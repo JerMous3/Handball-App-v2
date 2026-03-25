@@ -947,7 +947,7 @@
       <button class="btn-sm" id="startStopBtn" onclick="toggleTimer()">▶ Start</button>
       <button class="btn-sm" onclick="switchHalf()">Half</button>
       <button class="btn-sm danger" onclick="resetTimer()">Reset</button>
-      <button class="btn-sm export" onclick="exportToExcel()">⬇ Export XLSX</button>
+      <button class="btn-sm export" onclick="exportToExcel()">⬇ Export</button>
     </div>
   </div>
 </div>
@@ -1743,6 +1743,8 @@ function exportToExcel() {
   const filename = `handball_match_${dateStr.replace(/\//g,'-')}.xlsx`;
   XLSX.writeFile(wb, filename);
 }
+  
+window.exportToExcel = exportToExcel;
 
 // ─── INIT ────────────────────────────────────────────────
 renderPlayers();
