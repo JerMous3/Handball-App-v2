@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Handball Live Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #12151c;
+    --surface2: #1a1f2a;
+    --border: #252b38;
+    --accent: #e8ff00;
+    --accent2: #00d4ff;
+    --red: #ff3b3b;
+    --yellow: #ffc700;
+    --green: #00e87a;
+    --text: #f0f2f6;
+    --muted: #6b7585;
+    --gk-accent: #7b5cfa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .topbar-brand {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: var(--accent);
+  }
+
+  .topbar-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* TIMER */
+  .timer-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px 20px;
+  }
+
+  .timer-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+
+  .timer-display {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 32px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .timer-display.running { color: var(--green); }
+  .timer-display.second-half { color: var(--accent2); }
+
+  /* LIVE SCORE */
+  .scoreboard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 6px 18px;
+    box-shadow: 0 0 18px rgba(232,255,0,0.08);
+  }
+
+  .scoreboard-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+
+  .scoreboard-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .scoreboard-score {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 34px;
+    line-height: 1;
+    color: var(--accent);
+    min-width: 28px;
+    text-align: center;
+    transition: transform 0.2s, color 0.2s;
+  }
+
+  .scoreboard-score.bump {
+    transform: scale(1.35);
+    color: #fff;
+  }
+
+  .scoreboard-sep {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 24px;
+    color: var(--muted);
+    line-height: 1;
+  }
+
+  .scoreboard-teams {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 1px;
+    width: 100%;
+  }
+
+  .timer-btn-group {
+    display: flex;
+    gap: 6px;
+  }
+
+  .btn-sm {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+
+  .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  .btn-sm.danger { border-color: var(--red); color: var(--red); }
+  .btn-sm.danger:hover { background: var(--red); color: #fff; }
+
+  .half-badge {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+  }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: grid;
+    grid-template-columns: 280px 1fr 260px;
+    gap: 0;
+    height: calc(100vh - 65px);
+  }
+
+  /* SIDEBAR STATS */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sidebar-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 16px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 28px;
+    letter-spacing: 1px;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-value span { font-size: 14px; color: var(--muted); margin-left: 4px; }
+
+  .stat-bar-bg {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+
+  .stat-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  /* SUSPENSION TIMERS */
+  .suspension-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .suspension-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+    border: 1px solid var(--yellow);
+    border-radius: 8px;
+    padding: 8px 12px;
+    animation: pulse-yellow 2s infinite;
+  }
+
+  @keyframes pulse-yellow {
+    0%, 100% { border-color: var(--yellow); }
+    50% { border-color: #ff9800; }
+  }
+
+  .suspension-name {
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .suspension-timer {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 22px;
+    color: var(--yellow);
+  }
+
+  .suspension-timer.urgent { color: var(--red); }
+
+  .no-suspensions {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    padding: 12px;
+  }
+
+  /* EVENT LOG */
+  .event-log {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .event-log::-webkit-scrollbar { width: 3px; }
+  .event-log::-webkit-scrollbar-track { background: transparent; }
+  .event-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .event-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--bg);
+    border-radius: 6px;
+    font-size: 12px;
+    border-left: 3px solid transparent;
+  }
+
+  .event-time {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 13px;
+    color: var(--muted);
+    min-width: 28px;
+  }
+
+  .event-icon { font-size: 14px; }
+  .event-name { font-weight: 500; }
+  .event-type { color: var(--muted); font-size: 11px; }
+
+  /* CENTER PLAYERS */
+  .players-area {
+    padding: 16px 20px;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+
+  .players-area::-webkit-scrollbar { width: 4px; }
+  .players-area::-webkit-scrollbar-track { background: transparent; }
+  .players-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .section-header {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    margin-top: 4px;
+  }
+
+  .player-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .player-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .player-row::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--border);
+    border-radius: 3px 0 0 3px;
+  }
+
+  .player-row.gk::before { background: var(--gk-accent); }
+  .player-row.suspended::before { background: var(--yellow); }
+  .player-row.suspended { opacity: 0.6; }
+  .player-row.red-carded { opacity: 0.35; pointer-events: none; }
+  .player-row.red-carded::before { background: var(--red); }
+
+  .player-row:hover { border-color: var(--accent); }
+  .player-row.gk:hover { border-color: var(--gk-accent); }
+
+  .player-num {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 22px;
+    color: var(--muted);
+    min-width: 28px;
+    text-align: center;
+    line-height: 1;
+  }
+
+  .player-row.gk .player-num { color: var(--gk-accent); }
+
+  .player-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .player-name {
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .player-meta {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .player-stats {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .pstat {
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--surface2);
+    border-radius: 4px;
+    padding: 2px 6px;
+    white-space: nowrap;
+  }
+
+  .pstat.goals { color: var(--accent); }
+  .pstat.saves { color: var(--gk-accent); }
+  .pstat.cards { color: var(--yellow); }
+
+  .action-btns {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 300px;
+  }
+
+  .action-btn {
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+
+  .action-btn:hover { transform: translateY(-1px); filter: brightness(1.15); }
+  .action-btn:active { transform: translateY(0); }
+
+  .btn-goal { background: var(--accent); color: #000; }
+  .btn-shot { background: #1e2d1f; color: var(--green); border: 1px solid var(--green); }
+  .btn-assist { background: #1a2535; color: var(--accent2); border: 1px solid var(--accent2); }
+  .btn-yellow { background: #2a2210; color: var(--yellow); border: 1px solid var(--yellow); }
+  .btn-suspend { background: #2a1c0a; color: #ff9800; border: 1px solid #ff9800; }
+  .btn-red { background: #2a0e0e; color: var(--red); border: 1px solid var(--red); }
+  .btn-save { background: #1e1530; color: var(--gk-accent); border: 1px solid var(--gk-accent); }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* GOAL GRID MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 500px;
+    max-width: 95vw;
+    box-shadow: 0 0 60px rgba(0,0,0,0.6);
+  }
+
+  .modal-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 20px;
+    letter-spacing: 3px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .modal-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .modal-sub span { color: var(--gk-accent); font-weight: 600; }
+
+  .goal-svg-container {
+    position: relative;
+    width: 100%;
+  }
+
+  .goal-svg {
+    width: 100%;
+    border-radius: 8px;
+    cursor: crosshair;
+    display: block;
+  }
+
+  .goal-grid-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    cursor: crosshair;
+  }
+
+  .goal-cell {
+    border: 1px solid rgba(255,255,255,0.12);
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .goal-cell:hover { background: rgba(232,255,0,0.18); }
+  .goal-cell.selected { background: rgba(232,255,0,0.35); }
+
+  .goal-cell-label {
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 1px;
+    pointer-events: none;
+  }
+
+  .modal-btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    justify-content: flex-end;
+  }
+
+  .modal-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 9px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .modal-btn.cancel { background: var(--surface2); color: var(--muted); }
+  .modal-btn.cancel:hover { color: var(--text); }
+  .modal-btn.confirm { background: var(--gk-accent); color: #fff; }
+  .modal-btn.confirm:hover { background: #9b7fff; }
+  .modal-btn.confirm-goal { background: var(--accent); color: #000; }
+  .modal-btn.confirm-goal:hover { background: #fff700; }
+
+  .shot-type-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .shot-type-btn {
+    flex: 1;
+    padding: 7px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .shot-type-btn.active {
+    border-color: var(--gk-accent);
+    color: var(--gk-accent);
+    background: rgba(123,92,250,0.1);
+  }
+
+  .shot-type-btn.goal-active {
+    border-color: var(--accent);
+    color: #000;
+    background: var(--accent);
+  }
+
+  /* Scrollbar styling */
+  .sidebar::-webkit-scrollbar, .right-panel::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-track, .right-panel::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb, .right-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Goal heat map */
+  .heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 3px;
+    aspect-ratio: 3/1.4;
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+  }
+
+  .heatmap-cell {
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 16px;
+    color: rgba(255,255,255,0.7);
+    background: rgba(0,0,0,0.3);
+    transition: background 0.4s;
+  }
+
+  .zone-labels {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    font-size: 9px;
+    color: var(--muted);
+    text-align: center;
+    gap: 3px;
+    margin-top: 3px;
+  }
+
+  .btn-sm.export { border-color: var(--green); color: var(--green); }
+  .btn-sm.export:hover { background: var(--green); color: #000; }
+
+  /* DRAG AND DROP */
+  .player-row[draggable="true"] { cursor: grab; }
+  .player-row[draggable="true"]:active { cursor: grabbing; }
+
+  .drag-handle {
+    color: var(--muted);
+    font-size: 14px;
+    cursor: grab;
+    padding: 0 4px 0 0;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+  }
+  .player-row:hover .drag-handle { opacity: 1; }
+
+  .player-row.dragging {
+    opacity: 0.35;
+    border-style: dashed;
+  }
+
+  .drop-zone {
+    min-height: 54px;
+    border-radius: 10px;
+    border: 2px dashed transparent;
+    transition: border-color 0.15s, background 0.15s;
+    margin-bottom: 16px;
+  }
+
+  .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(232,255,0,0.04);
+  }
+
+  .drop-zone.drag-over-gk {
+    border-color: var(--gk-accent);
+    background: rgba(123,92,250,0.06);
+  }
+
+  .drop-zone.drag-over-sub {
+    border-color: var(--muted);
+    background: rgba(107,117,133,0.06);
+  }
+
+  .drop-zone-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 54px;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    border-radius: 10px;
+    border: 2px dashed var(--border);
+  }
+
+  .section-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    margin-top: 4px;
+  }
+
+  .section-count {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Substitution row styling — muted, no action buttons shown */
+  .player-row.sub-bench { opacity: 0.65; }
+  .player-row.sub-bench::before { background: var(--muted); }
+  .player-row.sub-bench:hover { border-color: var(--muted); opacity: 1; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .main { grid-template-columns: 1fr; height: auto; }
+    .sidebar, .right-panel { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-brand">⬡ HandballTrack</div>
+  <div class="topbar-controls">
+    <div class="half-badge" id="halfBadge">1st Half</div>
+    <div class="timer-block">
+      <div class="timer-label">Match Time</div>
+      <div class="timer-display" id="matchTimer">00:00</div>
+    </div>
+    <div class="scoreboard">
+      <div class="scoreboard-label">Score</div>
+      <div class="scoreboard-row">
+        <div class="scoreboard-score" id="sbHome">0</div>
+        <div class="scoreboard-sep">–</div>
+        <div class="scoreboard-score" id="sbAway">0</div>
+      </div>
+      <div class="scoreboard-teams">
+        <span>Home</span>
+        <span>Away</span>
+      </div>
+    </div>
+    <div class="timer-btn-group">
+      <button class="btn-sm" id="startStopBtn" onclick="toggleTimer()">▶ Start</button>
+      <button class="btn-sm" onclick="switchHalf()">Half</button>
+      <button class="btn-sm danger" onclick="resetTimer()">Reset</button>
+      <button class="btn-sm export" onclick="exportToExcel()">⬇ Export XLSX</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT: STATS -->
+  <div class="sidebar">
+    <div class="sidebar-title">Statistics</div>
+
+    <div class="stat-card">
+      <div class="stat-label">Shot Efficiency</div>
+      <div class="stat-value" id="shotPct">0%<span id="shotFrac">0/0</span></div>
+      <div class="stat-bar-bg">
+        <div class="stat-bar-fill" id="shotBar" style="width:0%;background:var(--accent)"></div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">GK Save Rate</div>
+      <div class="stat-value" id="savePct">0%<span id="saveFrac">0/0</span></div>
+      <div class="stat-bar-bg">
+        <div class="stat-bar-fill" id="saveBar" style="width:0%;background:var(--gk-accent)"></div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Shots on Goal</div>
+      <div class="stat-value" id="shotsOnGoal">0<span>shots</span></div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Yellow Cards</div>
+      <div class="stat-value" id="yellowCount">0<span>cards</span></div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">2-Min Suspensions</div>
+      <div class="stat-value" id="suspCount">0<span>total</span></div>
+    </div>
+
+    <div class="sidebar-title" style="margin-top:4px">GK Shot Zones</div>
+    <div class="heatmap-grid" id="heatmapGrid">
+      <div class="heatmap-cell" id="hm0">0</div>
+      <div class="heatmap-cell" id="hm1">0</div>
+      <div class="heatmap-cell" id="hm2">0</div>
+      <div class="heatmap-cell" id="hm3">0</div>
+      <div class="heatmap-cell" id="hm4">0</div>
+      <div class="heatmap-cell" id="hm5">0</div>
+    </div>
+    <div class="zone-labels">
+      <span>Top L</span><span>Top C</span><span>Top R</span>
+      <span>Bot L</span><span>Bot C</span><span>Bot R</span>
+    </div>
+  </div>
+
+  <!-- CENTER: PLAYERS -->
+  <div class="players-area">
+    <div class="section-header-row">
+      <div class="section-header" style="margin:0">Goalkeeper</div>
+      <div class="section-count" id="gkCount">1 on field</div>
+    </div>
+    <div class="drop-zone" id="gkList" data-zone="gk"></div>
+
+    <div class="section-header-row">
+      <div class="section-header" style="margin:0">Field Players</div>
+      <div class="section-count" id="fieldCount">11 on field</div>
+    </div>
+    <div class="drop-zone" id="playerList" data-zone="field"></div>
+
+    <div class="section-header-row">
+      <div class="section-header" style="margin:0">Substitutions</div>
+      <div class="section-count" id="subCount">0 on bench</div>
+    </div>
+    <div class="drop-zone" id="subList" data-zone="sub"></div>
+  </div>
+
+  <!-- RIGHT: SUSPENSIONS + LOG -->
+  <div class="right-panel">
+    <div class="sidebar-title">Active Suspensions</div>
+    <div class="suspension-list" id="suspensionList">
+      <div class="no-suspensions">No active suspensions</div>
+    </div>
+
+    <div class="sidebar-title" style="margin-top:8px">Event Log</div>
+    <div class="event-log" id="eventLog">
+      <div style="font-size:12px;color:var(--muted);text-align:center;padding:10px">No events yet</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: GK SHOT PLACEMENT -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">Shot Placement</div>
+    <div class="modal-sub">Goalkeeper: <span id="gkModalName">—</span></div>
+
+    <div class="shot-type-toggle">
+      <div class="shot-type-btn active" id="btnSave" onclick="setShotType('save')">🧤 Save / Stop</div>
+      <div class="shot-type-btn" id="btnGoalModal" onclick="setShotType('goal')">🥅 Goal Conceded</div>
+    </div>
+
+    <div class="goal-svg-container">
+      <svg class="goal-svg" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background / pitch -->
+        <rect width="400" height="200" fill="#0d1a0d"/>
+        <!-- Net lines -->
+        <defs>
+          <pattern id="net" width="16" height="16" patternUnits="userSpaceOnUse">
+            <path d="M0,0 L16,16 M16,0 L0,16 M0,8 L16,8 M8,0 L8,16" stroke="rgba(255,255,255,0.07)" stroke-width="0.5" fill="none"/>
+          </pattern>
+        </defs>
+        <!-- Goal frame -->
+        <rect x="20" y="20" width="360" height="160" fill="url(#net)" rx="2"/>
+        <!-- Posts -->
+        <rect x="18" y="18" width="6" height="166" fill="#c8c8c8" rx="2"/>
+        <rect x="376" y="18" width="6" height="166" fill="#c8c8c8" rx="2"/>
+        <rect x="18" y="18" width="364" height="6" fill="#c8c8c8" rx="2"/>
+        <!-- Ground line -->
+        <rect x="18" y="178" width="364" height="6" fill="#4a7c59" rx="1"/>
+        <!-- Zone dividers (visual only) -->
+        <line x1="140" y1="20" x2="140" y2="182" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
+        <line x1="260" y1="20" x2="260" y2="182" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
+        <line x1="20" y1="101" x2="380" y2="101" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
+      </svg>
+      <div class="goal-grid-overlay" id="goalGrid">
+        <div class="goal-cell" data-zone="0" onclick="selectZone(0)"><span class="goal-cell-label">TL</span></div>
+        <div class="goal-cell" data-zone="1" onclick="selectZone(1)"><span class="goal-cell-label">TC</span></div>
+        <div class="goal-cell" data-zone="2" onclick="selectZone(2)"><span class="goal-cell-label">TR</span></div>
+        <div class="goal-cell" data-zone="3" onclick="selectZone(3)"><span class="goal-cell-label">BL</span></div>
+        <div class="goal-cell" data-zone="4" onclick="selectZone(4)"><span class="goal-cell-label">BC</span></div>
+        <div class="goal-cell" data-zone="5" onclick="selectZone(5)"><span class="goal-cell-label">BR</span></div>
+      </div>
+    </div>
+
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn confirm" id="confirmBtn" onclick="confirmShot()">Confirm Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────
+const rosterData = {
+  gk: [
+    { id: 1, num: 69, name: 'Patrick Wijnands', pos: 'Goalkeeper' }
+  ],
+  players: [
+    { id: 3,  num: 7,  name: 'Randy Schild',    pos: 'Linkeropbouw' },
+    { id: 4,  num: 12,  name: 'Reinoud Bestebreurtje',   pos: 'Cirkel' },
+    { id: 5,  num: 18, name: 'Thijmen Bestebreurtje',    pos: 'Middenopbouw' },
+    { id: 6,  num: 22, name: 'Bryan Verschoor',  pos: 'Linkerhoek' },
+    { id: 7,  num: 25, name: 'Maarten Jan de Koning',    pos: 'Rechteropbouw' },
+    { id: 8,  num: 33, name: 'Dylan Oostindien',   pos: 'Rechterhoek' },
+
+  ],
+  subs: [
+    { id: 2,  num: 6,  name: 'Maurice vd Veer',    pos: 'Cirkel' },
+    { id: 9,  num: 55, name: 'Devin Oosthoek',    pos: 'Linkerhoek' },
+    { id: 10, num: 59, name: 'Mika vd Brug',     pos: 'Linkerhoek' },
+    { id: 11, num: 72, name: 'Joël Spoor',     pos: 'Linkerhoek' },
+    { id: 12, num: 20, name: 'Bas vd Heuvel',       pos: 'Linkeropbouw' },
+    { id: 13, num: 15, name: 'Mervin Ayaz',       pos: 'Linkerhoek' },
+  ]
+};
+
+const stats = {
+  goals: 0, shots: 0, assists: 0,
+  yellows: 0, suspensions: 0, redCards: 0,
+  saves: 0, goalsAgainst: 0,
+  zones: [0,0,0,0,0,0],
+};
+
+const playerStats = {};
+[...rosterData.gk, ...rosterData.players, ...rosterData.subs].forEach(p => {
+  playerStats[p.id] = { goals:0, shots:0, assists:0, yellows:0, suspensions:0, redCard:false, saves:0 };
+});
+
+// ─── ZONE TRACKING ──────────────────────────────────────
+// Each player's current zone: 'gk' | 'field' | 'sub'
+const playerZone = {};
+rosterData.gk.forEach(p => playerZone[p.id] = 'gk');
+rosterData.players.forEach(p => playerZone[p.id] = 'field');
+rosterData.subs.forEach(p => playerZone[p.id] = 'sub');
+
+// Master player lookup by id
+const allPlayersById = {};
+[...rosterData.gk, ...rosterData.players, ...rosterData.subs].forEach(p => allPlayersById[p.id] = p);
+
+const activeSuspensions = [];
+const eventLog = [];
+
+// ─── TIMER ───────────────────────────────────────────────
+let matchSeconds = 0;
+let timerRunning = false;
+let timerInterval = null;
+let currentHalf = 1;
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function updateTimerDisplay() {
+  const m = Math.floor(matchSeconds/60);
+  const s = matchSeconds % 60;
+  const el = document.getElementById('matchTimer');
+  el.textContent = `${pad(m)}:${pad(s)}`;
+  el.className = 'timer-display' + (timerRunning ? ' running' : '') + (currentHalf===2 ? ' second-half' : '');
+}
+
+function toggleTimer() {
+  timerRunning = !timerRunning;
+  const btn = document.getElementById('startStopBtn');
+  if (timerRunning) {
+    btn.textContent = '⏸ Pause';
+    btn.classList.add('active');
+    timerInterval = setInterval(() => {
+      matchSeconds++;
+      updateTimerDisplay();
+      tickSuspensions();
+    }, 1000);
+  } else {
+    btn.textContent = '▶ Start';
+    btn.classList.remove('active');
+    clearInterval(timerInterval);
+  }
+}
+
+function resetTimer() {
+  clearInterval(timerInterval);
+  timerRunning = false;
+  matchSeconds = 0;
+  document.getElementById('startStopBtn').textContent = '▶ Start';
+  document.getElementById('startStopBtn').classList.remove('active');
+  updateTimerDisplay();
+}
+
+function switchHalf() {
+  currentHalf = currentHalf === 1 ? 2 : 1;
+  document.getElementById('halfBadge').textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+  updateTimerDisplay();
+}
+
+function getCurrentTime() {
+  return `${pad(Math.floor(matchSeconds/60))}:${pad(matchSeconds%60)}`;
+}
+
+// ─── SUSPENSION TIMERS ────────────────────────────────────
+function addSuspension(player) {
+  const susp = { playerId: player.id, name: player.name, remaining: 120 };
+  activeSuspensions.push(susp);
+  renderSuspensions();
+}
+
+function tickSuspensions() {
+  for (let i = activeSuspensions.length - 1; i >= 0; i--) {
+    activeSuspensions[i].remaining--;
+    if (activeSuspensions[i].remaining <= 0) {
+      const pid = activeSuspensions[i].playerId;
+      activeSuspensions.splice(i, 1);
+      // un-suspend player
+      playerStats[pid].suspensions = Math.max(0, playerStats[pid].suspensions - 0); // keep count
+      const row = document.querySelector(`[data-player-id="${pid}"]`);
+      if (row) row.classList.remove('suspended');
+    }
+  }
+  renderSuspensions();
+}
+
+function renderSuspensions() {
+  const el = document.getElementById('suspensionList');
+  if (activeSuspensions.length === 0) {
+    el.innerHTML = '<div class="no-suspensions">No active suspensions</div>';
+    return;
+  }
+  el.innerHTML = activeSuspensions.map(s => {
+    const m = Math.floor(s.remaining/60), sec = s.remaining%60;
+    const urgent = s.remaining <= 30;
+    return `<div class="suspension-item">
+      <div>
+        <div class="suspension-name">🟡 ${s.name}</div>
+        <div style="font-size:10px;color:var(--muted)">2-min suspension</div>
+      </div>
+      <div class="suspension-timer${urgent?' urgent':''}">${pad(m)}:${pad(sec)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── STATS ───────────────────────────────────────────────
+function updateStats() {
+  const pct = stats.shots > 0 ? Math.round(stats.goals/stats.shots*100) : 0;
+  document.getElementById('shotPct').innerHTML = `${pct}%<span id="shotFrac">${stats.goals}/${stats.shots}</span>`;
+  document.getElementById('shotBar').style.width = pct + '%';
+
+  const total = stats.saves + stats.goalsAgainst;
+  const svPct = total > 0 ? Math.round(stats.saves/total*100) : 0;
+  document.getElementById('savePct').innerHTML = `${svPct}%<span id="saveFrac">${stats.saves}/${total}</span>`;
+  document.getElementById('saveBar').style.width = svPct + '%';
+
+  document.getElementById('shotsOnGoal').innerHTML = `${stats.shots}<span>shots</span>`;
+  document.getElementById('yellowCount').innerHTML = `${stats.yellows}<span>cards</span>`;
+  document.getElementById('suspCount').innerHTML = `${stats.suspensions}<span>total</span>`;
+
+  // heatmap
+  const maxZone = Math.max(...stats.zones, 1);
+  stats.zones.forEach((z, i) => {
+    const el = document.getElementById('hm'+i);
+    el.textContent = z;
+    const intensity = z/maxZone;
+    el.style.background = `rgba(123,92,250,${intensity * 0.7 + 0.05})`;
+  });
+}
+
+// ─── EVENT LOG ───────────────────────────────────────────
+const eventIcons = {
+  goal:'⚽', shot:'🎯', assist:'🤝', yellow:'🟡',
+  suspension:'⏱️', red:'🟥', save:'🧤', goal_against:'🥅', substitution:'🔄'
+};
+const eventColors = {
+  goal:'var(--accent)', shot:'var(--green)', assist:'var(--accent2)',
+  yellow:'var(--yellow)', suspension:'#ff9800', red:'var(--red)',
+  save:'var(--gk-accent)', goal_against:'var(--red)', substitution:'var(--muted)'
+};
+
+function addEvent(type, player, extra) {
+  const ev = { type, name: player.name, time: getCurrentTime(), extra };
+  eventLog.unshift(ev);
+  const el = document.getElementById('eventLog');
+  const html = eventLog.slice(0,40).map(e => `
+    <div class="event-item" style="border-left-color:${eventColors[e.type]||'var(--border)'}">
+      <div class="event-time">${e.time}</div>
+      <div class="event-icon">${eventIcons[e.type]||'•'}</div>
+      <div style="flex:1;min-width:0">
+        <div class="event-name">${e.name}</div>
+        <div class="event-type">${e.type.replace('_',' ')}${e.extra?' · '+e.extra:''}</div>
+      </div>
+    </div>`).join('');
+  el.innerHTML = html || '<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px">No events yet</div>';
+}
+
+// ─── PLAYER ACTIONS ──────────────────────────────────────
+function bumpScore(elId) {
+  const el = document.getElementById(elId);
+  el.classList.add('bump');
+  setTimeout(() => el.classList.remove('bump'), 300);
+}
+
+function updateScoreboard() {
+  document.getElementById('sbHome').textContent = stats.goals;
+  document.getElementById('sbAway').textContent = stats.goalsAgainst;
+}
+
+function recordGoal(player) {
+  stats.goals++; stats.shots++;
+  playerStats[player.id].goals++;
+  playerStats[player.id].shots++;
+  addEvent('goal', player);
+  updateStats();
+  updateScoreboard();
+  bumpScore('sbHome');
+  renderPlayers();
+  flashRow(player.id, 'var(--accent)');
+}
+
+function recordShot(player) {
+  stats.shots++;
+  playerStats[player.id].shots++;
+  addEvent('shot', player);
+  updateStats();
+  renderPlayers();
+}
+
+function recordAssist(player) {
+  playerStats[player.id].assists++;
+  addEvent('assist', player);
+  renderPlayers();
+}
+
+function recordYellow(player) {
+  stats.yellows++;
+  playerStats[player.id].yellows++;
+  addEvent('yellow', player);
+  updateStats();
+  renderPlayers();
+  flashRow(player.id, 'var(--yellow)');
+}
+
+function recordSuspension(player) {
+  stats.suspensions++;
+  playerStats[player.id].suspensions++;
+  addEvent('suspension', player);
+  addSuspension(player);
+  const row = document.querySelector(`[data-player-id="${player.id}"]`);
+  if (row) row.classList.add('suspended');
+  updateStats();
+  renderPlayers();
+}
+
+function recordRed(player) {
+  playerStats[player.id].redCard = true;
+  addEvent('red', player);
+  const row = document.querySelector(`[data-player-id="${player.id}"]`);
+  if (row) row.classList.add('red-carded');
+  renderPlayers();
+  flashRow(player.id, 'var(--red)');
+}
+
+function flashRow(playerId, color) {
+  const row = document.querySelector(`[data-player-id="${playerId}"]`);
+  if (!row) return;
+  row.style.boxShadow = `0 0 12px ${color}`;
+  setTimeout(() => { row.style.boxShadow = ''; }, 600);
+}
+
+// ─── MODAL ───────────────────────────────────────────────
+let currentGkPlayer = null;
+let selectedZone = null;
+let currentShotType = 'save';
+
+function openGkModal(player) {
+  currentGkPlayer = player;
+  selectedZone = null;
+  currentShotType = 'save';
+  document.getElementById('gkModalName').textContent = player.name;
+  setShotType('save');
+  document.querySelectorAll('.goal-cell').forEach(c => c.classList.remove('selected'));
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  currentGkPlayer = null;
+  selectedZone = null;
+}
+
+function setShotType(type) {
+  currentShotType = type;
+  document.getElementById('btnSave').className = 'shot-type-btn' + (type==='save' ? ' active' : '');
+  document.getElementById('btnGoalModal').className = 'shot-type-btn' + (type==='goal' ? ' goal-active' : '');
+  const btn = document.getElementById('confirmBtn');
+  btn.textContent = type==='save' ? 'Confirm Save' : 'Confirm Goal Conceded';
+  btn.className = 'modal-btn ' + (type==='save' ? 'confirm' : 'confirm-goal');
+}
+
+function selectZone(zone) {
+  selectedZone = zone;
+  document.querySelectorAll('.goal-cell').forEach((c,i) => {
+    c.classList.toggle('selected', i===zone);
+  });
+}
+
+function confirmShot() {
+  if (!currentGkPlayer) return;
+  const zoneNames = ['Top Left','Top Center','Top Right','Bot Left','Bot Center','Bot Right'];
+  const zoneName = selectedZone !== null ? zoneNames[selectedZone] : 'Unknown';
+
+  if (currentShotType === 'save') {
+    stats.saves++;
+    playerStats[currentGkPlayer.id].saves++;
+    if (selectedZone !== null) stats.zones[selectedZone]++;
+    addEvent('save', currentGkPlayer, zoneName);
+  } else {
+    stats.goalsAgainst++;
+    if (selectedZone !== null) stats.zones[selectedZone]++;
+    addEvent('goal_against', currentGkPlayer, zoneName);
+  }
+
+  updateStats();
+  updateScoreboard();
+  if (currentShotType === 'goal') bumpScore('sbAway');
+  renderPlayers();
+  closeModal();
+  flashRow(currentGkPlayer.id, currentShotType==='save' ? 'var(--gk-accent)' : 'var(--red)');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ─── RENDER ──────────────────────────────────────────────
+function buildPlayerRow(player, zone) {
+  const isGk = zone === 'gk';
+  const isSub = zone === 'sub';
+  const ps = playerStats[player.id];
+  const isSuspended = activeSuspensions.some(s => s.playerId === player.id);
+  const classes = [
+    'player-row',
+    isGk ? 'gk' : '',
+    isSub ? 'sub-bench' : '',
+    isSuspended ? 'suspended' : '',
+    ps.redCard ? 'red-carded' : ''
+  ].filter(Boolean).join(' ');
+
+  let statsHtml = '';
+  if (isGk) {
+    statsHtml = `
+      <div class="pstat saves">🧤 ${ps.saves} saves</div>
+      ${stats.goalsAgainst > 0 ? `<div class="pstat" style="color:var(--red)">🥅 ${stats.goalsAgainst}</div>` : ''}
+    `;
+  } else if (!isSub) {
+    if (ps.goals > 0) statsHtml += `<div class="pstat goals">⚽ ${ps.goals}</div>`;
+    if (ps.assists > 0) statsHtml += `<div class="pstat" style="color:var(--accent2)">🤝 ${ps.assists}</div>`;
+    if (ps.shots > 0) statsHtml += `<div class="pstat">🎯 ${ps.shots}</div>`;
+    if (ps.yellows > 0) statsHtml += `<div class="pstat cards">🟡 ${ps.yellows}</div>`;
+    if (ps.suspensions > 0) statsHtml += `<div class="pstat" style="color:#ff9800">⏱ ${ps.suspensions}</div>`;
+    if (ps.redCard) statsHtml += `<div class="pstat" style="color:var(--red)">🟥</div>`;
+  }
+
+  let btnsHtml = '';
+  if (isSub) {
+    btnsHtml = `<span style="font-size:11px;color:var(--muted);padding:4px 8px;">On bench</span>`;
+  } else if (isGk) {
+    btnsHtml = `
+      <button class="action-btn btn-save" onclick='openGkModal(${JSON.stringify(player)})'>🧤 Save/Stop</button>
+      <button class="action-btn btn-goal" onclick='openGkModal(${JSON.stringify(player)});setShotType("goal")'>🥅 Goal</button>
+    `;
+  } else if (!ps.redCard) {
+    btnsHtml = `
+      <button class="action-btn btn-goal"    onclick='recordGoal(${JSON.stringify(player)})'>⚽ Goal</button>
+      <button class="action-btn btn-shot"    onclick='recordShot(${JSON.stringify(player)})'>🎯 Shot</button>
+      <button class="action-btn btn-assist"  onclick='recordAssist(${JSON.stringify(player)})'>🤝 Assist</button>
+      <button class="action-btn btn-yellow"  onclick='recordYellow(${JSON.stringify(player)})'>🟡 Yellow</button>
+      <button class="action-btn btn-suspend" onclick='recordSuspension(${JSON.stringify(player)})'>⏱ 2-Min</button>
+      <button class="action-btn btn-red"     onclick='recordRed(${JSON.stringify(player)})'>🟥 Red</button>
+    `;
+  } else {
+    btnsHtml = `<span style="font-size:11px;color:var(--red)">Red Card — Excluded</span>`;
+  }
+
+  return `
+    <div class="${classes}" data-player-id="${player.id}" data-zone="${zone}"
+         draggable="true">
+      <span class="drag-handle">⠿</span>
+      <div class="player-num">${player.num}</div>
+      <div class="player-info">
+        <div class="player-name">${player.name}</div>
+        <div class="player-meta">${player.pos}</div>
+        <div class="player-stats" style="margin-top:4px;flex-wrap:wrap;gap:4px">${statsHtml}</div>
+      </div>
+      <div class="action-btns">${btnsHtml}</div>
+    </div>
+  `;
+}
+
+function renderPlayers() {
+  const gkIds    = Object.keys(playerZone).filter(id => playerZone[id] === 'gk').map(Number);
+  const fieldIds = Object.keys(playerZone).filter(id => playerZone[id] === 'field').map(Number);
+  const subIds   = Object.keys(playerZone).filter(id => playerZone[id] === 'sub').map(Number);
+
+  const gkEl    = document.getElementById('gkList');
+  const fieldEl = document.getElementById('playerList');
+  const subEl   = document.getElementById('subList');
+
+  gkEl.innerHTML    = gkIds.length    ? gkIds.map(id    => buildPlayerRow(allPlayersById[id], 'gk')).join('')
+                                      : '<div class="drop-zone-empty">Drop goalkeeper here</div>';
+  fieldEl.innerHTML = fieldIds.length ? fieldIds.map(id => buildPlayerRow(allPlayersById[id], 'field')).join('')
+                                      : '<div class="drop-zone-empty">Drop field players here</div>';
+  subEl.innerHTML   = subIds.length   ? subIds.map(id   => buildPlayerRow(allPlayersById[id], 'sub')).join('')
+                                      : '<div class="drop-zone-empty">No players on bench</div>';
+
+  document.getElementById('gkCount').textContent    = `${gkIds.length} on field`;
+  document.getElementById('fieldCount').textContent = `${fieldIds.length} on field`;
+  document.getElementById('subCount').textContent   = `${subIds.length} on bench`;
+
+  initDragAndDrop();
+}
+
+// ─── DRAG AND DROP ───────────────────────────────────────
+let draggedPlayerId = null;
+
+function initDragAndDrop() {
+  // Attach events to all player rows
+  document.querySelectorAll('.player-row[draggable="true"]').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      draggedPlayerId = parseInt(row.dataset.playerId);
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', draggedPlayerId);
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-over','drag-over-gk','drag-over-sub'));
+    });
+  });
+
+  // Attach events to drop zones
+  document.querySelectorAll('.drop-zone').forEach(zone => {
+    zone.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const zoneType = zone.dataset.zone;
+      zone.classList.remove('drag-over','drag-over-gk','drag-over-sub');
+      if (zoneType === 'gk')    zone.classList.add('drag-over-gk');
+      else if (zoneType === 'sub') zone.classList.add('drag-over-sub');
+      else                         zone.classList.add('drag-over');
+    });
+    zone.addEventListener('dragleave', e => {
+      if (!zone.contains(e.relatedTarget)) {
+        zone.classList.remove('drag-over','drag-over-gk','drag-over-sub');
+      }
+    });
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('drag-over','drag-over-gk','drag-over-sub');
+      if (draggedPlayerId === null) return;
+      const targetZone = zone.dataset.zone;
+      const previousZone = playerZone[draggedPlayerId];
+      if (targetZone === previousZone) return;
+
+      // Log the substitution event
+      const player = allPlayersById[draggedPlayerId];
+      if (previousZone === 'sub' && targetZone !== 'sub') {
+        addEvent('substitution', player, `→ ${targetZone === 'gk' ? 'Goalkeeper' : 'Field'}`);
+      } else if (previousZone !== 'sub' && targetZone === 'sub') {
+        addEvent('substitution', player, '→ Bench');
+      } else {
+        addEvent('substitution', player, `${previousZone} → ${targetZone}`);
+      }
+
+      playerZone[draggedPlayerId] = targetZone;
+      draggedPlayerId = null;
+      renderPlayers();
+    });
+  });
+}
+
+// ─── EXPORT TO EXCEL ─────────────────────────────────────
+function exportToExcel() {
+  const wb = XLSX.utils.book_new();
+  const matchTime = document.getElementById('matchTimer').textContent;
+  const dateStr = new Date().toLocaleDateString('en-GB');
+
+  // ── Sheet 1: Match Summary ──
+  const summaryData = [
+    ['HANDBALL MATCH REPORT'],
+    ['Date', dateStr],
+    ['Final Time', matchTime],
+    ['Half', currentHalf === 1 ? '1st Half' : '2nd Half'],
+    [],
+    ['FINAL SCORE'],
+    ['Home', 'Away'],
+    [stats.goals, stats.goalsAgainst],
+    [],
+    ['TEAM STATISTICS'],
+    ['Metric', 'Value'],
+    ['Goals Scored', stats.goals],
+    ['Goals Conceded', stats.goalsAgainst],
+    ['Total Shots', stats.shots],
+    ['Shot Efficiency (%)', stats.shots > 0 ? Math.round(stats.goals / stats.shots * 100) : 0],
+    ['GK Saves', stats.saves],
+    ['GK Save Rate (%)', (stats.saves + stats.goalsAgainst) > 0 ? Math.round(stats.saves / (stats.saves + stats.goalsAgainst) * 100) : 0],
+    ['Yellow Cards', stats.yellows],
+    ['2-Min Suspensions', stats.suspensions],
+    [],
+    ['GK SHOT ZONES (shots faced)'],
+    ['Top Left', 'Top Center', 'Top Right'],
+    [stats.zones[0], stats.zones[1], stats.zones[2]],
+    ['Bottom Left', 'Bottom Center', 'Bottom Right'],
+    [stats.zones[3], stats.zones[4], stats.zones[5]],
+  ];
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+  wsSummary['!cols'] = [{ wch: 28 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Match Summary');
+
+  // ── Sheet 2: Player Stats ──
+  const allPlayers = Object.values(allPlayersById);
+  const playerRows = [
+    ['#', 'Name', 'Position', 'Zone', 'Goals', 'Shots', 'Shot %', 'Assists', 'Saves', 'Yellow Cards', '2-Min Suspensions', 'Red Card'],
+  ];
+  allPlayers.forEach(p => {
+    const ps = playerStats[p.id];
+    const shotPct = ps.shots > 0 ? Math.round(ps.goals / ps.shots * 100) : 0;
+    const zone = playerZone[p.id] === 'gk' ? 'Goalkeeper' : playerZone[p.id] === 'field' ? 'Field' : 'Bench';
+    playerRows.push([
+      p.num, p.name, p.pos, zone,
+      ps.goals, ps.shots, shotPct + '%', ps.assists,
+      ps.saves, ps.yellows, ps.suspensions,
+      ps.redCard ? 'Yes' : 'No',
+    ]);
+  });
+  const wsPlayers = XLSX.utils.aoa_to_sheet(playerRows);
+  wsPlayers['!cols'] = [
+    { wch: 5 }, { wch: 20 }, { wch: 16 }, { wch: 10 }, { wch: 8 }, { wch: 8 },
+    { wch: 9 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 18 }, { wch: 10 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsPlayers, 'Player Stats');
+
+  // ── Sheet 3: Event Log ──
+  const eventRows = [
+    ['Time', 'Player', 'Event', 'Detail'],
+  ];
+  // eventLog is newest-first, so reverse for chronological order
+  [...eventLog].reverse().forEach(e => {
+    eventRows.push([e.time, e.name, e.type.replace('_', ' '), e.extra || '']);
+  });
+  const wsEvents = XLSX.utils.aoa_to_sheet(eventRows);
+  wsEvents['!cols'] = [{ wch: 8 }, { wch: 22 }, { wch: 18 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, wsEvents, 'Event Log');
+
+  // ── Download ──
+  const filename = `handball_match_${dateStr.replace(/\//g,'-')}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
+
+// ─── INIT ────────────────────────────────────────────────
+renderPlayers();
+updateStats();
+updateTimerDisplay();
+</script>
+</body>
+</html>
