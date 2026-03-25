@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Handball Live Tracker</title>
+<title>Handball Tracker (Empty)</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -744,13 +744,187 @@
     .main { grid-template-columns: 1fr; height: auto; }
     .sidebar, .right-panel { display: none; }
   }
+
+  /* ── TEAM SETUP SCREEN ── */
+  .setup-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 2000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 32px 16px 48px;
+    overflow-y: auto;
+  }
+  .setup-screen.hidden { display: none; }
+  .setup-card { width: 100%; max-width: 720px; }
+  .setup-logo {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 28px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .setup-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+  .setup-section { margin-bottom: 24px; }
+  .setup-section-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 15px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .setup-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .setup-rows { display: flex; flex-direction: column; gap: 6px; }
+  .setup-row {
+    display: grid;
+    grid-template-columns: 64px 1fr 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .setup-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    width: 100%;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  .setup-input:focus { border-color: var(--accent); }
+  .setup-input.gk-input:focus { border-color: var(--gk-accent); }
+  .setup-input::placeholder { color: var(--muted); }
+  .setup-remove-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .setup-remove-btn:hover { border-color: var(--red); color: var(--red); }
+  .setup-add-btn {
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    padding: 8px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+    margin-top: 6px;
+    letter-spacing: 0.5px;
+  }
+  .setup-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .setup-add-btn.gk:hover { border-color: var(--gk-accent); color: var(--gk-accent); }
+  .setup-col-labels {
+    display: grid;
+    grid-template-columns: 64px 1fr 1fr auto;
+    gap: 8px;
+    margin-bottom: 4px;
+    padding: 0 2px;
+  }
+  .setup-col-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .setup-launch-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 20px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 8px;
+  }
+  .setup-launch-btn:hover { background: #fff700; transform: translateY(-1px); }
+  .setup-team-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
 </style>
 </head>
 <body>
 
-<!-- TOP BAR -->
-<div class="topbar">
-  <div class="topbar-brand">⬡ HandballTrack</div>
+<!-- TEAM SETUP SCREEN -->
+<div class="setup-screen" id="setupScreen">
+  <div class="setup-card">
+    <div class="setup-logo">⬡ HandballTrack</div>
+    <div class="setup-subtitle">Fill in your squad before the match — all fields are optional except at least one player per section.</div>
+
+    <div class="setup-team-row">
+      <div>
+        <div class="setup-col-label" style="margin-bottom:6px">Team Name</div>
+        <input class="setup-input" id="setupTeamName" placeholder="e.g. HC Voorbeeld" />
+      </div>
+      <div>
+        <div class="setup-col-label" style="margin-bottom:6px">Opponent</div>
+        <input class="setup-input" id="setupOpponent" placeholder="e.g. HC Tegenstander" />
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-title">Goalkeeper</div>
+      <div class="setup-col-labels">
+        <span class="setup-col-label">#</span>
+        <span class="setup-col-label">Name</span>
+        <span class="setup-col-label">Position</span>
+        <span></span>
+      </div>
+      <div class="setup-rows" id="setupGkRows"></div>
+      <button class="setup-add-btn gk" onclick="addSetupRow('gk')">+ Add Goalkeeper</button>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-title">Field Players</div>
+      <div class="setup-col-labels">
+        <span class="setup-col-label">#</span>
+        <span class="setup-col-label">Name</span>
+        <span class="setup-col-label">Position</span>
+        <span></span>
+      </div>
+      <div class="setup-rows" id="setupFieldRows"></div>
+      <button class="setup-add-btn" onclick="addSetupRow('field')">+ Add Field Player</button>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-title">Substitutes (Bench)</div>
+      <div class="setup-col-labels">
+        <span class="setup-col-label">#</span>
+        <span class="setup-col-label">Name</span>
+        <span class="setup-col-label">Position</span>
+        <span></span>
+      </div>
+      <div class="setup-rows" id="setupSubRows"></div>
+      <button class="setup-add-btn" onclick="addSetupRow('sub')">+ Add Substitute</button>
+    </div>
+
+    <button class="setup-launch-btn" onclick="launchMatch()">▶ Start Match</button>
+  </div>
+</div>
+<div class="topbar" id="appTopbar" style="display:none">
+  <div class="topbar-brand" id="topbarBrand">⬡ HandballTrack</div>
   <div class="topbar-controls">
     <div class="half-badge" id="halfBadge">1st Half</div>
     <div class="timer-block">
@@ -779,7 +953,7 @@
 </div>
 
 <!-- MAIN -->
-<div class="main">
+<div class="main" id="appMain" style="display:none">
 
   <!-- LEFT: STATS -->
   <div class="sidebar">
@@ -874,7 +1048,7 @@
 
     <div class="shot-type-toggle">
       <div class="shot-type-btn active" id="btnSave" onclick="setShotType('save')">🧤 Save / Stop</div>
-      <div class="shot-type-btn" id="btnGoalModal" onclick="setShotType('goal')">🥅 Goal Conceded</div>
+      <div class="shot-type-btn active" id="btnGoalModal" onclick="setShotType('goal')">🥅 Goal Conceded</div>
     </div>
 
     <div class="goal-svg-container">
@@ -918,29 +1092,97 @@
 </div>
 
 <script>
-// ─── DATA ────────────────────────────────────────────────
-const rosterData = {
-  gk: [
-    { id: 1, num: 69, name: 'Patrick Wijnands', pos: 'Goalkeeper' }
-  ],
-  players: [
-    { id: 3,  num: 7,  name: 'Randy Schild',    pos: 'Linkeropbouw' },
-    { id: 4,  num: 12,  name: 'Reinoud Bestebreurtje',   pos: 'Cirkel' },
-    { id: 5,  num: 18, name: 'Thijmen Bestebreurtje',    pos: 'Middenopbouw' },
-    { id: 6,  num: 22, name: 'Bryan Verschoor',  pos: 'Linkerhoek' },
-    { id: 7,  num: 25, name: 'Maarten Jan de Koning',    pos: 'Rechteropbouw' },
-    { id: 8,  num: 33, name: 'Dylan Oostindien',   pos: 'Rechterhoek' },
+// ─── TEAM SETUP ──────────────────────────────────────────
+let setupIdCounter = 100;
 
-  ],
-  subs: [
-    { id: 2,  num: 6,  name: 'Maurice vd Veer',    pos: 'Cirkel' },
-    { id: 9,  num: 55, name: 'Devin Oosthoek',    pos: 'Linkerhoek' },
-    { id: 10, num: 59, name: 'Mika vd Brug',     pos: 'Linkerhoek' },
-    { id: 11, num: 72, name: 'Joël Spoor',     pos: 'Linkerhoek' },
-    { id: 12, num: 20, name: 'Bas vd Heuvel',       pos: 'Linkeropbouw' },
-    { id: 13, num: 15, name: 'Mervin Ayaz',       pos: 'Linkerhoek' },
-  ]
-};
+const defaultRoster = { gk: [], players: [], subs: [] };
+
+function makeSetupRow(section, num='', name='', pos='') {
+  const id = ++setupIdCounter;
+  const isGk = section === 'gk';
+  const div = document.createElement('div');
+  div.className = 'setup-row';
+  div.dataset.rowId = id;
+  div.innerHTML = `
+    <input class="setup-input${isGk?' gk-input':''}" placeholder="#" value="${num}" data-field="num" style="text-align:center" />
+    <input class="setup-input${isGk?' gk-input':''}" placeholder="Full name" value="${name}" data-field="name" />
+    <input class="setup-input${isGk?' gk-input':''}" placeholder="Position" value="${pos}" data-field="pos" />
+    <button class="setup-remove-btn" onclick="removeSetupRow('${section}',${id})">×</button>
+  `;
+  return div;
+}
+
+function addSetupRow(section, num='', name='', pos='') {
+  const containerId = section === 'gk' ? 'setupGkRows' : section === 'field' ? 'setupFieldRows' : 'setupSubRows';
+  document.getElementById(containerId).appendChild(makeSetupRow(section, num, name, pos));
+}
+
+function removeSetupRow(section, rowId) {
+  const containerId = section === 'gk' ? 'setupGkRows' : section === 'field' ? 'setupFieldRows' : 'setupSubRows';
+  const row = document.querySelector(`#${containerId} [data-row-id="${rowId}"]`);
+  if (row) row.remove();
+}
+
+function readSetupRows(containerId) {
+  const rows = document.querySelectorAll(`#${containerId} .setup-row`);
+  const result = [];
+  rows.forEach(row => {
+    const num  = row.querySelector('[data-field="num"]').value.trim();
+    const name = row.querySelector('[data-field="name"]').value.trim();
+    const pos  = row.querySelector('[data-field="pos"]').value.trim();
+    if (name || num) result.push({ num: parseInt(num)||0, name: name||'Player', pos: pos||'—' });
+  });
+  return result;
+}
+
+function launchMatch() {
+  const gkList    = readSetupRows('setupGkRows');
+  const fieldList = readSetupRows('setupFieldRows');
+  const subList   = readSetupRows('setupSubRows');
+
+  if (gkList.length === 0 && fieldList.length === 0) {
+    alert('Please add at least one player before starting.');
+    return;
+  }
+
+  // Assign sequential IDs
+  let idSeq = 1;
+  const rosterData = {
+    gk:      gkList.map(p    => ({ ...p, id: idSeq++ })),
+    players: fieldList.map(p => ({ ...p, id: idSeq++ })),
+    subs:    subList.map(p   => ({ ...p, id: idSeq++ })),
+  };
+
+  // Update team name in topbar if provided
+  const teamName = document.getElementById('setupTeamName').value.trim();
+  const opponent = document.getElementById('setupOpponent').value.trim();
+  if (teamName || opponent) {
+    const brand = document.getElementById('topbarBrand');
+    if (brand) brand.textContent = `⬡ ${teamName||'Home'} vs ${opponent||'Away'}`;
+    // Update scoreboard labels
+    const labels = document.querySelectorAll('.scoreboard-teams span');
+    if (labels.length === 2) {
+      labels[0].textContent = teamName || 'Home';
+      labels[1].textContent = opponent || 'Away';
+    }
+  }
+
+  initMatch(rosterData);
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('appTopbar').style.display = '';
+  document.getElementById('appMain').style.display = '';
+}
+
+// Pre-populate setup screen with default roster
+(function populateSetup() {
+  addSetupRow('gk');
+  addSetupRow('field');
+  addSetupRow('field');
+  addSetupRow('sub');
+})();
+
+// ─── MATCH INIT (called after setup) ────────────────────
+function initMatch(rosterData) {
 
 const stats = {
   goals: 0, shots: 0, assists: 0,
@@ -955,14 +1197,38 @@ const playerStats = {};
 });
 
 // ─── ZONE TRACKING ──────────────────────────────────────
-// Each player's current zone: 'gk' | 'field' | 'sub'
 const playerZone = {};
-rosterData.gk.forEach(p => playerZone[p.id] = 'gk');
+rosterData.gk.forEach(p      => playerZone[p.id] = 'gk');
 rosterData.players.forEach(p => playerZone[p.id] = 'field');
-rosterData.subs.forEach(p => playerZone[p.id] = 'sub');
+rosterData.subs.forEach(p    => playerZone[p.id] = 'sub');
 
-// Master player lookup by id
 const allPlayersById = {};
+window.allPlayersById = allPlayersById;
+
+function getPlayerById(id){ return window.allPlayersById[id]; }
+function recordGoalById(id){ recordGoal(getPlayerById(id)); }
+function recordShotById(id){ recordShot(getPlayerById(id)); }
+function recordAssistById(id){ recordAssist(getPlayerById(id)); }
+function recordYellowById(id){ recordYellow(getPlayerById(id)); }
+function recordSuspensionById(id){ recordSuspension(getPlayerById(id)); }
+function recordRedById(id){ recordRed(getPlayerById(id)); }
+function openGkModalById(id){ openGkModal(getPlayerById(id)); }
+
+window.toggleTimer = toggleTimer;
+window.resetTimer = resetTimer;
+window.switchHalf = switchHalf;
+window.recordGoalById = recordGoalById;
+window.recordShotById = recordShotById;
+window.recordAssistById = recordAssistById;
+window.recordYellowById = recordYellowById;
+window.recordSuspensionById = recordSuspensionById;
+window.recordRedById = recordRedById;
+window.openGkModalById = openGkModalById;
+window.setShotType = setShotType;
+window.selectZone = selectZone;
+window.confirmShot = confirmShot;
+window.closeModal = closeModal;
+
 [...rosterData.gk, ...rosterData.players, ...rosterData.subs].forEach(p => allPlayersById[p.id] = p);
 
 const activeSuspensions = [];
@@ -1287,17 +1553,17 @@ function buildPlayerRow(player, zone) {
     btnsHtml = `<span style="font-size:11px;color:var(--muted);padding:4px 8px;">On bench</span>`;
   } else if (isGk) {
     btnsHtml = `
-      <button class="action-btn btn-save" onclick='openGkModal(${JSON.stringify(player)})'>🧤 Save/Stop</button>
-      <button class="action-btn btn-goal" onclick='openGkModal(${JSON.stringify(player)});setShotType("goal")'>🥅 Goal</button>
+      <button class="action-btn btn-save" onclick="openGkModalById(${player.id})">🧤 Save/Stop</button>
+      <button class="action-btn btn-goal" onclick="openGkModalById(${player.id}); setShotType('goal')">🥅 Goal</button>
     `;
   } else if (!ps.redCard) {
     btnsHtml = `
-      <button class="action-btn btn-goal"    onclick='recordGoal(${JSON.stringify(player)})'>⚽ Goal</button>
-      <button class="action-btn btn-shot"    onclick='recordShot(${JSON.stringify(player)})'>🎯 Shot</button>
-      <button class="action-btn btn-assist"  onclick='recordAssist(${JSON.stringify(player)})'>🤝 Assist</button>
-      <button class="action-btn btn-yellow"  onclick='recordYellow(${JSON.stringify(player)})'>🟡 Yellow</button>
-      <button class="action-btn btn-suspend" onclick='recordSuspension(${JSON.stringify(player)})'>⏱ 2-Min</button>
-      <button class="action-btn btn-red"     onclick='recordRed(${JSON.stringify(player)})'>🟥 Red</button>
+      <button class="action-btn btn-goal"    onclick="recordGoalById(${player.id})">⚽ Goal</button>
+      <button class="action-btn btn-shot"    onclick="recordShotById(${player.id})">🎯 Shot</button>
+      <button class="action-btn btn-assist"  onclick="recordAssistById(${player.id})">🤝 Assist</button>
+      <button class="action-btn btn-yellow"  onclick="recordYellowById(${player.id})">🟡 Yellow</button>
+      <button class="action-btn btn-suspend" onclick="recordSuspensionById(${player.id})">⏱ 2-Min</button>
+      <button class="action-btn btn-red"     onclick="recordRedById(${player.id})">🟥 Red</button>
     `;
   } else {
     btnsHtml = `<span style="font-size:11px;color:var(--red)">Red Card — Excluded</span>`;
@@ -1482,6 +1748,8 @@ function exportToExcel() {
 renderPlayers();
 updateStats();
 updateTimerDisplay();
+
+} // end initMatch
 </script>
 </body>
 </html>
