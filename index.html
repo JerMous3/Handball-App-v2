@@ -861,8 +861,117 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
   }
+
+  /* Import button on setup page */
+  .setup-import-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .setup-import-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    padding: 8px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .setup-import-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .setup-import-hint { font-size: 11px; color: var(--muted); }
+
+  /* Import modal */
+  .import-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .import-modal-overlay.open { opacity: 1; pointer-events: all; }
+  .import-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 520px;
+    max-width: 95vw;
+    box-shadow: 0 0 60px rgba(0,0,0,0.6);
+  }
+  .import-textarea {
+    width: 100%;
+    min-height: 180px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    color: var(--text);
+    resize: vertical;
+    outline: none;
+    margin: 12px 0;
+    line-height: 1.6;
+  }
+  .import-textarea:focus { border-color: var(--accent2); }
+  .import-format-hint {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 2px;
+    line-height: 1.8;
+  }
+  .import-format-hint code {
+    color: var(--accent2);
+    background: rgba(0,212,255,0.08);
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 11px;
+  }
+
+  /* Shooter number in GK modal */
+  .shooter-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .shooter-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .shooter-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    width: 72px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .shooter-input:focus { border-color: var(--red); }
+  .shooter-hint { font-size: 11px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -872,6 +981,11 @@
   <div class="setup-card">
     <div class="setup-logo">⬡ HandballTrack</div>
     <div class="setup-subtitle">Fill in your squad before the match — all fields are optional except at least one player per section.</div>
+
+    <div class="setup-import-bar">
+      <button class="setup-import-btn" onclick="openImportModal()">⬆ Import Player List</button>
+      <span class="setup-import-hint">Paste a list to auto-fill the squad</span>
+    </div>
 
     <div class="setup-team-row">
       <div>
@@ -923,6 +1037,24 @@
     <button class="setup-launch-btn" onclick="launchMatch()">▶ Start Match</button>
   </div>
 </div>
+<!-- IMPORT MODAL -->
+<div class="import-modal-overlay" id="importModalOverlay">
+  <div class="import-modal">
+    <div class="modal-title">Import Player List</div>
+    <div class="modal-sub">Paste your squad — one player per line.</div>
+    <div class="import-format-hint">
+      Use <code>GK:</code> / <code>Field:</code> / <code>Sub:</code> as section headers.<br>
+      Each line: <code>69 Patrick Wijnands Goalkeeper</code> &nbsp;(number · name · position)<br>
+      Number and position are optional — name alone also works.
+    </div>
+    <textarea class="import-textarea" id="importTextarea" placeholder="GK:&#10;69 Patrick Wijnands Goalkeeper&#10;&#10;Field:&#10;7 Randy Schild Linkeropbouw&#10;12 Reinoud Bestebreurtje Cirkel&#10;&#10;Sub:&#10;6 Maurice vd Veer Cirkel"></textarea>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeImportModal()">Cancel</button>
+      <button class="modal-btn confirm" onclick="applyImport()">Import Squad</button>
+    </div>
+  </div>
+</div>
+
 <div class="topbar" id="appTopbar" style="display:none">
   <div class="topbar-brand" id="topbarBrand">⬡ HandballTrack</div>
   <div class="topbar-controls">
@@ -1084,6 +1216,12 @@
       </div>
     </div>
 
+    <div class="shooter-row">
+      <span class="shooter-label">👕 Opponent shooter #</span>
+      <input class="shooter-input" id="shooterNumber" type="number" min="1" max="99" placeholder="—" />
+      <span class="shooter-hint">Jersey number (optional)</span>
+    </div>
+
     <div class="modal-btns">
       <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
       <button class="modal-btn confirm" id="confirmBtn" onclick="confirmShot()">Confirm Save</button>
@@ -1180,6 +1318,55 @@ function launchMatch() {
   addSetupRow('field');
   addSetupRow('sub');
 })();
+
+// ─── IMPORT MODAL ────────────────────────────────────────
+function openImportModal() {
+  document.getElementById('importTextarea').value = '';
+  document.getElementById('importModalOverlay').classList.add('open');
+}
+
+function closeImportModal() {
+  document.getElementById('importModalOverlay').classList.remove('open');
+}
+
+function applyImport() {
+  const raw = document.getElementById('importTextarea').value;
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Clear all existing rows
+  document.getElementById('setupGkRows').innerHTML = '';
+  document.getElementById('setupFieldRows').innerHTML = '';
+  document.getElementById('setupSubRows').innerHTML = '';
+
+  let currentSection = 'field';
+
+  lines.forEach(line => {
+    const lower = line.toLowerCase().replace(/:$/, '');
+    if (['gk','goalkeeper','goalkeepers'].includes(lower)) { currentSection = 'gk'; return; }
+    if (['field','players','veld'].includes(lower))        { currentSection = 'field'; return; }
+    if (['sub','subs','bench','wissel','wissels'].includes(lower)) { currentSection = 'sub'; return; }
+
+    // Parse: optional leading number, name words, optional trailing position word
+    const parts = line.split(/\s+/);
+    let num = '', name = '', pos = '';
+    if (/^\d+$/.test(parts[0])) {
+      num = parts[0];
+      const rest = parts.slice(1);
+      if (rest.length >= 2) { pos = rest[rest.length - 1]; name = rest.slice(0, -1).join(' '); }
+      else { name = rest.join(' '); }
+    } else {
+      if (parts.length >= 2) { pos = parts[parts.length - 1]; name = parts.slice(0, -1).join(' '); }
+      else { name = parts[0]; }
+    }
+    if (name) addSetupRow(currentSection, num, name, pos);
+  });
+
+  closeImportModal();
+}
+
+document.getElementById('importModalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeImportModal();
+});
 
 // ─── MATCH INIT (called after setup) ────────────────────
 function initMatch(rosterData) {
@@ -1464,6 +1651,7 @@ function openGkModal(player) {
   selectedZone = null;
   currentShotType = 'save';
   document.getElementById('gkModalName').textContent = player.name;
+  document.getElementById('shooterNumber').value = '';
   setShotType('save');
   document.querySelectorAll('.goal-cell').forEach(c => c.classList.remove('selected'));
   document.getElementById('modalOverlay').classList.add('open');
@@ -1494,17 +1682,19 @@ function selectZone(zone) {
 function confirmShot() {
   if (!currentGkPlayer) return;
   const zoneNames = ['Top Left','Top Center','Top Right','Bot Left','Bot Center','Bot Right'];
-  const zoneName = selectedZone !== null ? zoneNames[selectedZone] : 'Unknown';
+  const zoneName = selectedZone !== null ? zoneNames[selectedZone] : 'Unknown zone';
+  const shooterNum = document.getElementById('shooterNumber').value.trim();
+  const detail = shooterNum ? `${zoneName} · Shooter: #${shooterNum}` : zoneName;
 
   if (currentShotType === 'save') {
     stats.saves++;
     playerStats[currentGkPlayer.id].saves++;
     if (selectedZone !== null) stats.zones[selectedZone]++;
-    addEvent('save', currentGkPlayer, zoneName);
+    addEvent('save', currentGkPlayer, detail);
   } else {
     stats.goalsAgainst++;
     if (selectedZone !== null) stats.zones[selectedZone]++;
-    addEvent('goal_against', currentGkPlayer, zoneName);
+    addEvent('goal_against', currentGkPlayer, detail);
   }
 
   updateStats();
