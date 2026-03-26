@@ -831,9 +831,209 @@
   .player-row.sub-bench:hover { border-color: var(--muted); opacity: 1; }
 
   /* Responsive */
-  @media (max-width: 900px) {
-    .main { grid-template-columns: 1fr; height: auto; }
-    .sidebar, .right-panel { display: none; }
+  /* ═══════════════════════════════════════════
+     MOBILE LAYOUT  (max-width: 768px)
+     Bottom tab navigation, large touch targets,
+     full-screen panels. Desktop untouched.
+  ═══════════════════════════════════════════ */
+  @media (max-width: 768px) {
+
+    /* ── Topbar ── */
+    .topbar {
+      padding: 8px 12px;
+      flex-wrap: nowrap;
+      gap: 8px;
+      height: 56px;
+    }
+    .topbar-brand { font-size: 16px; letter-spacing: 2px; }
+    .topbar-controls { gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
+    .half-badge { display: none; }
+    .timer-block { padding: 4px 10px; }
+    .timer-display { font-size: 22px; }
+    .timer-label { display: none; }
+    .scoreboard { padding: 4px 10px; }
+    .scoreboard-score { font-size: 24px; }
+    .scoreboard-label { display: none; }
+    .scoreboard-teams { display: none; }
+    .timer-btn-group { gap: 4px; }
+    .btn-sm { padding: 5px 9px; font-size: 11px; }
+    /* Hide less-critical topbar buttons — accessible via tab bar */
+    .btn-sm.history, .btn-sm.export { display: none; }
+    .user-badge { display: none; }
+
+    /* ── Main grid → single column, fill viewport ── */
+    .main {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr;
+      height: calc(100dvh - 56px - 60px); /* topbar + tab bar */
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── All panels hidden by default, shown by tab ── */
+    .sidebar, .players-area, .right-panel {
+      display: none;
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      padding: 12px;
+      background: var(--bg);
+    }
+    .sidebar.mobile-active,
+    .players-area.mobile-active,
+    .right-panel.mobile-active { display: block; }
+
+    /* ── Bottom tab bar ── */
+    .mobile-tab-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 60px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 200;
+    }
+    .mobile-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: color 0.15s;
+      padding: 6px 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mobile-tab .tab-icon { font-size: 20px; line-height: 1; }
+    .mobile-tab.active { color: var(--accent); }
+    .mobile-tab.active .tab-icon { filter: drop-shadow(0 0 4px rgba(232,255,0,0.5)); }
+
+    /* ── Player rows — bigger touch targets ── */
+    .player-row {
+      padding: 10px 10px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .player-num { font-size: 20px; min-width: 26px; }
+    .player-name { font-size: 13px; }
+    .player-meta { font-size: 10px; }
+
+    /* Action buttons — larger, wrap to 2 rows */
+    .action-btns {
+      width: 100%;
+      max-width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      margin-top: 6px;
+    }
+    .action-btn {
+      padding: 9px 4px;
+      font-size: 11px;
+      text-align: center;
+      border-radius: 7px;
+    }
+    /* GK buttons — 2 columns */
+    .player-row.gk .action-btns {
+      grid-template-columns: 1fr 1fr;
+    }
+    /* Sub bench label */
+    .player-row.sub-bench .action-btns {
+      grid-template-columns: 1fr;
+    }
+
+    /* Section headers */
+    .section-header-row { margin-bottom: 8px; }
+    .section-header { font-size: 13px; }
+    .drop-zone { margin-bottom: 12px; }
+    .drop-zone-empty { height: 44px; font-size: 11px; }
+
+    /* ── Stats sidebar — horizontal scroll cards on mobile ── */
+    .sidebar {
+      padding-bottom: 16px;
+    }
+    .stat-card {
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    .stat-value { font-size: 24px; }
+    .heatmap-grid { aspect-ratio: 3/1.6; }
+    .heatmap-cell { font-size: 14px; }
+
+    /* ── Right panel ── */
+    .right-panel { gap: 10px; }
+    .suspension-item { padding: 8px 10px; }
+    .suspension-timer { font-size: 20px; }
+    .event-log { max-height: none; }
+
+    /* ── GK modal — full screen on mobile ── */
+    .modal-overlay {
+      align-items: flex-end;
+      padding: 0;
+    }
+    .modal {
+      width: 100%;
+      max-width: 100%;
+      border-radius: 16px 16px 0 0;
+      padding: 20px 16px 32px;
+      max-height: 90dvh;
+      overflow-y: auto;
+    }
+    .goal-svg-container { margin: 0 -4px; }
+    .shooter-row { margin-top: 10px; }
+    .modal-btns { margin-top: 14px; }
+    .modal-btn { padding: 12px 20px; font-size: 14px; }
+
+    /* ── Setup screen on mobile ── */
+    .setup-card { padding-bottom: 80px; }
+    .setup-team-row { grid-template-columns: 1fr; }
+    .setup-row { grid-template-columns: 52px 1fr 1fr auto; gap: 5px; }
+    .setup-input { padding: 8px 8px; font-size: 13px; }
+    .setup-launch-btn { font-size: 18px; padding: 14px; }
+
+    /* ── Auth screen on mobile ── */
+    .auth-card { padding: 28px 20px; }
+
+    /* ── Import modal ── */
+    .import-modal { border-radius: 16px 16px 0 0; }
+
+    /* ── History modal ── */
+    .history-modal {
+      width: 100%;
+      max-width: 100%;
+      border-radius: 16px 16px 0 0;
+      max-height: 90dvh;
+    }
+    .history-modal-overlay { align-items: flex-end; }
+
+    /* Extra actions bar — shown in Players tab for History/Export */
+    .mobile-actions-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .mobile-actions-bar .btn-sm {
+      flex: 1;
+      text-align: center;
+      padding: 10px;
+      font-size: 12px;
+    }
+    .mobile-actions-bar .btn-sm.history { display: flex !important; justify-content: center; }
+    .mobile-actions-bar .btn-sm.export  { display: flex !important; justify-content: center; }
+  }
+
+  /* Show tab bar only on mobile */
+  .mobile-tab-bar { display: none; }
+  @media (max-width: 768px) {
+    .mobile-tab-bar { display: flex; }
   }
 
   /* ── TEAM SETUP SCREEN ── */
@@ -1421,7 +1621,13 @@
   </div>
 
   <!-- CENTER: PLAYERS -->
-  <div class="players-area">
+  <div class="players-area mobile-active">
+    <!-- Mobile-only quick action bar -->
+    <div class="mobile-actions-bar">
+      <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
+      <button class="btn-sm export" onclick="exportToExcel()">⬇ Export</button>
+      <button class="btn-sm signout" onclick="signOut()" style="display:none" id="mobileSignout">Sign Out</button>
+    </div>
     <div class="section-header-row">
       <div class="section-header" style="margin:0">Goalkeeper</div>
       <div class="section-count" id="gkCount">1 on field</div>
@@ -1455,7 +1661,21 @@
   </div>
 </div>
 
-<!-- MODAL: GK SHOT PLACEMENT -->
+<!-- MOBILE BOTTOM TAB BAR -->
+<div class="mobile-tab-bar" id="mobileTabBar">
+  <button class="mobile-tab active" id="tabPlayers" onclick="switchMobileTab('players')">
+    <span class="tab-icon">👕</span>Players
+  </button>
+  <button class="mobile-tab" id="tabStats" onclick="switchMobileTab('stats')">
+    <span class="tab-icon">📊</span>Stats
+  </button>
+  <button class="mobile-tab" id="tabEvents" onclick="switchMobileTab('events')">
+    <span class="tab-icon">📋</span>Events
+  </button>
+  <button class="mobile-tab" id="tabMore" onclick="switchMobileTab('more')">
+    <span class="tab-icon">⚙️</span>More
+  </button>
+</div>
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-title">Shot Placement</div>
@@ -2561,16 +2781,59 @@ function exportToExcel() {
   
 window.exportToExcel = exportToExcel;
 window.signOut = signOut;
+window.switchMobileTab = switchMobileTab;
 window.saveRosterToCloud = saveRosterToCloud;
 window.loadSavedRoster = loadSavedRoster;
 window.switchAuthTab = switchAuthTab;
 window.handleAuth = handleAuth;
 window.deleteCloudEntry = deleteCloudEntry;
 
+// ─── MOBILE TAB NAVIGATION ───────────────────────────────
+function switchMobileTab(tab) {
+  // Only applies on mobile
+  if (window.innerWidth > 768) return;
+
+  // Update tab button states
+  ['players','stats','events','more'].forEach(t => {
+    const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+
+  // Show/hide panels
+  const playersArea = document.querySelector('.players-area');
+  const sidebar     = document.querySelector('.sidebar');
+  const rightPanel  = document.querySelector('.right-panel');
+
+  playersArea.classList.remove('mobile-active');
+  sidebar.classList.remove('mobile-active');
+  rightPanel.classList.remove('mobile-active');
+
+  if (tab === 'players') {
+    playersArea.classList.add('mobile-active');
+    document.getElementById('mobileSignout').style.display = 'none';
+  } else if (tab === 'stats') {
+    sidebar.classList.add('mobile-active');
+  } else if (tab === 'events') {
+    rightPanel.classList.add('mobile-active');
+  } else if (tab === 'more') {
+    // Show a minimal "more" panel — reuse players area with sign out visible
+    playersArea.classList.add('mobile-active');
+    document.getElementById('mobileSignout').style.display = 'flex';
+  }
+}
+
+// On mobile, initialise with players tab active
+function initMobileLayout() {
+  if (window.innerWidth <= 768) {
+    switchMobileTab('players');
+  }
+}
+
 // ─── INIT ────────────────────────────────────────────────
 renderPlayers();
 updateStats();
 updateTimerDisplay();
+initMobileLayout();
 
 } // end initMatch
 
