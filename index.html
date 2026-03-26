@@ -1789,8 +1789,16 @@ async function handleAuth() {
     if (teamName && data.user) {
       await _supabase.from('profiles').update({ team_name: teamName }).eq('id', data.user.id);
     }
-    showAuthSuccess('Account created! Check your email to confirm, then sign in.');
-    btn.disabled = false; btn.textContent = 'Create Account';
+    // If session exists immediately, email confirmation is off — log straight in
+    if (data.session) {
+      onSignedIn(data.user);
+    } else {
+      // Confirmation email sent — switch to login tab and show message
+      switchAuthTab('login');
+      document.getElementById('authEmail').value = email;
+      showAuthSuccess('✓ Account created! Check your email to confirm, then sign in here.');
+      btn.disabled = false; btn.textContent = 'Create Account';
+    }
   }
 }
 
