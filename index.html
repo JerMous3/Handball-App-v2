@@ -1778,7 +1778,12 @@ async function handleAuth() {
     if (error) { showAuthError(error.message); btn.disabled = false; btn.textContent = 'Sign In'; return; }
     onSignedIn(data.user);
   } else {
-    const { data, error } = await _supabase.auth.signUp({ email, password });
+    const { data, error } = await _supabase.auth.signUp({
+      email, password,
+      options: {
+        emailRedirectTo: 'https://jermous3.github.io/Handball-App-v2/'
+      }
+    });
     if (error) { showAuthError(error.message); btn.disabled = false; btn.textContent = 'Create Account'; return; }
     // Save team name to profile
     if (teamName && data.user) {
@@ -1960,9 +1965,43 @@ async function deleteCloudEntry(id) {
   renderHistoryList();
 }
 
-// ─── SESSION RESTORE ─────────────────────────────────────
-// Check if already logged in when page loads
+// ─── SESSION RESTORE + EMAIL CONFIRMATION HANDLER ────────
+// Supabase puts tokens in the URL hash after email confirmation.
+// We detect and exchange them here before checking for a session.
 (async function checkSession() {
+  // Parse hash fragment — Supabase uses both #access_token (implicit)
+  // and ?code= (PKCE) flows depending on version
+  const hash   = window.location.hash;
+  const search = window.location.search;
+
+  // Handle implicit flow: #access_token=...&type=signup (or recovery)
+  if (hash && hash.includes('access_token')) {
+    try {
+      const { data, error } = await _supabase.auth.getSession();
+      // Clean the URL so tokens don't stay in the address bar
+      window.history.replaceState(null, '', window.location.pathname);
+      if (data?.session?.user) {
+        onSignedIn(data.session.user);
+        return;
+      }
+    } catch(e) {}
+  }
+
+  // Handle PKCE flow: ?code=...
+  if (search && search.includes('code=')) {
+    try {
+      const { data, error } = await _supabase.auth.exchangeCodeForSession(
+        new URLSearchParams(search).get('code')
+      );
+      window.history.replaceState(null, '', window.location.pathname);
+      if (data?.session?.user) {
+        onSignedIn(data.session.user);
+        return;
+      }
+    } catch(e) {}
+  }
+
+  // Normal session check (already logged in)
   const { data: { session } } = await _supabase.auth.getSession();
   if (session?.user) {
     onSignedIn(session.user);
