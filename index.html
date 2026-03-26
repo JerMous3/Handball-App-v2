@@ -1618,7 +1618,12 @@ function collectCurrentRoster() {
 async function saveRosterToCloud() {
   if (!currentUser) return;
   const roster = collectCurrentRoster();
-  const allPlayers = [...roster.gk, ...roster.players, ...roster.subs];
+  // Tag each player with their section so loading is always exact
+  const allPlayers = [
+    ...roster.gk.map(p      => ({ ...p, _zone: 'gk' })),
+    ...roster.players.map(p => ({ ...p, _zone: 'field' })),
+    ...roster.subs.map(p    => ({ ...p, _zone: 'sub' })),
+  ];
   const teamName = document.getElementById('setupTeamName').value.trim() || 'My Team';
   const rosterInfo = document.getElementById('rosterBarInfo');
   rosterInfo.innerHTML = '💾 Saving...';
@@ -1648,25 +1653,23 @@ async function loadSavedRoster() {
   const { data, error } = await _supabase.from('rosters').select('*').eq('user_id', currentUser.id).maybeSingle();
   if (error || !data) { alert('Could not load roster.'); return; }
 
-  // Clear and repopulate
   document.getElementById('setupGkRows').innerHTML = '';
   document.getElementById('setupFieldRows').innerHTML = '';
   document.getElementById('setupSubRows').innerHTML = '';
 
   const players = data.players || [];
-  // Determine section by position keyword or index
   players.forEach(p => {
-    const posLower = (p.pos || '').toLowerCase();
-    if (posLower.includes('goal') || posLower === 'gk') {
-      addSetupRow('gk', p.num, p.name, p.pos);
-    } else if (p.zone === 'sub' || posLower.includes('sub') || posLower.includes('bench')) {
-      addSetupRow('sub', p.num, p.name, p.pos);
-    } else {
-      addSetupRow('field', p.num, p.name, p.pos);
+    // Use saved _zone tag first, fall back to position keyword for old saves
+    let zone = p._zone;
+    if (!zone) {
+      const posLower = (p.pos || '').toLowerCase();
+      if (posLower.includes('goal') || posLower === 'gk') zone = 'gk';
+      else if (posLower.includes('sub') || posLower.includes('bench') || posLower.includes('wissel')) zone = 'sub';
+      else zone = 'field';
     }
+    addSetupRow(zone, p.num, p.name, p.pos);
   });
 
-  // Pre-fill team name
   if (data.name && data.name !== 'My Team') {
     document.getElementById('setupTeamName').value = data.name;
   }
