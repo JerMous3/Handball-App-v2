@@ -661,6 +661,91 @@
 
   .btn-sm.export { border-color: var(--green); color: var(--green); }
   .btn-sm.export:hover { background: var(--green); color: #000; }
+  .btn-sm.undo { border-color: var(--accent2); color: var(--accent2); }
+  .btn-sm.undo:hover { background: var(--accent2); color: #000; }
+  .btn-sm.undo:disabled { opacity: 0.3; cursor: not-allowed; border-color: var(--border); color: var(--muted); }
+  .btn-sm.history { border-color: var(--muted); color: var(--muted); }
+  .btn-sm.history:hover { border-color: var(--text); color: var(--text); }
+
+  /* History modal */
+  .history-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .history-modal-overlay.open { opacity: 1; pointer-events: all; }
+  .history-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 580px;
+    max-width: 96vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 60px rgba(0,0,0,0.6);
+  }
+  .history-list {
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .history-list::-webkit-scrollbar { width: 3px; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .history-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .history-card:hover { border-color: var(--accent); }
+  .history-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .history-card-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 16px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+  .history-card-date { font-size: 11px; color: var(--muted); }
+  .history-card-score {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 28px;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .history-card-stats { font-size: 11px; color: var(--muted); }
+  .history-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 32px; }
+  .history-card-del {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--muted);
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .history-card-del:hover { border-color: var(--red); color: var(--red); }
 
   /* DRAG AND DROP */
   .player-row[draggable="true"] { cursor: grab; }
@@ -1047,7 +1132,7 @@
       Each line: <code>69 Patrick Wijnands Goalkeeper</code> &nbsp;(number · name · position)<br>
       Number and position are optional — name alone also works.
     </div>
-    <textarea class="import-textarea" id="importTextarea" placeholder="GK:&#10;69 Patrick Wijnands Goalkeeper&#10;&#10;Field:&#10;7 Randy Schild Linkeropbouw&#10;12 Reinoud Bestebreurtje Cirkel&#10;&#10;Sub:&#10;6 Maurice vd Veer Cirkel"></textarea>
+    <textarea class="import-textarea" id="importTextarea" placeholder="GK:&#10;1 Name Goalkeeper&#10;&#10;Field:&#10;2 Name Position&#10;3 Name Position&#10;4 Name Position&#10;&#10;Sub:&#10;5 Name Position&#10;6 Name Position"></textarea>
     <div class="modal-btns">
       <button class="modal-btn cancel" onclick="closeImportModal()">Cancel</button>
       <button class="modal-btn confirm" onclick="applyImport()">Import Squad</button>
@@ -1077,9 +1162,23 @@
     </div>
     <div class="timer-btn-group">
       <button class="btn-sm" id="startStopBtn" onclick="toggleTimer()">▶ Start</button>
-      <button class="btn-sm" onclick="switchHalf()">Half</button>
+      <button class="btn-sm" onclick="switchHalf()">½ Half</button>
       <button class="btn-sm danger" onclick="resetTimer()">Reset</button>
+      <button class="btn-sm undo" id="undoBtn" onclick="undoLastAction()" disabled>↩ Undo</button>
+      <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
       <button class="btn-sm export" onclick="exportToExcel()">⬇ Export</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY MODAL -->
+<div class="history-modal-overlay" id="historyModalOverlay">
+  <div class="history-modal">
+    <div class="modal-title">Match History</div>
+    <div class="modal-sub">Saved locally in this browser — up to 20 matches.</div>
+    <div class="history-list" id="historyList"></div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="modal-btn cancel" onclick="closeHistoryModal()">Close</button>
     </div>
   </div>
 </div>
@@ -1415,11 +1514,33 @@ window.setShotType = setShotType;
 window.selectZone = selectZone;
 window.confirmShot = confirmShot;
 window.closeModal = closeModal;
+window.undoLastAction = undoLastAction;
+window.openHistoryModal = openHistoryModal;
+window.closeHistoryModal = closeHistoryModal;
+window.deleteHistoryEntry = deleteHistoryEntry;
 
 [...rosterData.gk, ...rosterData.players, ...rosterData.subs].forEach(p => allPlayersById[p.id] = p);
 
 const activeSuspensions = [];
 const eventLog = [];
+const undoStack = []; // each entry: { applyUndo: fn }
+
+function pushUndo(fn) {
+  undoStack.push({ applyUndo: fn });
+  if (undoStack.length > 30) undoStack.shift();
+  document.getElementById('undoBtn').disabled = false;
+}
+
+function undoLastAction() {
+  if (!undoStack.length) return;
+  const entry = undoStack.pop();
+  entry.applyUndo();
+  if (!undoStack.length) document.getElementById('undoBtn').disabled = true;
+  updateStats();
+  updateScoreboard();
+  renderPlayers();
+  renderEventLog();
+}
 
 // ─── TIMER ───────────────────────────────────────────────
 let matchSeconds = 0;
@@ -1465,9 +1586,28 @@ function resetTimer() {
 }
 
 function switchHalf() {
+  const wasFirst = currentHalf === 1;
   currentHalf = currentHalf === 1 ? 2 : 1;
   document.getElementById('halfBadge').textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+  // Offer timer reset when switching to 2nd half
+  if (wasFirst) {
+    clearInterval(timerInterval);
+    timerRunning = false;
+    document.getElementById('startStopBtn').textContent = '▶ Start';
+    document.getElementById('startStopBtn').classList.remove('active');
+    matchSeconds = 0;
+    // Clear any expired suspensions
+    activeSuspensions.length = 0;
+    renderSuspensions();
+    addEventNoPlayer('halftime', '— Halftime — Timer reset');
+  }
   updateTimerDisplay();
+}
+
+function addEventNoPlayer(type, label) {
+  const ev = { type, name: label, time: getCurrentTime(), extra: '' };
+  eventLog.unshift(ev);
+  renderEventLog();
 }
 
 function getCurrentTime() {
@@ -1543,17 +1683,15 @@ function updateStats() {
 // ─── EVENT LOG ───────────────────────────────────────────
 const eventIcons = {
   goal:'⚽', shot:'🎯', assist:'🤝', yellow:'🟡',
-  suspension:'⏱️', red:'🟥', save:'🧤', goal_against:'🥅', substitution:'🔄'
+  suspension:'⏱️', red:'🟥', save:'🧤', goal_against:'🥅', substitution:'🔄', halftime:'🔔'
 };
 const eventColors = {
   goal:'var(--accent)', shot:'var(--green)', assist:'var(--accent2)',
   yellow:'var(--yellow)', suspension:'#ff9800', red:'var(--red)',
-  save:'var(--gk-accent)', goal_against:'var(--red)', substitution:'var(--muted)'
+  save:'var(--gk-accent)', goal_against:'var(--red)', substitution:'var(--muted)', halftime:'var(--muted)'
 };
 
-function addEvent(type, player, extra) {
-  const ev = { type, name: player.name, time: getCurrentTime(), extra };
-  eventLog.unshift(ev);
+function renderEventLog() {
   const el = document.getElementById('eventLog');
   const html = eventLog.slice(0,40).map(e => `
     <div class="event-item" style="border-left-color:${eventColors[e.type]||'var(--border)'}">
@@ -1565,6 +1703,12 @@ function addEvent(type, player, extra) {
       </div>
     </div>`).join('');
   el.innerHTML = html || '<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px">No events yet</div>';
+}
+
+function addEvent(type, player, extra) {
+  const ev = { type, name: player.name, time: getCurrentTime(), extra };
+  eventLog.unshift(ev);
+  renderEventLog();
 }
 
 // ─── PLAYER ACTIONS ──────────────────────────────────────
@@ -1584,24 +1728,34 @@ function recordGoal(player) {
   playerStats[player.id].goals++;
   playerStats[player.id].shots++;
   addEvent('goal', player);
-  updateStats();
-  updateScoreboard();
-  bumpScore('sbHome');
-  renderPlayers();
-  flashRow(player.id, 'var(--accent)');
+  pushUndo(() => {
+    stats.goals--; stats.shots--;
+    playerStats[player.id].goals--;
+    playerStats[player.id].shots--;
+    eventLog.shift();
+  });
+  updateStats(); updateScoreboard(); bumpScore('sbHome'); renderPlayers(); flashRow(player.id, 'var(--accent)');
 }
 
 function recordShot(player) {
   stats.shots++;
   playerStats[player.id].shots++;
   addEvent('shot', player);
-  updateStats();
-  renderPlayers();
+  pushUndo(() => {
+    stats.shots--;
+    playerStats[player.id].shots--;
+    eventLog.shift();
+  });
+  updateStats(); renderPlayers();
 }
 
 function recordAssist(player) {
   playerStats[player.id].assists++;
   addEvent('assist', player);
+  pushUndo(() => {
+    playerStats[player.id].assists--;
+    eventLog.shift();
+  });
   renderPlayers();
 }
 
@@ -1609,9 +1763,12 @@ function recordYellow(player) {
   stats.yellows++;
   playerStats[player.id].yellows++;
   addEvent('yellow', player);
-  updateStats();
-  renderPlayers();
-  flashRow(player.id, 'var(--yellow)');
+  pushUndo(() => {
+    stats.yellows--;
+    playerStats[player.id].yellows--;
+    eventLog.shift();
+  });
+  updateStats(); renderPlayers(); flashRow(player.id, 'var(--yellow)');
 }
 
 function recordSuspension(player) {
@@ -1619,19 +1776,31 @@ function recordSuspension(player) {
   playerStats[player.id].suspensions++;
   addEvent('suspension', player);
   addSuspension(player);
+  pushUndo(() => {
+    stats.suspensions--;
+    playerStats[player.id].suspensions--;
+    eventLog.shift();
+    const idx = activeSuspensions.findIndex(s => s.playerId === player.id);
+    if (idx !== -1) activeSuspensions.splice(idx, 1);
+    renderSuspensions();
+    const row = document.querySelector(`[data-player-id="${player.id}"]`);
+    if (row) row.classList.remove('suspended');
+  });
   const row = document.querySelector(`[data-player-id="${player.id}"]`);
   if (row) row.classList.add('suspended');
-  updateStats();
-  renderPlayers();
+  updateStats(); renderPlayers();
 }
 
 function recordRed(player) {
   playerStats[player.id].redCard = true;
   addEvent('red', player);
+  pushUndo(() => {
+    playerStats[player.id].redCard = false;
+    eventLog.shift();
+  });
   const row = document.querySelector(`[data-player-id="${player.id}"]`);
   if (row) row.classList.add('red-carded');
-  renderPlayers();
-  flashRow(player.id, 'var(--red)');
+  renderPlayers(); flashRow(player.id, 'var(--red)');
 }
 
 function flashRow(playerId, color) {
@@ -1685,24 +1854,37 @@ function confirmShot() {
   const zoneName = selectedZone !== null ? zoneNames[selectedZone] : 'Unknown zone';
   const shooterNum = document.getElementById('shooterNumber').value.trim();
   const detail = shooterNum ? `${zoneName} · Shooter: #${shooterNum}` : zoneName;
+  const zoneIdx = selectedZone;
+  const gkPlayer = currentGkPlayer;
+  const shotType = currentShotType;
 
-  if (currentShotType === 'save') {
+  if (shotType === 'save') {
     stats.saves++;
-    playerStats[currentGkPlayer.id].saves++;
-    if (selectedZone !== null) stats.zones[selectedZone]++;
-    addEvent('save', currentGkPlayer, detail);
+    playerStats[gkPlayer.id].saves++;
+    if (zoneIdx !== null) stats.zones[zoneIdx]++;
+    addEvent('save', gkPlayer, detail);
+    pushUndo(() => {
+      stats.saves--;
+      playerStats[gkPlayer.id].saves--;
+      if (zoneIdx !== null) stats.zones[zoneIdx]--;
+      eventLog.shift();
+    });
   } else {
     stats.goalsAgainst++;
-    if (selectedZone !== null) stats.zones[selectedZone]++;
-    addEvent('goal_against', currentGkPlayer, detail);
+    if (zoneIdx !== null) stats.zones[zoneIdx]++;
+    addEvent('goal_against', gkPlayer, detail);
+    pushUndo(() => {
+      stats.goalsAgainst--;
+      if (zoneIdx !== null) stats.zones[zoneIdx]--;
+      eventLog.shift();
+    });
   }
 
-  updateStats();
-  updateScoreboard();
-  if (currentShotType === 'goal') bumpScore('sbAway');
+  updateStats(); updateScoreboard();
+  if (shotType === 'goal') bumpScore('sbAway');
   renderPlayers();
   closeModal();
-  flashRow(currentGkPlayer.id, currentShotType==='save' ? 'var(--gk-accent)' : 'var(--red)');
+  flashRow(gkPlayer.id, shotType === 'save' ? 'var(--gk-accent)' : 'var(--red)');
 }
 
 document.getElementById('modalOverlay').addEventListener('click', function(e) {
@@ -1862,6 +2044,24 @@ function exportToExcel() {
   const matchTime = document.getElementById('matchTimer').textContent;
   const dateStr = new Date().toLocaleDateString('en-GB');
 
+  // ── Save to history ──
+  const teamName = document.getElementById('topbarBrand').textContent.replace('⬡ ','').split(' vs ')[0].trim();
+  const opponent = document.getElementById('topbarBrand').textContent.includes(' vs ') 
+    ? document.getElementById('topbarBrand').textContent.split(' vs ')[1].trim() : 'Away';
+  const shotPct  = stats.shots > 0 ? Math.round(stats.goals / stats.shots * 100) : 0;
+  const totalFaced = stats.saves + stats.goalsAgainst;
+  const savePct  = totalFaced > 0 ? Math.round(stats.saves / totalFaced * 100) : 0;
+  saveMatchToHistory({
+    id: Date.now().toString(),
+    date: dateStr,
+    teamName, opponent,
+    goalsFor: stats.goals,
+    goalsAgainst: stats.goalsAgainst,
+    shots: stats.shots, shotPct,
+    saves: stats.saves, savePct,
+    yellows: stats.yellows,
+  });
+
   // ── Sheet 1: Match Summary ──
   const summaryData = [
     ['HANDBALL MATCH REPORT'],
@@ -1942,6 +2142,72 @@ updateStats();
 updateTimerDisplay();
 
 } // end initMatch
+
+// ─── MATCH HISTORY (localStorage) ───────────────────────
+const HISTORY_KEY = 'handballtrack_history';
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+  catch(e) { return []; }
+}
+
+function saveHistory(entries) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(entries)); } catch(e) {}
+}
+
+function saveMatchToHistory(matchData) {
+  const entries = loadHistory();
+  entries.unshift(matchData);
+  if (entries.length > 20) entries.pop();
+  saveHistory(entries);
+}
+
+function openHistoryModal() {
+  renderHistoryList();
+  document.getElementById('historyModalOverlay').classList.add('open');
+}
+
+function closeHistoryModal() {
+  document.getElementById('historyModalOverlay').classList.remove('open');
+}
+
+function deleteHistoryEntry(id) {
+  const entries = loadHistory().filter(e => e.id !== id);
+  saveHistory(entries);
+  renderHistoryList();
+}
+
+function renderHistoryList() {
+  const entries = loadHistory();
+  const el = document.getElementById('historyList');
+  if (!entries.length) {
+    el.innerHTML = '<div class="history-empty">No matches saved yet.<br>Use ⬇ Export to save a match to history.</div>';
+    return;
+  }
+  el.innerHTML = entries.map(e => `
+    <div class="history-card">
+      <div class="history-card-header">
+        <div class="history-card-title">${e.teamName || 'Home'} vs ${e.opponent || 'Away'}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="history-card-date">${e.date}</div>
+          <button class="history-card-del" onclick="deleteHistoryEntry('${e.id}')">✕</button>
+        </div>
+      </div>
+      <div class="history-card-score">${e.goalsFor} – ${e.goalsAgainst}</div>
+      <div class="history-card-stats">
+        🎯 ${e.shots} shots &nbsp;·&nbsp; 
+        📊 ${e.shotPct}% efficiency &nbsp;·&nbsp; 
+        🧤 ${e.saves} saves &nbsp;·&nbsp;
+        ${e.savePct}% save rate &nbsp;·&nbsp;
+        🟡 ${e.yellows} yellow cards
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('historyModalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeHistoryModal();
+});
 </script>
 </body>
 </html>
