@@ -6,6 +6,12 @@
 <title>Handball Tracker (Empty)</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://qgqryeanopdxrwrfczcx.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_I67bdwmAkdodIk5bAQf1Zw_86KroW5R';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+</script>
 <style>
   :root {
     --bg: #0a0c10;
@@ -1057,15 +1063,188 @@
   }
   .shooter-input:focus { border-color: var(--red); }
   .shooter-hint { font-size: 11px; color: var(--muted); }
+  /* ── AUTH SCREEN ── */
+  .auth-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 4000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .auth-screen.hidden { display: none; }
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 0 60px rgba(0,0,0,0.5);
+  }
+  .auth-logo {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 26px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .auth-tagline { font-size: 12px; color: var(--muted); margin-bottom: 28px; }
+  .auth-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .auth-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+  }
+  .auth-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .auth-field { margin-bottom: 14px; }
+  .auth-field label { display: block; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+  .auth-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .auth-input:focus { border-color: var(--accent); }
+  .auth-submit {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 18px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 6px;
+  }
+  .auth-submit:hover { background: #fff700; }
+  .auth-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .auth-error {
+    font-size: 12px;
+    color: var(--red);
+    background: rgba(255,59,59,0.08);
+    border: 1px solid rgba(255,59,59,0.2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .auth-error.show { display: block; }
+  .auth-success {
+    font-size: 12px;
+    color: var(--green);
+    background: rgba(0,232,122,0.08);
+    border: 1px solid rgba(0,232,122,0.2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .auth-success.show { display: block; }
+
+  /* User badge in topbar */
+  .user-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .user-badge span { color: var(--text); font-weight: 500; }
+  .btn-sm.signout { border-color: var(--muted); color: var(--muted); font-size: 11px; padding: 4px 10px; }
+  .btn-sm.signout:hover { border-color: var(--red); color: var(--red); }
+
+  /* Cloud status indicator */
+  .cloud-status {
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .cloud-status.saving { color: var(--yellow); }
+  .cloud-status.saved  { color: var(--green); }
+  .cloud-status.error  { color: var(--red); }
+
+  /* Roster load button on setup screen */
+  .setup-roster-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .setup-roster-info { font-size: 12px; color: var(--muted); flex: 1; }
+  .setup-roster-info strong { color: var(--text); }
 </style>
-</head>
 <body>
 
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">⬡ HandballTrack</div>
+    <div class="auth-tagline">Sign in to save your roster and match history</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Create Account</button>
+    </div>
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-success" id="authSuccess"></div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input class="auth-input" id="authEmail" type="email" placeholder="coach@example.com" />
+    </div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input class="auth-input" id="authPassword" type="password" placeholder="••••••••" />
+    </div>
+    <div class="auth-field" id="teamNameField" style="display:none">
+      <label>Team Name</label>
+      <input class="auth-input" id="authTeamName" placeholder="e.g. HV Helius" />
+    </div>
+    <button class="auth-submit" id="authSubmit" onclick="handleAuth()">Sign In</button>
+  </div>
+</div>
+
 <!-- TEAM SETUP SCREEN -->
-<div class="setup-screen" id="setupScreen">
+<div class="setup-screen hidden" id="setupScreen">
   <div class="setup-card">
     <div class="setup-logo">⬡ HandballTrack</div>
     <div class="setup-subtitle">Fill in your squad before the match — all fields are optional except at least one player per section.</div>
+
+    <div class="setup-roster-bar" id="rosterBar" style="display:none">
+      <div class="setup-roster-info" id="rosterBarInfo">Loading saved roster...</div>
+      <button class="setup-import-btn" onclick="loadSavedRoster()">↓ Load Saved Roster</button>
+      <button class="setup-import-btn" onclick="saveRosterToCloud()" style="border-color:var(--green);color:var(--green)">↑ Save Roster</button>
+    </div>
 
     <div class="setup-import-bar">
       <button class="setup-import-btn" onclick="openImportModal()">⬆ Import Player List</button>
@@ -1129,7 +1308,7 @@
     <div class="modal-sub">Paste your squad — one player per line.</div>
     <div class="import-format-hint">
       Use <code>GK:</code> / <code>Field:</code> / <code>Sub:</code> as section headers.<br>
-      Each line: <code># Name Position</code> &nbsp;(number · name · position)<br>
+      Each line: <code>69 Patrick Wijnands Goalkeeper</code> &nbsp;(number · name · position)<br>
       Number and position are optional — name alone also works.
     </div>
     <textarea class="import-textarea" id="importTextarea" placeholder="GK:&#10;1 Name Goalkeeper&#10;&#10;Field:&#10;2 Name Position&#10;3 Name Position&#10;4 Name Position&#10;&#10;Sub:&#10;5 Name Position&#10;6 Name Position"></textarea>
@@ -1168,6 +1347,11 @@
       <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
       <button class="btn-sm export" onclick="exportToExcel()">⬇ Export</button>
     </div>
+    <div class="user-badge">
+      <div class="cloud-status" id="cloudStatus"></div>
+      <span id="userEmail"></span>
+      <button class="btn-sm signout" onclick="signOut()">Sign Out</button>
+    </div>
   </div>
 </div>
 
@@ -1175,7 +1359,7 @@
 <div class="history-modal-overlay" id="historyModalOverlay">
   <div class="history-modal">
     <div class="modal-title">Match History</div>
-    <div class="modal-sub">Saved locally in this browser — up to 20 matches.</div>
+    <div class="modal-sub" id="historyModalSub">Saved to your account — up to 20 matches.</div>
     <div class="history-list" id="historyList"></div>
     <div class="modal-btns" style="margin-top:14px">
       <button class="modal-btn cancel" onclick="closeHistoryModal()">Close</button>
@@ -1329,6 +1513,239 @@
 </div>
 
 <script>
+// ─── AUTH & SUPABASE ─────────────────────────────────────
+let currentUser = null;
+let currentAuthTab = 'login';
+
+function switchAuthTab(tab) {
+  currentAuthTab = tab;
+  document.getElementById('tabLogin').className  = 'auth-tab' + (tab==='login'  ? ' active' : '');
+  document.getElementById('tabSignup').className = 'auth-tab' + (tab==='signup' ? ' active' : '');
+  document.getElementById('authSubmit').textContent = tab === 'login' ? 'Sign In' : 'Create Account';
+  document.getElementById('teamNameField').style.display = tab === 'signup' ? 'block' : 'none';
+  clearAuthMessages();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('authSuccess').classList.remove('show');
+}
+function showAuthSuccess(msg) {
+  const el = document.getElementById('authSuccess');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('authError').classList.remove('show');
+}
+function clearAuthMessages() {
+  document.getElementById('authError').classList.remove('show');
+  document.getElementById('authSuccess').classList.remove('show');
+}
+
+async function handleAuth() {
+  const email    = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const teamName = document.getElementById('authTeamName').value.trim();
+  const btn      = document.getElementById('authSubmit');
+
+  if (!email || !password) { showAuthError('Please enter your email and password.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Please wait...';
+  clearAuthMessages();
+
+  if (currentAuthTab === 'login') {
+    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+    if (error) { showAuthError(error.message); btn.disabled = false; btn.textContent = 'Sign In'; return; }
+    onSignedIn(data.user);
+  } else {
+    const { data, error } = await _supabase.auth.signUp({ email, password });
+    if (error) { showAuthError(error.message); btn.disabled = false; btn.textContent = 'Create Account'; return; }
+    // Save team name to profile
+    if (teamName && data.user) {
+      await _supabase.from('profiles').update({ team_name: teamName }).eq('id', data.user.id);
+    }
+    showAuthSuccess('Account created! Check your email to confirm, then sign in.');
+    btn.disabled = false; btn.textContent = 'Create Account';
+  }
+}
+
+// Allow Enter key to submit auth form
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !document.getElementById('authScreen').classList.contains('hidden')) {
+    handleAuth();
+  }
+});
+
+async function onSignedIn(user) {
+  currentUser = user;
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('setupScreen').classList.remove('hidden');
+  document.getElementById('userEmail').textContent = user.email;
+
+  // Check for saved roster
+  const { data } = await _supabase.from('rosters').select('*').eq('user_id', user.id).maybeSingle();
+  const rosterBar = document.getElementById('rosterBar');
+  const rosterInfo = document.getElementById('rosterBarInfo');
+  rosterBar.style.display = 'flex';
+  if (data) {
+    const players = data.players || [];
+    const updated = new Date(data.updated_at).toLocaleDateString('en-GB');
+    rosterInfo.innerHTML = `<strong>${data.name}</strong> — ${players.length} players saved &nbsp;·&nbsp; Last updated ${updated}`;
+  } else {
+    rosterInfo.innerHTML = 'No saved roster yet — fill in your squad and click <strong>↑ Save Roster</strong>';
+    document.getElementById('rosterBar').querySelector('button:first-child').style.display = 'none';
+  }
+}
+
+async function signOut() {
+  await _supabase.auth.signOut();
+  currentUser = null;
+  document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('appTopbar').style.display = 'none';
+  document.getElementById('appMain').style.display = 'none';
+}
+
+// ─── ROSTER CLOUD SAVE / LOAD ────────────────────────────
+function collectCurrentRoster() {
+  return {
+    gk:      readSetupRows('setupGkRows'),
+    players: readSetupRows('setupFieldRows'),
+    subs:    readSetupRows('setupSubRows'),
+  };
+}
+
+async function saveRosterToCloud() {
+  if (!currentUser) return;
+  const roster = collectCurrentRoster();
+  const allPlayers = [...roster.gk, ...roster.players, ...roster.subs];
+  const teamName = document.getElementById('setupTeamName').value.trim() || 'My Team';
+  const rosterInfo = document.getElementById('rosterBarInfo');
+  rosterInfo.innerHTML = '💾 Saving...';
+
+  const { data: existing } = await _supabase.from('rosters').select('id').eq('user_id', currentUser.id).maybeSingle();
+  let error;
+  if (existing) {
+    ({ error } = await _supabase.from('rosters').update({
+      name: teamName, players: allPlayers, updated_at: new Date().toISOString()
+    }).eq('user_id', currentUser.id));
+  } else {
+    ({ error } = await _supabase.from('rosters').insert({
+      user_id: currentUser.id, name: teamName, players: allPlayers
+    }));
+  }
+
+  if (error) {
+    rosterInfo.innerHTML = '❌ Save failed — ' + error.message;
+  } else {
+    rosterInfo.innerHTML = `<strong>${teamName}</strong> — ${allPlayers.length} players saved &nbsp;·&nbsp; Just now`;
+    document.getElementById('rosterBar').querySelector('button:first-child').style.display = '';
+  }
+}
+
+async function loadSavedRoster() {
+  if (!currentUser) return;
+  const { data, error } = await _supabase.from('rosters').select('*').eq('user_id', currentUser.id).maybeSingle();
+  if (error || !data) { alert('Could not load roster.'); return; }
+
+  // Clear and repopulate
+  document.getElementById('setupGkRows').innerHTML = '';
+  document.getElementById('setupFieldRows').innerHTML = '';
+  document.getElementById('setupSubRows').innerHTML = '';
+
+  const players = data.players || [];
+  // Determine section by position keyword or index
+  players.forEach(p => {
+    const posLower = (p.pos || '').toLowerCase();
+    if (posLower.includes('goal') || posLower === 'gk') {
+      addSetupRow('gk', p.num, p.name, p.pos);
+    } else if (p.zone === 'sub' || posLower.includes('sub') || posLower.includes('bench')) {
+      addSetupRow('sub', p.num, p.name, p.pos);
+    } else {
+      addSetupRow('field', p.num, p.name, p.pos);
+    }
+  });
+
+  // Pre-fill team name
+  if (data.name && data.name !== 'My Team') {
+    document.getElementById('setupTeamName').value = data.name;
+  }
+}
+
+// ─── MATCH CLOUD SAVE ────────────────────────────────────
+async function saveMatchToSupabase(matchData) {
+  if (!currentUser) return;
+  setCloudStatus('saving', '☁ Saving...');
+  const { error } = await _supabase.from('matches').insert({
+    user_id:       currentUser.id,
+    team_name:     matchData.teamName,
+    opponent:      matchData.opponent,
+    goals_for:     matchData.goalsFor,
+    goals_against: matchData.goalsAgainst,
+    shots:         matchData.shots,
+    shot_pct:      matchData.shotPct,
+    saves:         matchData.saves,
+    save_pct:      matchData.savePct,
+    yellows:       matchData.yellows,
+    suspensions:   matchData.suspensions || 0,
+    event_log:     matchData.eventLog || [],
+    player_stats:  matchData.playerStats || {},
+  });
+  if (error) {
+    setCloudStatus('error', '❌ Save failed');
+    console.error(error);
+  } else {
+    setCloudStatus('saved', '✓ Saved');
+    setTimeout(() => setCloudStatus('', ''), 3000);
+  }
+}
+
+function setCloudStatus(state, msg) {
+  const el = document.getElementById('cloudStatus');
+  el.textContent = msg;
+  el.className = 'cloud-status' + (state ? ' ' + state : '');
+}
+
+// ─── CLOUD MATCH HISTORY ─────────────────────────────────
+async function loadCloudHistory() {
+  if (!currentUser) return loadHistory(); // fall back to localStorage
+  const { data, error } = await _supabase
+    .from('matches')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('played_at', { ascending: false })
+    .limit(20);
+  if (error || !data) return loadHistory();
+  return data.map(m => ({
+    id: m.id,
+    date: new Date(m.played_at).toLocaleDateString('en-GB'),
+    teamName: m.team_name,
+    opponent: m.opponent,
+    goalsFor: m.goals_for,
+    goalsAgainst: m.goals_against,
+    shots: m.shots,
+    shotPct: m.shot_pct,
+    saves: m.saves,
+    savePct: m.save_pct,
+    yellows: m.yellows,
+  }));
+}
+
+async function deleteCloudEntry(id) {
+  if (!currentUser) { deleteHistoryEntry(id); return; }
+  await _supabase.from('matches').delete().eq('id', id).eq('user_id', currentUser.id);
+  renderHistoryList();
+}
+
+// ─── SESSION RESTORE ─────────────────────────────────────
+// Check if already logged in when page loads
+(async function checkSession() {
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (session?.user) {
+    onSignedIn(session.user);
+  }
+})();
+
 // ─── TEAM SETUP ──────────────────────────────────────────
 let setupIdCounter = 100;
 
@@ -2051,7 +2468,7 @@ function exportToExcel() {
   const shotPct  = stats.shots > 0 ? Math.round(stats.goals / stats.shots * 100) : 0;
   const totalFaced = stats.saves + stats.goalsAgainst;
   const savePct  = totalFaced > 0 ? Math.round(stats.saves / totalFaced * 100) : 0;
-  saveMatchToHistory({
+  const matchData = {
     id: Date.now().toString(),
     date: dateStr,
     teamName, opponent,
@@ -2060,7 +2477,12 @@ function exportToExcel() {
     shots: stats.shots, shotPct,
     saves: stats.saves, savePct,
     yellows: stats.yellows,
-  });
+    suspensions: stats.suspensions,
+    eventLog: eventLog.slice(0, 100),
+    playerStats,
+  };
+  saveMatchToHistory(matchData);       // localStorage fallback
+  saveMatchToSupabase(matchData);      // Supabase cloud save
 
   // ── Sheet 1: Match Summary ──
   const summaryData = [
@@ -2135,6 +2557,12 @@ function exportToExcel() {
 }
   
 window.exportToExcel = exportToExcel;
+window.signOut = signOut;
+window.saveRosterToCloud = saveRosterToCloud;
+window.loadSavedRoster = loadSavedRoster;
+window.switchAuthTab = switchAuthTab;
+window.handleAuth = handleAuth;
+window.deleteCloudEntry = deleteCloudEntry;
 
 // ─── INIT ────────────────────────────────────────────────
 renderPlayers();
@@ -2177,9 +2605,10 @@ function deleteHistoryEntry(id) {
   renderHistoryList();
 }
 
-function renderHistoryList() {
-  const entries = loadHistory();
+async function renderHistoryList() {
   const el = document.getElementById('historyList');
+  el.innerHTML = '<div class="history-empty" style="color:var(--muted)">Loading...</div>';
+  const entries = await loadCloudHistory();
   if (!entries.length) {
     el.innerHTML = '<div class="history-empty">No matches saved yet.<br>Use ⬇ Export to save a match to history.</div>';
     return;
@@ -2190,13 +2619,13 @@ function renderHistoryList() {
         <div class="history-card-title">${e.teamName || 'Home'} vs ${e.opponent || 'Away'}</div>
         <div style="display:flex;align-items:center;gap:8px">
           <div class="history-card-date">${e.date}</div>
-          <button class="history-card-del" onclick="deleteHistoryEntry('${e.id}')">✕</button>
+          <button class="history-card-del" onclick="deleteCloudEntry('${e.id}')">✕</button>
         </div>
       </div>
       <div class="history-card-score">${e.goalsFor} – ${e.goalsAgainst}</div>
       <div class="history-card-stats">
-        🎯 ${e.shots} shots &nbsp;·&nbsp; 
-        📊 ${e.shotPct}% efficiency &nbsp;·&nbsp; 
+        🎯 ${e.shots} shots &nbsp;·&nbsp;
+        📊 ${e.shotPct}% efficiency &nbsp;·&nbsp;
         🧤 ${e.saves} saves &nbsp;·&nbsp;
         ${e.savePct}% save rate &nbsp;·&nbsp;
         🟡 ${e.yellows} yellow cards
