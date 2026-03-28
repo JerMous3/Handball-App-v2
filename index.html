@@ -1028,10 +1028,8 @@
     }
     .mobile-actions-bar .btn-sm.history { display: flex !important; justify-content: center; }
     .mobile-actions-bar .btn-sm.export  { display: flex !important; justify-content: center; }
-  }
 
-  .mobile-tab-bar { display: none; }
-  @media (max-width: 768px) {
+    /* Show tab bar on mobile */
     .mobile-tab-bar { display: flex; }
   }
 
@@ -1039,6 +1037,9 @@
   .mobile-actions-bar {
     display: none;
   }
+
+  /* Hide tab bar on desktop */
+  .mobile-tab-bar { display: none; }
 
   /* ── TEAM SETUP SCREEN ── */
   .setup-screen {
@@ -1414,7 +1415,7 @@
 <!-- AUTH SCREEN -->
 <div class="auth-screen" id="authScreen">
   <div class="auth-card">
-    <div class="auth-logo">⬡ Handball Tracker</div>
+    <div class="auth-logo">⬡ HandballTrack</div>
     <div class="auth-tagline">Sign in to save your roster and match history</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Sign In</button>
@@ -1441,7 +1442,7 @@
 <!-- TEAM SETUP SCREEN -->
 <div class="setup-screen hidden" id="setupScreen">
   <div class="setup-card">
-    <div class="setup-logo">⬡ Handball Tracker</div>
+    <div class="setup-logo">⬡ HandballTrack</div>
     <div class="setup-subtitle">Fill in your squad before the match — all fields are optional except at least one player per section.</div>
 
     <div class="setup-roster-bar" id="rosterBar" style="display:none">
@@ -1512,7 +1513,7 @@
     <div class="modal-sub">Paste your squad — one player per line.</div>
     <div class="import-format-hint">
       Use <code>GK:</code> / <code>Field:</code> / <code>Sub:</code> as section headers.<br>
-      Each line: <code>69 Patrick Wijnands Goalkeeper</code> &nbsp;(number · name · position)<br>
+      Each line: <code># Name Position</code> &nbsp;(number · name · position)<br>
       Number and position are optional — name alone also works.
     </div>
     <textarea class="import-textarea" id="importTextarea" placeholder="GK:&#10;1 Name Goalkeeper&#10;&#10;Field:&#10;2 Name Position&#10;3 Name Position&#10;4 Name Position&#10;&#10;Sub:&#10;5 Name Position&#10;6 Name Position"></textarea>
@@ -1524,7 +1525,7 @@
 </div>
 
 <div class="topbar" id="appTopbar" style="display:none">
-  <div class="topbar-brand" id="topbarBrand">⬡ Handball Tracker</div>
+  <div class="topbar-brand" id="topbarBrand">⬡ HandballTrack</div>
   <div class="topbar-controls">
     <div class="half-badge" id="halfBadge">1st Half</div>
     <div class="timer-block">
