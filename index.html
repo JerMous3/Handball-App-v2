@@ -1014,7 +1014,7 @@
     }
     .history-modal-overlay { align-items: flex-end; }
 
-    /* Extra actions bar — shown in Players tab for History/Export */
+    /* Show mobile-actions-bar on mobile */
     .mobile-actions-bar {
       display: flex;
       gap: 8px;
@@ -1030,10 +1030,14 @@
     .mobile-actions-bar .btn-sm.export  { display: flex !important; justify-content: center; }
   }
 
-  /* Show tab bar only on mobile */
   .mobile-tab-bar { display: none; }
   @media (max-width: 768px) {
     .mobile-tab-bar { display: flex; }
+  }
+
+  /* Hide mobile-actions-bar on desktop (must be outside media query) */
+  .mobile-actions-bar {
+    display: none;
   }
 
   /* ── TEAM SETUP SCREEN ── */
@@ -2234,10 +2238,77 @@ let matchSeconds = 0;
 let timerRunning = false;
 let timerInterval = null;
 let currentHalf = 1;
+let timerStartTime = null; // Store when timer was started
+let timerPausedAt = 0; // Store accumulated seconds when paused
+
+// Load timer state from localStorage on init
+function loadTimerState() {
+  try {
+    const saved = localStorage.getItem('handballtrack_timer');
+    if (saved) {
+      const state = JSON.parse(saved);
+      timerRunning = state.running || false;
+      timerStartTime = state.startTime || null;
+      timerPausedAt = state.pausedAt || 0;
+      currentHalf = state.half || 1;
+      
+      // If timer was running, calculate elapsed time
+      if (timerRunning && timerStartTime) {
+        const now = Date.now();
+        const elapsed = Math.floor((now - timerStartTime) / 1000);
+        matchSeconds = timerPausedAt + elapsed;
+      } else {
+        matchSeconds = timerPausedAt;
+      }
+      
+      updateTimerDisplay();
+      document.getElementById('halfBadge').textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+      
+      // Restart interval if it was running
+      if (timerRunning) {
+        const btn = document.getElementById('startStopBtn');
+        btn.textContent = '⏸ Pause';
+        btn.classList.add('active');
+        startTimerInterval();
+      }
+    }
+  } catch(e) {
+    console.error('Error loading timer state:', e);
+  }
+}
+
+// Save timer state to localStorage
+function saveTimerState() {
+  try {
+    const state = {
+      running: timerRunning,
+      startTime: timerStartTime,
+      pausedAt: timerPausedAt,
+      half: currentHalf
+    };
+    localStorage.setItem('handballtrack_timer', JSON.stringify(state));
+  } catch(e) {
+    console.error('Error saving timer state:', e);
+  }
+}
+
+// Clear timer state from localStorage
+function clearTimerState() {
+  try {
+    localStorage.removeItem('handballtrack_timer');
+  } catch(e) {}
+}
 
 function pad(n) { return String(n).padStart(2,'0'); }
 
 function updateTimerDisplay() {
+  // Calculate current time based on start time if running
+  if (timerRunning && timerStartTime) {
+    const now = Date.now();
+    const elapsed = Math.floor((now - timerStartTime) / 1000);
+    matchSeconds = timerPausedAt + elapsed;
+  }
+  
   const m = Math.floor(matchSeconds/60);
   const s = matchSeconds % 60;
   const el = document.getElementById('matchTimer');
@@ -2245,50 +2316,87 @@ function updateTimerDisplay() {
   el.className = 'timer-display' + (timerRunning ? ' running' : '') + (currentHalf===2 ? ' second-half' : '');
 }
 
+function startTimerInterval() {
+  // Clear any existing interval
+  if (timerInterval) clearInterval(timerInterval);
+  
+  timerInterval = setInterval(() => {
+    updateTimerDisplay();
+    tickSuspensions();
+  }, 1000);
+}
+
 function toggleTimer() {
   timerRunning = !timerRunning;
   const btn = document.getElementById('startStopBtn');
+  
   if (timerRunning) {
+    // Starting timer
     btn.textContent = '⏸ Pause';
     btn.classList.add('active');
-    timerInterval = setInterval(() => {
-      matchSeconds++;
-      updateTimerDisplay();
-      tickSuspensions();
-    }, 1000);
+    timerStartTime = Date.now();
+    startTimerInterval();
   } else {
+    // Pausing timer
     btn.textContent = '▶ Start';
     btn.classList.remove('active');
+    
+    // Calculate final elapsed time and store it
+    if (timerStartTime) {
+      const now = Date.now();
+      const elapsed = Math.floor((now - timerStartTime) / 1000);
+      timerPausedAt += elapsed;
+      matchSeconds = timerPausedAt;
+    }
+    
+    timerStartTime = null;
     clearInterval(timerInterval);
+    timerInterval = null;
   }
+  
+  updateTimerDisplay();
+  saveTimerState();
 }
 
 function resetTimer() {
   clearInterval(timerInterval);
+  timerInterval = null;
   timerRunning = false;
   matchSeconds = 0;
+  timerStartTime = null;
+  timerPausedAt = 0;
+  
   document.getElementById('startStopBtn').textContent = '▶ Start';
   document.getElementById('startStopBtn').classList.remove('active');
   updateTimerDisplay();
+  saveTimerState();
 }
 
 function switchHalf() {
   const wasFirst = currentHalf === 1;
   currentHalf = currentHalf === 1 ? 2 : 1;
   document.getElementById('halfBadge').textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+  
   // Offer timer reset when switching to 2nd half
   if (wasFirst) {
     clearInterval(timerInterval);
+    timerInterval = null;
     timerRunning = false;
+    timerStartTime = null;
+    timerPausedAt = 0;
+    
     document.getElementById('startStopBtn').textContent = '▶ Start';
     document.getElementById('startStopBtn').classList.remove('active');
     matchSeconds = 0;
+    
     // Clear any expired suspensions
     activeSuspensions.length = 0;
     renderSuspensions();
     addEventNoPlayer('halftime', '— Halftime — Timer reset');
   }
+  
   updateTimerDisplay();
+  saveTimerState();
 }
 
 function addEventNoPlayer(type, label) {
@@ -2298,6 +2406,13 @@ function addEventNoPlayer(type, label) {
 }
 
 function getCurrentTime() {
+  // Use current matchSeconds for event timestamps
+  if (timerRunning && timerStartTime) {
+    const now = Date.now();
+    const elapsed = Math.floor((now - timerStartTime) / 1000);
+    const currentSecs = timerPausedAt + elapsed;
+    return `${pad(Math.floor(currentSecs/60))}:${pad(currentSecs%60)}`;
+  }
   return `${pad(Math.floor(matchSeconds/60))}:${pad(matchSeconds%60)}`;
 }
 
@@ -2877,6 +2992,7 @@ function initMobileLayout() {
 }
 
 // ─── INIT ────────────────────────────────────────────────
+loadTimerState(); // Restore timer state if page was reloaded
 renderPlayers();
 updateStats();
 updateTimerDisplay();
