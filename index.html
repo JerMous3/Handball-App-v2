@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Handball Tracker</title>
+<title>Handball-Tracker</title>
 <link rel="icon" type="image/png" href="Logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1416,7 +1416,7 @@
 <!-- AUTH SCREEN -->
 <div class="auth-screen" id="authScreen">
   <div class="auth-card">
-    <div class="auth-logo">⬡ Handball Tracker</div>
+    <div class="auth-logo">⬡ Handball-Tracker</div>
     <div class="auth-tagline">Sign in to save your roster and match history</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Sign In</button>
@@ -1443,7 +1443,7 @@
 <!-- TEAM SETUP SCREEN -->
 <div class="setup-screen hidden" id="setupScreen">
   <div class="setup-card">
-    <div class="setup-logo">⬡ Handball Tracker</div>
+    <div class="setup-logo">⬡ HandballTrack</div>
     <div class="setup-subtitle">Fill in your squad before the match — all fields are optional except at least one player per section.</div>
 
     <div class="setup-roster-bar" id="rosterBar" style="display:none">
@@ -1514,7 +1514,7 @@
     <div class="modal-sub">Paste your squad — one player per line.</div>
     <div class="import-format-hint">
       Use <code>GK:</code> / <code>Field:</code> / <code>Sub:</code> as section headers.<br>
-      Each line: <code>69 Patrick Wijnands Goalkeeper</code> &nbsp;(number · name · position)<br>
+      Each line: <code># Name Position</code> &nbsp;(number · name · position)<br>
       Number and position are optional — name alone also works.
     </div>
     <textarea class="import-textarea" id="importTextarea" placeholder="GK:&#10;1 Name Goalkeeper&#10;&#10;Field:&#10;2 Name Position&#10;3 Name Position&#10;4 Name Position&#10;&#10;Sub:&#10;5 Name Position&#10;6 Name Position"></textarea>
@@ -1526,7 +1526,7 @@
 </div>
 
 <div class="topbar" id="appTopbar" style="display:none">
-  <div class="topbar-brand" id="topbarBrand">⬡ Handball Tracker</div>
+  <div class="topbar-brand" id="topbarBrand">⬡ Handball-Tracker</div>
   <div class="topbar-controls">
     <div class="half-badge" id="halfBadge">1st Half</div>
     <div class="timer-block">
@@ -1784,6 +1784,21 @@ async function handleAuth() {
     if (error) { showAuthError(error.message); btn.disabled = false; btn.textContent = 'Sign In'; return; }
     onSignedIn(data.user);
   } else {
+    // CHECK EMAIL WHITELIST BEFORE SIGNUP
+    const { data: approvedData, error: approvedError } = await _supabase
+      .from('approved_emails')
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .eq('is_active', true)
+      .single();
+    
+    if (approvedError || !approvedData) {
+      showAuthError('Dit emailadres is niet geregistreerd. Ga naar handball-tracker.com om je aan te melden.');
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+      return;
+    }
+    
     const { data, error } = await _supabase.auth.signUp({
       email, password,
       options: {
@@ -1791,9 +1806,10 @@ async function handleAuth() {
       }
     });
     if (error) { showAuthError(error.message); btn.disabled = false; btn.textContent = 'Create Account'; return; }
-    // Save team name to profile
-    if (teamName && data.user) {
-      await _supabase.from('profiles').update({ team_name: teamName }).eq('id', data.user.id);
+    // Save team name to profile (use club_name from whitelist if no team name provided)
+    const finalTeamName = teamName || approvedData.club_name;
+    if (finalTeamName && data.user) {
+      await _supabase.from('profiles').update({ team_name: finalTeamName }).eq('id', data.user.id);
     }
     // If session exists immediately, email confirmation is off — log straight in
     if (data.session) {
@@ -1816,6 +1832,21 @@ document.addEventListener('keydown', function(e) {
 });
 
 async function onSignedIn(user) {
+  // CHECK EMAIL WHITELIST - Verify user still has access
+  const { data: approvedData, error: approvedError } = await _supabase
+    .from('approved_emails')
+    .select('*')
+    .eq('email', user.email.toLowerCase())
+    .eq('is_active', true)
+    .single();
+  
+  if (approvedError || !approvedData) {
+    // User's access has been revoked
+    await _supabase.auth.signOut();
+    showAuthError('Je toegang is verlopen of ingetrokken. Neem contact op met handball-tracker.com');
+    return;
+  }
+  
   currentUser = user;
   document.getElementById('authScreen').classList.add('hidden');
   document.getElementById('setupScreen').classList.remove('hidden');
