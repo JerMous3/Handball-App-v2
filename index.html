@@ -1549,7 +1549,7 @@
     <div style="display: flex; align-items: center; gap: 12px; margin: 12px 0; padding: 12px; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border);">
       <div style="flex: 1;">
         <div style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Attacks</div>
-        <div style="font-size: 24px; font-weight: 600; color: var(--accent);" id="attackCounter">0</div>
+        <div style="font-size: 24px; font-weight: 600; color: var(--accent); transition: all 0.15s ease;" id="attackCounter">0</div>
       </div>
       <button onclick="recordAttack()" style="background: var(--accent); color: var(--bg); border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;">
         +1 Attack
@@ -2564,31 +2564,48 @@ function deleteEvent(idx) {
   if (!confirm('Delete this event? Stats will be adjusted.')) return;
   
   const event = eventLog[idx];
-  const player = roster.find(p => p.name === event.name);
   
-  if (!player) {
+  // Find player in the active roster
+  const allPlayers = [...document.querySelectorAll('.player-row')];
+  const playerRow = allPlayers.find(row => {
+    const nameEl = row.querySelector('.player-name');
+    return nameEl && nameEl.textContent.trim() === event.name;
+  });
+  
+  if (!playerRow) {
     // Event exists but player not found, just remove from log
     eventLog.splice(idx, 1);
     renderEventLog();
     return;
   }
   
+  // Get player ID from row
+  const playerId = playerRow.dataset.playerId;
+  
   // Reverse the stats based on event type
   switch(event.type) {
     case 'goal':
-      player.goals = Math.max(0, player.goals - 1);
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].goals = Math.max(0, playerStats[playerId].goals - 1);
+      }
       stats.goals = Math.max(0, stats.goals - 1);
       stats.shots = Math.max(0, stats.shots - 1);
       break;
     case 'assist':
-      player.assists = Math.max(0, player.assists - 1);
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].assists = Math.max(0, playerStats[playerId].assists - 1);
+      }
       break;
     case 'shot':
-      player.shots = Math.max(0, player.shots - 1);
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].shots = Math.max(0, playerStats[playerId].shots - 1);
+      }
       stats.shots = Math.max(0, stats.shots - 1);
       break;
     case 'gk_save':
-      player.saves = Math.max(0, player.saves - 1);
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].saves = Math.max(0, playerStats[playerId].saves - 1);
+      }
       stats.saves = Math.max(0, stats.saves - 1);
       stats.goalsAgainst = Math.max(0, stats.goalsAgainst - 1);
       break;
@@ -2596,18 +2613,27 @@ function deleteEvent(idx) {
       stats.goalsAgainst = Math.max(0, stats.goalsAgainst - 1);
       break;
     case 'yellow':
-      player.yellows = Math.max(0, player.yellows - 1);
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].yellows = Math.max(0, playerStats[playerId].yellows - 1);
+      }
       stats.yellows = Math.max(0, stats.yellows - 1);
       break;
     case '2min':
-      player.twoMins = Math.max(0, player.twoMins - 1);
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].suspensions = Math.max(0, playerStats[playerId].suspensions - 1);
+      }
       stats.suspensions = Math.max(0, stats.suspensions - 1);
       // Remove from active suspensions if present
-      const susIdx = activeSuspensions.findIndex(s => s.player.id === player.id);
-      if (susIdx >= 0) activeSuspensions.splice(susIdx, 1);
+      const susIdx = activeSuspensions.findIndex(s => s.player && s.player.name === event.name);
+      if (susIdx >= 0) {
+        activeSuspensions.splice(susIdx, 1);
+        renderSuspensions();
+      }
       break;
     case 'red':
-      player.reds = Math.max(0, player.reds - 1);
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].redCard = false;
+      }
       break;
   }
   
@@ -2616,9 +2642,9 @@ function deleteEvent(idx) {
   
   // Update UI
   renderEventLog();
-  renderRoster();
+  renderPlayers();
   updateScoreboard();
-  updateStatsPanel();
+  updateStats();
 }
 
 // ─── PLAYER ACTIONS ──────────────────────────────────────
@@ -2635,15 +2661,22 @@ function updateScoreboard() {
 
 function recordAttack() {
   stats.attacks++;
-  document.getElementById('attackCounter').textContent = stats.attacks;
+  console.log('Attack recorded! Total attacks:', stats.attacks);
+  
+  const counterEl = document.getElementById('attackCounter');
+  if (!counterEl) {
+    console.error('attackCounter element not found!');
+    return;
+  }
+  
+  counterEl.textContent = stats.attacks;
   
   // Add a visual bump effect
-  const el = document.getElementById('attackCounter');
-  el.style.transform = 'scale(1.2)';
-  el.style.color = 'var(--green)';
+  counterEl.style.transform = 'scale(1.2)';
+  counterEl.style.color = 'var(--green)';
   setTimeout(() => {
-    el.style.transform = 'scale(1)';
-    el.style.color = 'var(--accent)';
+    counterEl.style.transform = 'scale(1)';
+    counterEl.style.color = 'var(--accent)';
   }, 150);
 }
 
