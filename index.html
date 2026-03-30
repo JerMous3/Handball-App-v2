@@ -11,6 +11,11 @@
   const SUPABASE_URL = 'https://qgqryeanopdxrwrfczcx.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_I67bdwmAkdodIk5bAQf1Zw_86KroW5R';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  
+  // Declare functions globally so onclick handlers work
+  // These will be properly implemented later in the main script
+  window.recordAttack = function() { console.log('recordAttack not ready yet'); };
+  window.deleteEvent = function() { console.log('deleteEvent not ready yet'); };
 </script>
 <style>
   :root {
@@ -2560,7 +2565,7 @@ function addEvent(type, player, extra) {
   renderEventLog();
 }
 
-function deleteEvent(idx) {
+window.deleteEvent = function deleteEvent(idx) {
   if (!confirm('Delete this event? Stats will be adjusted.')) return;
   
   const event = eventLog[idx];
@@ -2659,7 +2664,7 @@ function updateScoreboard() {
   document.getElementById('sbAway').textContent = stats.goalsAgainst;
 }
 
-function recordAttack() {
+window.recordAttack = function recordAttack() {
   stats.attacks++;
   console.log('Attack recorded! Total attacks:', stats.attacks);
   
