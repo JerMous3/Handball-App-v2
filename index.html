@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Handball-Tracker</title>
-<link rel="icon" type="image/png" href="Logo.png">
+<title>Handball Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1443,7 +1442,7 @@
 <!-- TEAM SETUP SCREEN -->
 <div class="setup-screen hidden" id="setupScreen">
   <div class="setup-card">
-    <div class="setup-logo">⬡ HandballTrack</div>
+    <div class="setup-logo">⬡ Handball-Tracker</div>
     <div class="setup-subtitle">Fill in your squad before the match — all fields are optional except at least one player per section.</div>
 
     <div class="setup-roster-bar" id="rosterBar" style="display:none">
@@ -1514,7 +1513,7 @@
     <div class="modal-sub">Paste your squad — one player per line.</div>
     <div class="import-format-hint">
       Use <code>GK:</code> / <code>Field:</code> / <code>Sub:</code> as section headers.<br>
-      Each line: <code># Name Position</code> &nbsp;(number · name · position)<br>
+      Each line: <code>69 Patrick Wijnands Goalkeeper</code> &nbsp;(number · name · position)<br>
       Number and position are optional — name alone also works.
     </div>
     <textarea class="import-textarea" id="importTextarea" placeholder="GK:&#10;1 Name Goalkeeper&#10;&#10;Field:&#10;2 Name Position&#10;3 Name Position&#10;4 Name Position&#10;&#10;Sub:&#10;5 Name Position&#10;6 Name Position"></textarea>
@@ -1545,6 +1544,18 @@
         <span>Away</span>
       </div>
     </div>
+    
+    <!-- Attack Counter -->
+    <div style="display: flex; align-items: center; gap: 12px; margin: 12px 0; padding: 12px; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border);">
+      <div style="flex: 1;">
+        <div style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Attacks</div>
+        <div style="font-size: 24px; font-weight: 600; color: var(--accent);" id="attackCounter">0</div>
+      </div>
+      <button onclick="recordAttack()" style="background: var(--accent); color: var(--bg); border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;">
+        +1 Attack
+      </button>
+    </div>
+    
     <div class="timer-btn-group">
       <button class="btn-sm" id="startStopBtn" onclick="toggleTimer()">▶ Start</button>
       <button class="btn-sm" onclick="switchHalf()">½ Half</button>
@@ -1961,6 +1972,7 @@ async function saveMatchToSupabase(matchData) {
     save_pct:      matchData.savePct,
     yellows:       matchData.yellows,
     suspensions:   matchData.suspensions || 0,
+    attacks:       matchData.attacks || 0,
     event_log:     matchData.eventLog || [],
     player_stats:  matchData.playerStats || {},
   });
@@ -2199,6 +2211,7 @@ const stats = {
   yellows: 0, suspensions: 0, redCards: 0,
   saves: 0, goalsAgainst: 0,
   zones: [0,0,0,0,0,0],
+  attacks: 0, // New: track number of attacks
 };
 
 const playerStats = {};
@@ -2528,22 +2541,84 @@ const eventColors = {
 
 function renderEventLog() {
   const el = document.getElementById('eventLog');
-  const html = eventLog.slice(0,40).map(e => `
-    <div class="event-item" style="border-left-color:${eventColors[e.type]||'var(--border)'}">
+  const html = eventLog.slice(0,40).map((e, idx) => `
+    <div class="event-item" style="border-left-color:${eventColors[e.type]||'var(--border)'}; position: relative;">
       <div class="event-time">${e.time}</div>
       <div class="event-icon">${eventIcons[e.type]||'•'}</div>
       <div style="flex:1;min-width:0">
         <div class="event-name">${e.name}</div>
         <div class="event-type">${e.type.replace('_',' ')}${e.extra?' · '+e.extra:''}</div>
       </div>
+      <button onclick="deleteEvent(${idx})" style="background:var(--red);color:white;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;margin-left:8px;" title="Delete event">×</button>
     </div>`).join('');
   el.innerHTML = html || '<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px">No events yet</div>';
 }
 
 function addEvent(type, player, extra) {
-  const ev = { type, name: player.name, time: getCurrentTime(), extra };
+  const ev = { type, name: player.name, time: getCurrentTime(), extra, playerId: player.id };
   eventLog.unshift(ev);
   renderEventLog();
+}
+
+function deleteEvent(idx) {
+  if (!confirm('Delete this event? Stats will be adjusted.')) return;
+  
+  const event = eventLog[idx];
+  const player = roster.find(p => p.name === event.name);
+  
+  if (!player) {
+    // Event exists but player not found, just remove from log
+    eventLog.splice(idx, 1);
+    renderEventLog();
+    return;
+  }
+  
+  // Reverse the stats based on event type
+  switch(event.type) {
+    case 'goal':
+      player.goals = Math.max(0, player.goals - 1);
+      stats.goals = Math.max(0, stats.goals - 1);
+      stats.shots = Math.max(0, stats.shots - 1);
+      break;
+    case 'assist':
+      player.assists = Math.max(0, player.assists - 1);
+      break;
+    case 'shot':
+      player.shots = Math.max(0, player.shots - 1);
+      stats.shots = Math.max(0, stats.shots - 1);
+      break;
+    case 'gk_save':
+      player.saves = Math.max(0, player.saves - 1);
+      stats.saves = Math.max(0, stats.saves - 1);
+      stats.goalsAgainst = Math.max(0, stats.goalsAgainst - 1);
+      break;
+    case 'gk_goal':
+      stats.goalsAgainst = Math.max(0, stats.goalsAgainst - 1);
+      break;
+    case 'yellow':
+      player.yellows = Math.max(0, player.yellows - 1);
+      stats.yellows = Math.max(0, stats.yellows - 1);
+      break;
+    case '2min':
+      player.twoMins = Math.max(0, player.twoMins - 1);
+      stats.suspensions = Math.max(0, stats.suspensions - 1);
+      // Remove from active suspensions if present
+      const susIdx = activeSuspensions.findIndex(s => s.player.id === player.id);
+      if (susIdx >= 0) activeSuspensions.splice(susIdx, 1);
+      break;
+    case 'red':
+      player.reds = Math.max(0, player.reds - 1);
+      break;
+  }
+  
+  // Remove event from log
+  eventLog.splice(idx, 1);
+  
+  // Update UI
+  renderEventLog();
+  renderRoster();
+  updateScoreboard();
+  updateStatsPanel();
 }
 
 // ─── PLAYER ACTIONS ──────────────────────────────────────
@@ -2556,6 +2631,20 @@ function bumpScore(elId) {
 function updateScoreboard() {
   document.getElementById('sbHome').textContent = stats.goals;
   document.getElementById('sbAway').textContent = stats.goalsAgainst;
+}
+
+function recordAttack() {
+  stats.attacks++;
+  document.getElementById('attackCounter').textContent = stats.attacks;
+  
+  // Add a visual bump effect
+  const el = document.getElementById('attackCounter');
+  el.style.transform = 'scale(1.2)';
+  el.style.color = 'var(--green)';
+  setTimeout(() => {
+    el.style.transform = 'scale(1)';
+    el.style.color = 'var(--accent)';
+  }, 150);
 }
 
 function recordGoal(player) {
@@ -2896,6 +2985,7 @@ function exportToExcel() {
     saves: stats.saves, savePct,
     yellows: stats.yellows,
     suspensions: stats.suspensions,
+    attacks: stats.attacks,
     eventLog: eventLog.slice(0, 100),
     playerStats,
   };
@@ -2919,6 +3009,8 @@ function exportToExcel() {
     ['Goals Conceded', stats.goalsAgainst],
     ['Total Shots', stats.shots],
     ['Shot Efficiency (%)', stats.shots > 0 ? Math.round(stats.goals / stats.shots * 100) : 0],
+    ['Total Attacks', stats.attacks],
+    ['Attack Efficiency (%)', stats.attacks > 0 ? Math.round(stats.goals / stats.attacks * 100) : 0],
     ['GK Saves', stats.saves],
     ['GK Save Rate (%)', (stats.saves + stats.goalsAgainst) > 0 ? Math.round(stats.saves / (stats.saves + stats.goalsAgainst) * 100) : 0],
     ['Yellow Cards', stats.yellows],
