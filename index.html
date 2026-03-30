@@ -314,6 +314,14 @@
   .event-log::-webkit-scrollbar-track { background: transparent; }
   .event-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
+  .attack-counter-container {
+    margin-top: 12px;
+    padding: 10px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
   .event-item {
     display: flex;
     align-items: center;
@@ -1550,17 +1558,6 @@
       </div>
     </div>
     
-    <!-- Attack Counter -->
-    <div style="display: flex; align-items: center; gap: 12px; margin: 12px 0; padding: 12px; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border);">
-      <div style="flex: 1;">
-        <div style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Attacks</div>
-        <div style="font-size: 24px; font-weight: 600; color: var(--accent); transition: all 0.15s ease;" id="attackCounter">0</div>
-      </div>
-      <button onclick="recordAttack()" style="background: var(--accent); color: var(--bg); border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 14px;">
-        +1 Attack
-      </button>
-    </div>
-    
     <div class="timer-btn-group">
       <button class="btn-sm" id="startStopBtn" onclick="toggleTimer()">▶ Start</button>
       <button class="btn-sm" onclick="switchHalf()">½ Half</button>
@@ -1679,6 +1676,19 @@
     <div class="sidebar-title" style="margin-top:8px">Event Log</div>
     <div class="event-log" id="eventLog">
       <div style="font-size:12px;color:var(--muted);text-align:center;padding:10px">No events yet</div>
+    </div>
+    
+    <!-- Attack Counter -->
+    <div class="attack-counter-container">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+        <div>
+          <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">Attacks</div>
+          <div style="font-size: 20px; font-weight: 600; color: var(--accent); transition: all 0.15s ease; line-height: 1;" id="attackCounter">0</div>
+        </div>
+        <button onclick="recordAttack()" style="background: var(--accent); color: var(--bg); border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; white-space: nowrap;">
+          +1 Attack
+        </button>
+      </div>
     </div>
   </div>
 </div>
