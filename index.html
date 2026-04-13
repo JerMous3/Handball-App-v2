@@ -12,6 +12,47 @@
   const SUPABASE_KEY = 'sb_publishable_I67bdwmAkdodIk5bAQf1Zw_86KroW5R';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   
+  // Error logging to Supabase
+  async function logError(errorType, error, context = {}) {
+    try {
+      const errorData = {
+        user_id: null, // Will be set properly later when currentUser is available
+        error_type: errorType,
+        error_message: error.message || String(error),
+        error_stack: error.stack || null,
+        context: context,
+        user_agent: navigator.userAgent,
+        url: window.location.href,
+      };
+      
+      // Try to get current user if available
+      const { data: { user } } = await _supabase.auth.getUser();
+      if (user) errorData.user_id = user.id;
+      
+      await _supabase.from('error_logs').insert(errorData);
+      console.log('Error logged to Supabase:', errorType);
+    } catch (logError) {
+      // If logging fails, just log to console
+      console.error('Failed to log error to Supabase:', logError);
+    }
+  }
+  
+  // Global error handler
+  window.addEventListener('error', (event) => {
+    logError('uncaught_error', event.error, {
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno
+    });
+  });
+  
+  // Promise rejection handler
+  window.addEventListener('unhandledrejection', (event) => {
+    logError('unhandled_promise_rejection', event.reason, {
+      promise: 'Promise rejection'
+    });
+  });
+  
   // Declare functions globally so onclick handlers work
   // These will be properly implemented later in the main script
   window.recordAttack = function() { console.log('recordAttack not ready yet'); };
@@ -1993,7 +2034,20 @@ async function saveMatchToSupabase(matchData) {
   });
   if (error) {
     setCloudStatus('error', '❌ Save failed');
-    console.error(error);
+    console.error('Match save error:', error);
+    
+    // Log error to Supabase
+    logError('match_save_failed', error, {
+      matchData: {
+        teamName: matchData.teamName,
+        opponent: matchData.opponent,
+        goalsFor: matchData.goalsFor,
+        goalsAgainst: matchData.goalsAgainst,
+        attacks: matchData.attacks,
+      },
+      userId: currentUser?.id,
+      timestamp: new Date().toISOString()
+    });
   } else {
     setCloudStatus('saved', '✓ Saved');
     setTimeout(() => setCloudStatus('', ''), 3000);
@@ -2843,16 +2897,19 @@ function confirmShot() {
     });
   } else {
     stats.goalsAgainst++;
+    stats.attacks++; // Auto-increment attacks when opponent scores
     if (zoneIdx !== null) stats.zones[zoneIdx]++;
     addEvent('goal_against', gkPlayer, detail);
     pushUndo(() => {
       stats.goalsAgainst--;
+      stats.attacks = Math.max(0, stats.attacks - 1); // Decrement attacks on undo
       if (zoneIdx !== null) stats.zones[zoneIdx]--;
       eventLog.shift();
     });
   }
 
   updateStats(); updateScoreboard();
+  document.getElementById('attackCounter').textContent = stats.attacks; // Update attack counter display
   if (shotType === 'goal') bumpScore('sbAway');
   renderPlayers();
   closeModal();
