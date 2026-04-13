@@ -1602,7 +1602,7 @@
     <div class="timer-btn-group">
       <button class="btn-sm" id="startStopBtn" onclick="toggleTimer()">▶ Start</button>
       <button class="btn-sm" onclick="switchHalf()">½ Half</button>
-      <button class="btn-sm danger" onclick="resetTimer()">Reset</button>
+      <button class="btn-sm danger" onclick="resetTimer()">🔄 Reset Match</button>
       <button class="btn-sm undo" id="undoBtn" onclick="undoLastAction()" disabled>↩ Undo</button>
       <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
       <button class="btn-sm export" onclick="exportToExcel()">⬇ Export</button>
@@ -2474,6 +2474,22 @@ function toggleTimer() {
 }
 
 function resetTimer() {
+  // Confirmation dialog to prevent accidental resets
+  const confirmed = confirm(
+    '⚠️ Reset entire match?\n\n' +
+    'This will reset:\n' +
+    '• Timer\n' +
+    '• Score (both teams)\n' +
+    '• All player stats\n' +
+    '• Event log\n' +
+    '• Attacks counter\n' +
+    '• Active suspensions\n\n' +
+    'This cannot be undone!'
+  );
+  
+  if (!confirmed) return;
+  
+  // Reset timer
   clearInterval(timerInterval);
   timerInterval = null;
   timerRunning = false;
@@ -2481,10 +2497,58 @@ function resetTimer() {
   timerStartTime = null;
   timerPausedAt = 0;
   
+  // Reset half
+  currentHalf = 1;
+  document.getElementById('halfBadge').textContent = '1st Half';
+  
+  // Reset scores and stats
+  stats.goals = 0;
+  stats.goalsAgainst = 0;
+  stats.shots = 0;
+  stats.assists = 0;
+  stats.yellows = 0;
+  stats.suspensions = 0;
+  stats.redCards = 0;
+  stats.saves = 0;
+  stats.zones = [0, 0, 0, 0, 0, 0];
+  stats.attacks = 0;
+  
+  // Reset player stats
+  Object.keys(playerStats).forEach(playerId => {
+    playerStats[playerId] = {
+      goals: 0,
+      shots: 0,
+      assists: 0,
+      yellows: 0,
+      suspensions: 0,
+      redCard: false,
+      saves: 0
+    };
+  });
+  
+  // Clear event log
+  eventLog.length = 0;
+  
+  // Clear active suspensions
+  activeSuspensions.length = 0;
+  
+  // Clear undo stack
+  undoStack.length = 0;
+  document.getElementById('undoBtn').disabled = true;
+  
+  // Update all UI
   document.getElementById('startStopBtn').textContent = '▶ Start';
   document.getElementById('startStopBtn').classList.remove('active');
+  document.getElementById('attackCounter').textContent = '0';
   updateTimerDisplay();
+  updateScoreboard();
+  updateStats();
+  renderEventLog();
+  renderPlayers();
+  renderSuspensions();
   saveTimerState();
+  
+  console.log('Match reset complete');
 }
 
 function switchHalf() {
