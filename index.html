@@ -1755,6 +1755,132 @@
   </div>
 </div>
 
+<!-- MOBILE MORE SECTION (only visible on mobile in More tab) -->
+<div id="mobileMoreSection" style="
+  padding: 20px;
+  background: var(--bg);
+  display: none;
+">
+  <style>
+    @media (max-width: 768px) {
+      #mobileMoreSection.mobile-active {
+        display: block !important;
+      }
+    }
+  </style>
+  
+  <!-- Team Names -->
+  <div style="
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    text-align: center;
+  ">
+    <div class="mobile-team-names">
+      <div class="team-vs">
+        <span id="mobileHomeTeam2">Home Team</span>
+        <span style="color: var(--muted); margin: 0 8px;">VS</span>
+        <span id="mobileAwayTeam2">Away Team</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Action Buttons -->
+  <div style="
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  ">
+    <div style="
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    ">
+      Match Actions
+    </div>
+    
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <button class="btn-sm" onclick="resetTimer()" style="
+        width: 100%;
+        justify-content: center;
+        background: rgba(255, 59, 59, 0.1);
+        border: 1px solid var(--red);
+        color: var(--red);
+      ">
+        🔄 Reset Match
+      </button>
+      
+      <button class="btn-sm" id="mobileUndoBtn" onclick="undoLastAction()" disabled style="
+        width: 100%;
+        justify-content: center;
+      ">
+        ↩ Undo Last Action
+      </button>
+      
+      <button class="btn-sm" id="mobileLiveBtn" onclick="typeof startLiveMatch === 'function' ? startLiveMatch() : alert('Live broadcasting not available')" style="
+        width: 100%;
+        justify-content: center;
+        background: rgba(255, 59, 59, 0.15);
+        border: 1px solid var(--red);
+        color: var(--red);
+        font-weight: 700;
+      ">
+        🔴 Go Live
+      </button>
+    </div>
+  </div>
+  
+  <!-- Other Actions -->
+  <div style="
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  ">
+    <div style="
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    ">
+      Other Actions
+    </div>
+    
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <button class="btn-sm history" onclick="openHistoryModal()" style="
+        width: 100%;
+        justify-content: center;
+      ">
+        📋 Match History
+      </button>
+      
+      <button class="btn-sm export" onclick="exportToExcel()" style="
+        width: 100%;
+        justify-content: center;
+      ">
+        ⬇ Export to Excel
+      </button>
+      
+      <button class="btn-sm signout" onclick="signOut()" style="
+        width: 100%;
+        justify-content: center;
+      ">
+        🚪 Sign Out
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- MOBILE BOTTOM TAB BAR -->
 <div class="mobile-tab-bar" id="mobileTabBar">
   <button class="mobile-tab active" id="tabPlayers" onclick="switchMobileTab('players')">
@@ -2231,8 +2357,12 @@ function launchMatch() {
   // Update mobile team names
   const mobileHomeEl = document.getElementById('mobileHomeTeam');
   const mobileAwayEl = document.getElementById('mobileAwayTeam');
+  const mobileHomeEl2 = document.getElementById('mobileHomeTeam2');
+  const mobileAwayEl2 = document.getElementById('mobileAwayTeam2');
   if (mobileHomeEl) mobileHomeEl.textContent = teamName || 'Home Team';
   if (mobileAwayEl) mobileAwayEl.textContent = opponent || 'Away Team';
+  if (mobileHomeEl2) mobileHomeEl2.textContent = teamName || 'Home Team';
+  if (mobileAwayEl2) mobileAwayEl2.textContent = opponent || 'Away Team';
   
   // Update scoreboard labels (now has 3 spans: team1, dash, team2)
   const labels = document.querySelectorAll('.scoreboard-teams span');
@@ -2366,14 +2496,22 @@ const undoStack = []; // each entry: { applyUndo: fn }
 function pushUndo(fn) {
   undoStack.push({ applyUndo: fn });
   if (undoStack.length > 30) undoStack.shift();
-  document.getElementById('undoBtn').disabled = false;
+  const undoBtn = document.getElementById('undoBtn');
+  const mobileUndoBtn = document.getElementById('mobileUndoBtn');
+  if (undoBtn) undoBtn.disabled = false;
+  if (mobileUndoBtn) mobileUndoBtn.disabled = false;
 }
 
 function undoLastAction() {
   if (!undoStack.length) return;
   const entry = undoStack.pop();
   entry.applyUndo();
-  if (!undoStack.length) document.getElementById('undoBtn').disabled = true;
+  if (!undoStack.length) {
+    const undoBtn = document.getElementById('undoBtn');
+    const mobileUndoBtn = document.getElementById('mobileUndoBtn');
+    if (undoBtn) undoBtn.disabled = true;
+    if (mobileUndoBtn) mobileUndoBtn.disabled = true;
+  }
   updateStats();
   updateScoreboard();
   renderPlayers();
@@ -3374,10 +3512,12 @@ function switchMobileTab(tab) {
   const playersArea = document.querySelector('.players-area');
   const sidebar     = document.querySelector('.sidebar');
   const rightPanel  = document.querySelector('.right-panel');
+  const moreSection = document.getElementById('mobileMoreSection');
 
   playersArea.classList.remove('mobile-active');
   sidebar.classList.remove('mobile-active');
   rightPanel.classList.remove('mobile-active');
+  if (moreSection) moreSection.classList.remove('mobile-active');
 
   if (tab === 'players') {
     playersArea.classList.add('mobile-active');
@@ -3388,9 +3528,12 @@ function switchMobileTab(tab) {
   } else if (tab === 'events') {
     rightPanel.classList.add('mobile-active');
   } else if (tab === 'more') {
-    // Show a minimal "more" panel — reuse players area with sign out visible
-    playersArea.classList.add('mobile-active');
-    document.getElementById('mobileSignout').style.display = 'flex';
+    // Show More tab - custom section with action buttons
+    const moreSection = document.getElementById('mobileMoreSection');
+    if (moreSection) {
+      moreSection.classList.add('mobile-active');
+    }
+    document.getElementById('mobileSignout').style.display = 'none';
     document.getElementById('mobileTeamNames').style.display = 'block';
   }
 }
