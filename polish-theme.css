@@ -1,0 +1,654 @@
+/* ===================================================================
+   HANDBALL TRACKER - USER-FRIENDLY POLISH
+   Enhanced UX while keeping Black & Yellow aesthetic
+   =================================================================== */
+
+/* Better Typography - Manrope is more refined than DM Sans */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Keep original black & yellow colors */
+  --bg: #0a0c10;
+  --surface: #12151c;
+  --surface2: #1a1f2a;
+  --border: #252b38;
+  --accent: #e8ff00;
+  --accent2: #00d4ff;
+  --red: #ff3b3b;
+  --yellow: #ffc700;
+  --green: #00e87a;
+  --text: #f0f2f6;
+  --muted: #6b7585;
+  --gk-accent: #7b5cfa;
+  
+  /* Design system - consistent spacing & radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  
+  /* Shadows for depth */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 30px rgba(232, 255, 0, 0.15);
+  
+  /* Transitions */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* ===================================================================
+   TYPOGRAPHY UPGRADE
+   =================================================================== */
+
+body {
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  line-height: 1.5;
+}
+
+/* Keep Bebas Neue for display text */
+.topbar-brand,
+.timer-display,
+.scoreboard-score,
+.scoreboard-sep,
+.stat-value,
+.sidebar-title,
+#attackCounter {
+  font-family: 'Bebas Neue', cursive !important;
+}
+
+/* ===================================================================
+   1. VISUAL HIERARCHY - Make important things BIGGER
+   =================================================================== */
+
+/* Scoreboard - THE HERO - make it much bigger */
+.scoreboard {
+  padding: 12px 28px !important;
+  background: linear-gradient(135deg, #1a1f2a 0%, #12151c 100%) !important;
+  box-shadow: 
+    var(--shadow-glow),
+    var(--shadow-lg) !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+.scoreboard-score {
+  font-size: 52px !important; /* Much bigger - was 34px */
+  font-weight: 700 !important;
+  text-shadow: 0 4px 24px rgba(232, 255, 0, 0.4) !important;
+  letter-spacing: 2px !important;
+}
+
+.scoreboard-sep {
+  font-size: 32px !important; /* Bigger separator */
+}
+
+.scoreboard-label {
+  font-weight: 700 !important;
+  letter-spacing: 2.5px !important;
+  margin-bottom: 6px !important;
+}
+
+.scoreboard-teams {
+  font-weight: 600 !important;
+  letter-spacing: 1.5px !important;
+  margin-top: 6px !important;
+}
+
+/* Timer - Secondary importance */
+.timer-block {
+  padding: 10px 24px !important;
+  background: linear-gradient(135deg, #1a1f2a 0%, #12151c 100%) !important;
+  box-shadow: var(--shadow-sm) !important;
+  border-radius: var(--radius-md) !important;
+  transition: all var(--transition-base);
+}
+
+.timer-block:hover {
+  box-shadow: var(--shadow-md) !important;
+  transform: translateY(-2px);
+}
+
+.timer-display {
+  font-size: 36px !important;
+  font-weight: 700 !important;
+  letter-spacing: 3px !important;
+  text-shadow: 0 2px 12px rgba(232, 255, 0, 0.3) !important;
+}
+
+.timer-label {
+  font-weight: 700 !important;
+  letter-spacing: 2.5px !important;
+}
+
+/* ===================================================================
+   2. BREATHING ROOM - More spacious layout
+   =================================================================== */
+
+/* More spacious buttons */
+.btn-sm {
+  padding: 10px 20px !important; /* Was 6px 14px */
+  margin: 4px !important;
+  border-radius: var(--radius-sm) !important;
+  font-weight: 600 !important;
+  font-family: 'Manrope', sans-serif !important;
+  letter-spacing: 0.5px;
+}
+
+.timer-btn-group {
+  gap: 8px !important;
+  margin-top: 16px !important;
+  padding-top: 16px !important;
+  border-top: 1px solid rgba(232, 255, 0, 0.08);
+}
+
+/* More spacious player rows */
+.player-row {
+  padding: 12px 16px !important; /* Was 8px 12px */
+  margin-bottom: 6px !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+/* Section spacing */
+.sidebar-title {
+  margin-top: 24px !important;
+  margin-bottom: 16px !important;
+  padding-bottom: 12px !important;
+  letter-spacing: 3px !important;
+  font-size: 18px !important;
+}
+
+/* Stat cards spacing */
+.stat-card {
+  padding: 16px !important; /* Was 12px 14px */
+  margin-bottom: 12px !important;
+  border-radius: var(--radius-md) !important;
+}
+
+/* Event log spacing */
+.event-item {
+  padding: 10px 12px !important;
+  margin-bottom: 6px !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+/* Attack counter spacing */
+.attack-counter-container {
+  padding: 14px !important;
+  margin-top: 16px !important;
+  border-radius: var(--radius-md) !important;
+}
+
+/* ===================================================================
+   3. INTERACTIVE FEEDBACK - Make clicks feel good
+   =================================================================== */
+
+/* Button interactions */
+.btn-sm {
+  transition: all var(--transition-base) !important;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-sm:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(232, 255, 0, 0.25) !important;
+  border-color: var(--accent) !important;
+}
+
+.btn-sm:active {
+  transform: translateY(0) !important;
+  transition: all 0.1s !important;
+}
+
+.btn-sm.active {
+  box-shadow: 0 0 20px rgba(232, 255, 0, 0.4) !important;
+  transform: translateY(0) !important;
+}
+
+/* Button ripple effect */
+.btn-sm::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(232, 255, 0, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s, height 0.4s;
+}
+
+.btn-sm:hover::before {
+  width: 200px;
+  height: 200px;
+}
+
+/* Player row interactions */
+.player-row {
+  transition: all var(--transition-base) !important;
+  cursor: pointer;
+  border-left: 3px solid transparent !important;
+}
+
+.player-row:hover {
+  background: rgba(232, 255, 0, 0.05) !important;
+  transform: translateX(4px) !important;
+  border-left-color: var(--accent) !important;
+}
+
+.player-row.gk-row:hover {
+  border-left-color: var(--gk-accent) !important;
+  background: rgba(123, 92, 250, 0.05) !important;
+}
+
+/* Event log item interactions */
+.event-item {
+  transition: all var(--transition-base) !important;
+  cursor: pointer;
+}
+
+.event-item:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+  transform: translateX(4px) !important;
+}
+
+/* Stat card interactions */
+.stat-card {
+  transition: all var(--transition-base) !important;
+  cursor: default;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* ===================================================================
+   4. VISUAL DEPTH - Shadows and gradients
+   =================================================================== */
+
+/* Scoreboard depth */
+.scoreboard {
+  position: relative;
+}
+
+.scoreboard::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(232, 255, 0, 0.03) 0%, transparent 70%);
+  animation: gentleGlow 6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes gentleGlow {
+  0%, 100% { opacity: 0.5; transform: translate(0, 0) scale(1); }
+  50% { opacity: 0.8; transform: translate(5%, 5%) scale(1.05); }
+}
+
+/* Cards with depth */
+.stat-card,
+.timer-block,
+.attack-counter-container {
+  background: linear-gradient(135deg, #1a1f2a 0%, #16181f 100%) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* Event log depth */
+.event-item {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Topbar depth */
+.topbar {
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ===================================================================
+   5. SMART COLOR USAGE - Yellow for important things only
+   =================================================================== */
+
+/* Dim labels - make values pop */
+.stat-label,
+.timer-label,
+.scoreboard-label {
+  color: #6b7585 !important; /* More muted */
+  font-size: 10px !important;
+}
+
+.stat-value {
+  color: #f0f2f6 !important; /* Bright white for data */
+  font-size: 32px !important;
+  font-weight: 700 !important;
+  letter-spacing: 2px !important;
+}
+
+/* Yellow only for active/important */
+.timer-display.running {
+  color: #e8ff00 !important;
+  text-shadow: 0 0 24px rgba(232, 255, 0, 0.5) !important;
+  animation: timerPulse 2s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.9; }
+}
+
+/* Scoreboard teams - subtle */
+.scoreboard-teams {
+  color: #c1c7d0 !important;
+}
+
+/* Event log timestamps - very subtle */
+.event-time {
+  color: #6b7585 !important;
+  font-size: 11px !important;
+}
+
+/* ===================================================================
+   6. ANIMATIONS - Score bump and micro-interactions
+   =================================================================== */
+
+/* Dramatic score bump */
+.scoreboard-score.bump {
+  animation: scorePulse var(--transition-bounce) !important;
+}
+
+@keyframes scorePulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3) rotate(3deg); }
+  100% { transform: scale(1); }
+}
+
+/* Attack counter bump */
+#attackCounter {
+  transition: all var(--transition-bounce);
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  letter-spacing: 2px !important;
+}
+
+/* Event log slide in */
+.event-item {
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Suspension timer urgency */
+.suspension-timer.urgent {
+  animation: urgentPulse 1s ease-in-out infinite !important;
+  font-weight: 700 !important;
+}
+
+@keyframes urgentPulse {
+  0%, 100% { 
+    color: #ff3b3b;
+    transform: scale(1);
+  }
+  50% { 
+    color: #ff6b6b;
+    transform: scale(1.08);
+  }
+}
+
+/* Half badge */
+.half-badge {
+  padding: 6px 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1.5px !important;
+  border-radius: var(--radius-sm) !important;
+  border-width: 2px !important;
+}
+
+/* ===================================================================
+   7. MOBILE IMPROVEMENTS - Better touch targets
+   =================================================================== */
+
+@media (max-width: 768px) {
+  /* Bigger tap targets */
+  .mobile-tab {
+    padding: 18px 12px !important;
+    min-height: 68px !important;
+    transition: all var(--transition-base) !important;
+  }
+  
+  /* Clear active indicator */
+  .mobile-tab.active {
+    background: rgba(232, 255, 0, 0.08) !important;
+    border-top: 3px solid #e8ff00 !important;
+  }
+  
+  .mobile-tab.active .tab-icon {
+    transform: scale(1.1);
+  }
+  
+  /* Smooth panel transitions */
+  .mobile-active {
+    animation: fadeSlideIn 0.3s ease;
+  }
+  
+  @keyframes fadeSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Bigger buttons on mobile */
+  .btn-sm {
+    padding: 12px 20px !important;
+    font-size: 13px !important;
+  }
+  
+  /* Bigger player tap targets */
+  .player-row {
+    padding: 14px 16px !important;
+  }
+}
+
+/* ===================================================================
+   8. PROFESSIONAL POLISH - Small details matter
+   =================================================================== */
+
+/* Focus states for accessibility */
+button:focus-visible,
+.player-row:focus-visible,
+.btn-sm:focus-visible {
+  outline: 2px solid #e8ff00 !important;
+  outline-offset: 3px !important;
+}
+
+/* Better disabled states */
+.btn-sm:disabled,
+button:disabled {
+  opacity: 0.3 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  pointer-events: none;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #12151c;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #e8ff00 0%, #d4e600 100%);
+  border-radius: 5px;
+  border: 2px solid #12151c;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e8ff00;
+}
+
+/* Selection color */
+::selection {
+  background: rgba(232, 255, 0, 0.3);
+  color: #ffffff;
+}
+
+/* Remove tap highlight on mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ===================================================================
+   9. MODAL IMPROVEMENTS
+   =================================================================== */
+
+.modal {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
+  background: linear-gradient(135deg, #1a1f2a 0%, #12151c 100%) !important;
+}
+
+.modal-title {
+  font-size: 24px !important;
+  letter-spacing: 3px !important;
+  margin-bottom: 12px !important;
+}
+
+.modal-sub {
+  color: #6b7585 !important;
+  margin-bottom: 20px !important;
+}
+
+/* Zone buttons */
+.zone-btn {
+  transition: all var(--transition-fast) !important;
+  cursor: pointer;
+  border-radius: var(--radius-sm) !important;
+}
+
+.zone-btn:hover {
+  transform: scale(1.08) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.zone-btn:active {
+  transform: scale(0.95) !important;
+}
+
+/* ===================================================================
+   10. LOADING & EMPTY STATES
+   =================================================================== */
+
+.no-suspensions,
+.history-empty {
+  color: #6b7585 !important;
+  padding: 24px !important;
+  text-align: center;
+  font-size: 14px !important;
+  line-height: 1.6;
+}
+
+/* Loading animation */
+@keyframes gentlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.loading {
+  animation: gentlePulse 1.5s ease-in-out infinite;
+}
+
+/* ===================================================================
+   BONUS: Stat bars
+   =================================================================== */
+
+.stat-bar-bg {
+  background: #1a1f2a !important;
+  border-radius: 3px !important;
+  overflow: hidden;
+  height: 6px !important;
+}
+
+.stat-bar {
+  background: linear-gradient(90deg, #e8ff00 0%, #d4e600 100%) !important;
+  box-shadow: 0 0 8px rgba(232, 255, 0, 0.4) !important;
+  border-radius: 3px !important;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* ===================================================================
+   FINAL TOUCHES
+   =================================================================== */
+
+/* Topbar brand animation */
+.topbar-brand {
+  transition: all var(--transition-base);
+}
+
+.topbar-brand:hover {
+  letter-spacing: 5px;
+  transform: scale(1.05);
+}
+
+/* Player stats numbers */
+.pstat {
+  font-weight: 600 !important;
+  letter-spacing: 0.5px;
+}
+
+/* Delete buttons */
+.event-item-del,
+.history-card-del {
+  transition: all var(--transition-fast) !important;
+  border-radius: 4px !important;
+}
+
+.event-item-del:hover,
+.history-card-del:hover {
+  transform: scale(1.2) rotate(90deg) !important;
+  background: rgba(255, 59, 59, 0.2) !important;
+}
+
+/* Cloud status indicator */
+.cloud-status {
+  transition: all var(--transition-base) !important;
+  font-weight: 600 !important;
+}
+
+/* Smooth everything */
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
