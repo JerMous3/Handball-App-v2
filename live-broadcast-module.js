@@ -94,6 +94,9 @@ async function startLiveMatch() {
     const viewerUrl = `${window.location.origin}/watch.html?match=${currentLiveMatchId}`;
     showLiveMatchLink(viewerUrl);
 
+    // Start syncing timer every 5 seconds
+    startTimerSync();
+
     console.log('✅ Live match started:', currentLiveMatchId);
     console.log('📺 Viewer URL:', viewerUrl);
 
@@ -113,6 +116,12 @@ async function stopLiveMatch() {
   if (!currentLiveMatchId) return;
 
   try {
+    // Stop timer sync
+    if (window.liveTimerInterval) {
+      clearInterval(window.liveTimerInterval);
+      window.liveTimerInterval = null;
+    }
+
     await _supabase.rpc('end_live_match', { 
       p_live_match_id: currentLiveMatchId 
     });
@@ -127,6 +136,49 @@ async function stopLiveMatch() {
     console.error('Error ending live match:', error);
     logError('live_match_end_failed', error);
   }
+}
+
+/**
+ * Sync match timer to database every 5 seconds
+ */
+function startTimerSync() {
+  // Clear any existing interval
+  if (window.liveTimerInterval) {
+    clearInterval(window.liveTimerInterval);
+  }
+
+  // Update timer every 5 seconds
+  window.liveTimerInterval = setInterval(() => {
+    if (!isLiveBroadcasting || !currentLiveMatchId) {
+      clearInterval(window.liveTimerInterval);
+      return;
+    }
+
+    // Get current match time from DOM
+    const timerText = document.getElementById('matchTimer')?.textContent || '00:00';
+    const timerParts = timerText.split(':');
+    const matchTimeSeconds = (parseInt(timerParts[0]) * 60) + parseInt(timerParts[1] || '0');
+    
+    // Get current half
+    const halfLabel = document.getElementById('timerLabel')?.textContent || '1st Half';
+    const currentHalf = halfLabel.includes('2nd') ? 'second' : 'first';
+
+    // Update in database
+    _supabase
+      .from('live_matches')
+      .update({
+        match_time_seconds: matchTimeSeconds,
+        current_half: currentHalf
+      })
+      .eq('id', currentLiveMatchId)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Timer sync error:', error);
+        }
+      });
+  }, 5000); // Every 5 seconds
+
+  console.log('⏱️ Timer sync started');
 }
 
 // ============================================================
