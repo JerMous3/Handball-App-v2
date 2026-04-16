@@ -1589,7 +1589,7 @@
   <!-- Center Section: Timer, Score, Half Badge -->
   <div class="topbar-center">
     <div class="timer-block">
-      <div class="timer-label">Match Time</div>
+      <div class="timer-label" id="timerLabel">1st Half</div>
       <div class="timer-display" id="matchTimer">00:00</div>
     </div>
     <div class="scoreboard">
@@ -1601,10 +1601,10 @@
       </div>
       <div class="scoreboard-teams">
         <span>Home</span>
+        <span class="team-dash">–</span>
         <span>Away</span>
       </div>
     </div>
-    <div class="half-badge" id="halfBadge">1st Half</div>
   </div>
   
   <!-- Right Section: Actions -->
@@ -2586,7 +2586,9 @@ function resetTimer() {
 function switchHalf() {
   const wasFirst = currentHalf === 1;
   currentHalf = currentHalf === 1 ? 2 : 1;
-  document.getElementById('halfBadge').textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+  
+  // Update timer label to show current half
+  document.getElementById('timerLabel').textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
   
   // Offer timer reset when switching to 2nd half
   if (wasFirst) {
