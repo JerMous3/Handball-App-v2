@@ -102,6 +102,11 @@ async function startLiveMatch() {
     } catch (error) {
       console.error('❌ Failed to start timer sync:', error);
     }
+    
+    // Track analytics (non-blocking)
+    trackMatchAnalytics(data.id, teamName, opponent).catch(err => {
+      console.log('Analytics tracking failed (non-critical):', err);
+    });
 
     console.log('✅ Live match started:', currentLiveMatchId);
     console.log('📺 Viewer URL:', viewerUrl);
@@ -120,6 +125,11 @@ async function startLiveMatch() {
  */
 async function stopLiveMatch() {
   if (!currentLiveMatchId) return;
+
+  // Confirmation before stopping
+  if (!confirm('Stop live broadcasting?\n\nViewers will no longer see updates from this match.')) {
+    return;
+  }
 
   try {
     // Stop timer sync
@@ -196,6 +206,46 @@ function startTimerSync() {
 }
 
 // ============================================================
+// ANALYTICS TRACKING
+// ============================================================
+
+/**
+ * Track match analytics (usage metrics)
+ * Non-blocking - failures are logged but don't break functionality
+ */
+async function trackMatchAnalytics(matchId, teamName, opponent) {
+  try {
+    // Only track if user exists
+    if (!currentUser) return;
+    
+    const analyticsData = {
+      match_id: matchId,
+      coach_id: currentUser.id,
+      team_name: teamName,
+      opponent: opponent,
+      started_at: new Date().toISOString(),
+      platform: navigator.platform,
+      user_agent: navigator.userAgent
+    };
+    
+    // Try to insert analytics - create table if it doesn't exist
+    const { error } = await _supabase
+      .from('match_analytics')
+      .insert(analyticsData);
+    
+    if (error) {
+      // If table doesn't exist, that's ok - analytics is optional
+      console.log('📊 Analytics: Table not yet created (optional feature)');
+    } else {
+      console.log('📊 Analytics tracked');
+    }
+  } catch (error) {
+    // Fail silently - analytics should never break core functionality
+    console.log('📊 Analytics tracking skipped:', error.message);
+  }
+}
+
+// ============================================================
 // 2. BROADCAST EVENTS
 // ============================================================
 
@@ -241,31 +291,38 @@ async function broadcastEvent(eventType, player, detail = '') {
 }
 
 /**
- * Update live match score
+ * Update live match score (debounced to batch rapid updates)
  */
+let scoreUpdateTimeout;
 async function updateLiveScore() {
   if (!isLiveBroadcasting || !currentLiveMatchId) return;
 
-  // Get scores from DOM
-  const scoreHome = parseInt(document.getElementById('sbHome')?.textContent || '0');
-  const scoreAway = parseInt(document.getElementById('sbAway')?.textContent || '0');
+  // Clear any pending update
+  clearTimeout(scoreUpdateTimeout);
   
-  // Get match time from DOM
-  const timerText = document.getElementById('matchTimer')?.textContent || '00:00';
-  const timerParts = timerText.split(':');
-  const matchTimeSeconds = (parseInt(timerParts[0]) * 60) + parseInt(timerParts[1] || '0');
+  // Debounce - wait 1 second to batch multiple rapid score changes
+  scoreUpdateTimeout = setTimeout(() => {
+    // Get scores from DOM
+    const scoreHome = parseInt(document.getElementById('sbHome')?.textContent || '0');
+    const scoreAway = parseInt(document.getElementById('sbAway')?.textContent || '0');
+    
+    // Get match time from DOM
+    const timerText = document.getElementById('matchTimer')?.textContent || '00:00';
+    const timerParts = timerText.split(':');
+    const matchTimeSeconds = (parseInt(timerParts[0]) * 60) + parseInt(timerParts[1] || '0');
 
-  liveUpdateQueue.push({
-    type: 'score',
-    data: {
-      live_match_id: currentLiveMatchId,
-      score_home: scoreHome,
-      score_away: scoreAway,
-      match_time_seconds: matchTimeSeconds
-    }
-  });
-  
-  processLiveUpdateQueue();
+    liveUpdateQueue.push({
+      type: 'score',
+      data: {
+        live_match_id: currentLiveMatchId,
+        score_home: scoreHome,
+        score_away: scoreAway,
+        match_time_seconds: matchTimeSeconds
+      }
+    });
+    
+    processLiveUpdateQueue();
+  }, 1000); // Wait 1 second before updating
 }
 
 /**
@@ -282,18 +339,42 @@ async function processLiveUpdateQueue() {
 
     for (const update of updates) {
       if (update.type === 'event') {
-        await _supabase.from('live_events').insert(update.data);
+        const { error } = await _supabase.from('live_events').insert(update.data);
+        if (error) {
+          console.error('❌ Event insert failed:', error);
+          if (typeof logError === 'function') {
+            logError('broadcast_event_failed', new Error(error.message), {
+              event_type: update.data.event_type,
+              match_id: currentLiveMatchId,
+              error_details: error
+            });
+          }
+        }
       } else if (update.type === 'score') {
-        await _supabase.rpc('update_live_match_score', {
+        const { error } = await _supabase.rpc('update_live_match_score', {
           p_live_match_id: update.data.live_match_id,
           p_score_home: update.data.score_home,
           p_score_away: update.data.score_away
         });
+        if (error) {
+          console.error('❌ Score update failed:', error);
+          if (typeof logError === 'function') {
+            logError('broadcast_score_failed', new Error(error.message), {
+              match_id: currentLiveMatchId,
+              error_details: error
+            });
+          }
+        }
       }
     }
   } catch (error) {
     console.error('Error processing live updates:', error);
-    logError('live_update_failed', error);
+    if (typeof logError === 'function') {
+      logError('live_update_queue_failed', error, {
+        match_id: currentLiveMatchId,
+        queue_length: liveUpdateQueue.length
+      });
+    }
   } finally {
     processingQueue = false;
 
@@ -548,6 +629,23 @@ function showLiveMatchLink(url) {
             📋 Copy
           </button>
         </div>
+        
+        <button
+          onclick="shareLiveUrl('${url}')"
+          style="
+            width: 100%;
+            background: var(--accent2);
+            color: #000;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-bottom: 12px;
+          "
+        >
+          📱 Share Link
+        </button>
 
         <button
           onclick="document.getElementById('liveUrlModal').remove()"
@@ -574,6 +672,29 @@ function showLiveMatchLink(url) {
   setTimeout(() => {
     document.getElementById('liveUrlInput')?.select();
   }, 100);
+}
+
+/**
+ * Share live URL using native share API
+ */
+function shareLiveUrl(url) {
+  if (navigator.share) {
+    navigator.share({
+      title: 'Watch Live Match',
+      text: 'Watch our handball match live!',
+      url: url
+    }).then(() => {
+      console.log('✅ Share successful');
+    }).catch((error) => {
+      console.log('Share cancelled or failed:', error);
+      // Fallback to copy
+      copyLiveUrl();
+    });
+  } else {
+    // Fallback for browsers without share API
+    copyLiveUrl();
+    alert('Link copied! Share it with your fans.');
+  }
 }
 
 /**
@@ -716,5 +837,6 @@ window.startLiveMatch = startLiveMatch;
 window.stopLiveMatch = stopLiveMatch;
 window.broadcastEvent = broadcastEvent;
 window.copyLiveUrl = copyLiveUrl;
+window.shareLiveUrl = shareLiveUrl;
 
 console.log('📡 Live broadcasting functions loaded');
