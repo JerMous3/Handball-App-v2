@@ -522,20 +522,40 @@ function showLiveStatus(isLive) {
 
     topbar.insertBefore(indicator, topbar.firstChild);
 
-    // Update stop button if exists
+    // Update desktop live button
     const liveBtn = document.getElementById('liveBroadcastBtn');
     if (liveBtn) {
       liveBtn.textContent = '⏹ Stop Live';
       liveBtn.classList.add('danger');
       liveBtn.onclick = stopLiveMatch;
     }
+    
+    // Update mobile live button
+    const mobileLiveBtn = document.getElementById('mobileLiveBtn');
+    if (mobileLiveBtn) {
+      mobileLiveBtn.textContent = '⏹ Stop Live';
+      mobileLiveBtn.style.background = 'rgba(255, 193, 7, 0.15)';
+      mobileLiveBtn.style.borderColor = '#ffc107';
+      mobileLiveBtn.style.color = '#ffc107';
+      mobileLiveBtn.onclick = stopLiveMatch;
+    }
   } else {
-    // Reset button
+    // Reset desktop button
     const liveBtn = document.getElementById('liveBroadcastBtn');
     if (liveBtn) {
       liveBtn.textContent = '🔴 Go Live';
       liveBtn.classList.remove('danger');
       liveBtn.onclick = startLiveMatch;
+    }
+    
+    // Reset mobile button
+    const mobileLiveBtn = document.getElementById('mobileLiveBtn');
+    if (mobileLiveBtn) {
+      mobileLiveBtn.textContent = '🔴 Go Live';
+      mobileLiveBtn.style.background = 'rgba(255, 59, 59, 0.15)';
+      mobileLiveBtn.style.borderColor = 'var(--red)';
+      mobileLiveBtn.style.color = 'var(--red)';
+      mobileLiveBtn.onclick = startLiveMatch;
     }
   }
 }
