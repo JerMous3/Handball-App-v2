@@ -2536,7 +2536,10 @@ function resetTimer() {
   
   // Reset half
   currentHalf = 1;
-  document.getElementById('halfBadge').textContent = '1st Half';
+  const timerLabel = document.getElementById('timerLabel');
+  if (timerLabel) {
+    timerLabel.textContent = '1st Half';
+  }
   
   // Reset scores and stats
   stats.goals = 0;
