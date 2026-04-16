@@ -27,8 +27,8 @@ async function startLiveMatch() {
 
   // Get team names from the topbar brand element
   const topbarBrand = document.getElementById('topbarBrand') || document.querySelector('.topbar-brand');
-  let teamName = 'Home Team';
-  let opponent = 'Away Team';
+  let teamName = '';
+  let opponent = '';
   
   if (topbarBrand && topbarBrand.textContent) {
     const brandText = topbarBrand.textContent.replace('⬡', '').trim();
@@ -40,16 +40,18 @@ async function startLiveMatch() {
   }
   
   // Fallback: try to get from scoreboard teams
-  if (teamName === 'Home Team') {
+  if (!teamName || !opponent) {
     const scoreboardTeams = document.querySelector('.scoreboard-teams');
     if (scoreboardTeams) {
       const teamSpans = scoreboardTeams.querySelectorAll('span');
-      if (teamSpans.length >= 2) {
+      if (teamSpans.length >= 3) {
         teamName = teamSpans[0].textContent.trim();
-        opponent = teamSpans[2] ? teamSpans[2].textContent.trim() : 'Away Team';
+        opponent = teamSpans[2].textContent.trim(); // Index 2 because index 1 is the dash
       }
     }
   }
+
+  console.log('📝 Team names detected:', teamName, 'vs', opponent);
 
   if (!teamName || !opponent || teamName === 'Home' || opponent === 'Away') {
     alert('Please set team names before going live!\n\nMake sure you entered team names when starting the match.');
