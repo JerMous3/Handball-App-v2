@@ -2756,11 +2756,22 @@ window.deleteEvent = function deleteEvent(idx) {
         playerStats[playerId].suspensions = Math.max(0, playerStats[playerId].suspensions - 1);
       }
       stats.suspensions = Math.max(0, stats.suspensions - 1);
+      
       // Remove from active suspensions if present
-      const susIdx = activeSuspensions.findIndex(s => s.player && s.player.name === event.name);
+      // Suspension objects have structure: { playerId, name, remaining }
+      const susIdx = activeSuspensions.findIndex(s => {
+        // Match by either playerId or name for reliability
+        return s.playerId === playerId || s.name === event.name;
+      });
+      
       if (susIdx >= 0) {
         activeSuspensions.splice(susIdx, 1);
         renderSuspensions();
+        
+        // Also remove suspended class from player row
+        if (playerRow) {
+          playerRow.classList.remove('suspended');
+        }
       }
       break;
     case 'red':
