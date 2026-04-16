@@ -1938,7 +1938,6 @@ async function onSignedIn(user) {
   currentUser = user;
   document.getElementById('authScreen').classList.add('hidden');
   document.getElementById('setupScreen').classList.remove('hidden');
-  document.getElementById('userEmail').textContent = user.email;
 
   // Check for saved roster
   const { data } = await _supabase.from('rosters').select('*').eq('user_id', user.id).maybeSingle();
