@@ -68,9 +68,9 @@ body {
    1. VISUAL HIERARCHY - Make important things BIGGER
    =================================================================== */
 
-/* Scoreboard - THE HERO - make it much bigger */
+/* Scoreboard - Keep original size but add polish */
 .scoreboard {
-  padding: 12px 28px !important;
+  padding: 8px 20px !important; /* Back to smaller size */
   background: linear-gradient(135deg, #1a1f2a 0%, #12151c 100%) !important;
   box-shadow: 
     var(--shadow-glow),
@@ -79,31 +79,31 @@ body {
 }
 
 .scoreboard-score {
-  font-size: 52px !important; /* Much bigger - was 34px */
+  font-size: 34px !important; /* Back to original size - was 52px */
   font-weight: 700 !important;
   text-shadow: 0 4px 24px rgba(232, 255, 0, 0.4) !important;
   letter-spacing: 2px !important;
 }
 
 .scoreboard-sep {
-  font-size: 32px !important; /* Bigger separator */
+  font-size: 24px !important; /* Back to original size - was 32px */
 }
 
 .scoreboard-label {
   font-weight: 700 !important;
   letter-spacing: 2.5px !important;
-  margin-bottom: 6px !important;
+  margin-bottom: 4px !important; /* Smaller margin */
 }
 
 .scoreboard-teams {
   font-weight: 600 !important;
   letter-spacing: 1.5px !important;
-  margin-top: 6px !important;
+  margin-top: 4px !important; /* Smaller margin */
 }
 
-/* Timer - Secondary importance */
+/* Timer - Back to original size */
 .timer-block {
-  padding: 10px 24px !important;
+  padding: 8px 20px !important; /* Back to smaller - was 10px 24px */
   background: linear-gradient(135deg, #1a1f2a 0%, #12151c 100%) !important;
   box-shadow: var(--shadow-sm) !important;
   border-radius: var(--radius-md) !important;
@@ -116,7 +116,7 @@ body {
 }
 
 .timer-display {
-  font-size: 36px !important;
+  font-size: 32px !important; /* Back to original - was 36px */
   font-weight: 700 !important;
   letter-spacing: 3px !important;
   text-shadow: 0 2px 12px rgba(232, 255, 0, 0.3) !important;
@@ -313,6 +313,9 @@ body {
 
 /* Topbar depth */
 .topbar {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 100 !important;
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.3) !important;
 }
 
