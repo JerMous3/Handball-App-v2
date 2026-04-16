@@ -316,7 +316,7 @@ let subscription = null;
 // Load live matches
 async function loadLiveMatches() {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await _supabase
       .from('live_matches')
       .select('*')
       .eq('is_live', true)
@@ -336,7 +336,7 @@ async function loadLiveMatches() {
 
 // Subscribe to real-time updates
 function subscribeToMatches() {
-  subscription = supabase
+  subscription = _supabase
     .channel('live-matches-channel')
     .on(
       'postgres_changes',
@@ -488,7 +488,7 @@ subscribeToMatches();
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
   if (subscription) {
-    supabase.removeChannel(subscription);
+    _supabase.removeChannel(subscription);
   }
 });
 
