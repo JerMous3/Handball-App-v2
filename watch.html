@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live Match - Handball Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://qgqryeanopdxrwrfczcx.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFncXJ5ZWFub3BkeHJ3cmZjemN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc3MjQ4NjgsImV4cCI6MjA1MzMwMDg2OH0.p3p6ggbWPf_EGDLOIgz5PBLqCbxM6y3aOx2hqKwxjEQ';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+</script>
+<style>
+  :root {
+    --bg: #0a0c10; --surface: #12151c; --surface2: #1a1f2a; --border: #252b38;
+    --accent: #e8ff00; --accent2: #00d4ff; --red: #ff3b3b; --yellow: #ffc700;
+    --green: #00e87a; --text: #f0f2f6; --muted: #6b7585; --gk-accent: #7b5cfa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Manrope', sans-serif; overflow-x: hidden; }
+  
+  .topbar { position: sticky; top: 0; z-index: 100; background: linear-gradient(180deg, #12151c 0%, #0f1218 100%);
+    border-bottom: 1px solid var(--border); padding: 12px 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
+  .topbar-content { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+  .back-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 8px 16px;
+    border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: flex;
+    align-items: center; gap: 8px; transition: all 0.2s; }
+  .back-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .live-badge { display: flex; align-items: center; gap: 8px; background: rgba(255, 59, 59, 0.15);
+    border: 1px solid var(--red); border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 700; }
+  .live-dot { width: 8px; height: 8px; background: var(--red); border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.2); } }
+  
+  .scoreboard-hero { background: linear-gradient(135deg, #1a1f2a 0%, #12151c 100%); border-bottom: 1px solid var(--border);
+    padding: 40px 24px; position: relative; overflow: hidden; }
+  .scoreboard-hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at 50% 0%, rgba(232, 255, 0, 0.08) 0%, transparent 70%); pointer-events: none; }
+  .scoreboard-content { max-width: 1400px; margin: 0 auto; position: relative; z-index: 1; }
+  .match-timer { text-align: center; margin-bottom: 24px; }
+  .timer { font-family: 'Bebas Neue', cursive; font-size: 56px; color: var(--accent); letter-spacing: 3px;
+    text-shadow: 0 0 30px rgba(232, 255, 0, 0.3); line-height: 1; }
+  .half-label { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-top: 8px; }
+  
+  .score-display { display: flex; align-items: center; justify-content: center; gap: 48px; margin-bottom: 32px; }
+  .team-block { text-align: center; flex: 0 0 250px; }
+  .team-name { font-size: 28px; font-weight: 800; color: var(--text); margin-bottom: 16px; text-transform: uppercase; }
+  .score { font-family: 'Bebas Neue', cursive; font-size: 96px; color: var(--accent); line-height: 1;
+    text-shadow: 0 4px 32px rgba(232, 255, 0, 0.4); transition: all 0.3s; }
+  .score.bump { animation: scoreBump 0.4s ease-out; }
+  @keyframes scoreBump { 0% { transform: scale(1); } 50% { transform: scale(1.2); color: #fff; } 100% { transform: scale(1); } }
+  .vs { font-family: 'Bebas Neue', cursive; font-size: 32px; color: var(--muted); align-self: center; margin-top: 40px; }
+  
+  .main-content { max-width: 1400px; margin: 0 auto; padding: 32px 24px; display: grid; grid-template-columns: 1fr 400px; gap: 32px; }
+  .event-feed { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; height: fit-content; }
+  .feed-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+    padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .feed-title { font-family: 'Bebas Neue', cursive; font-size: 24px; letter-spacing: 2px; }
+  .auto-update { font-size: 12px; color: var(--green); display: flex; align-items: center; gap: 6px; }
+  .update-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
+  
+  .event-list { display: flex; flex-direction: column; gap: 12px; max-height: 600px; overflow-y: auto; }
+  .event-list::-webkit-scrollbar { width: 6px; }
+  .event-list::-webkit-scrollbar-track { background: var(--surface2); border-radius: 3px; }
+  .event-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  
+  .event-item { background: var(--surface2); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 8px; padding: 14px; animation: slideIn 0.3s ease-out; }
+  .event-item.goal { border-left-color: var(--accent); background: linear-gradient(90deg, rgba(232, 255, 0, 0.08) 0%, var(--surface2) 100%); }
+  .event-item.save { border-left-color: var(--gk-accent); }
+  .event-item.yellow { border-left-color: var(--yellow); }
+  .event-item.red { border-left-color: var(--red); }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+  
+  .event-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .event-type { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
+  .event-icon { font-size: 18px; }
+  .event-time { font-family: 'Bebas Neue', cursive; font-size: 18px; color: var(--muted); letter-spacing: 1px; }
+  .event-player { font-size: 15px; color: var(--text); font-weight: 600; }
+  .event-detail { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  
+  .stats-sidebar { display: flex; flex-direction: column; gap: 24px; }
+  .stats-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+  .stats-card-title { font-family: 'Bebas Neue', cursive; font-size: 20px; letter-spacing: 2px; margin-bottom: 20px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  
+  .loading { text-align: center; padding: 60px 20px; font-size: 18px; color: var(--muted); }
+  .error { text-align: center; padding: 60px 20px; }
+  .error-icon { font-size: 48px; margin-bottom: 16px; }
+  .error-text { font-size: 18px; color: var(--red); }
+  
+  @media (max-width: 1024px) { .main-content { grid-template-columns: 1fr; } }
+  @media (max-width: 768px) {
+    .timer { font-size: 42px; }
+    .score-display { flex-direction: column; gap: 24px; }
+    .team-name { font-size: 20px; }
+    .score { font-size: 64px; }
+    .vs { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-content">
+    <a href="live.html" class="back-btn">
+      <span>←</span>
+      <span>Back to Live Matches</span>
+    </a>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      <span>LIVE</span>
+    </div>
+  </div>
+</div>
+
+<div class="scoreboard-hero">
+  <div class="scoreboard-content">
+    <div class="match-timer">
+      <div class="timer" id="matchTimer">--:--</div>
+      <div class="half-label" id="halfLabel">Loading...</div>
+    </div>
+    <div class="score-display">
+      <div class="team-block">
+        <div class="team-name" id="homeTeam">Home</div>
+        <div class="score" id="homeScore">0</div>
+      </div>
+      <div class="vs">-</div>
+      <div class="team-block">
+        <div class="team-name" id="awayTeam">Away</div>
+        <div class="score" id="awayScore">0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main-content">
+  <div class="event-feed">
+    <div class="feed-header">
+      <h2 class="feed-title">Live Event Feed</h2>
+      <div class="auto-update">
+        <div class="update-dot"></div>
+        <span>Auto-updating</span>
+      </div>
+    </div>
+    <div class="event-list" id="eventList">
+      <div class="loading">Loading events...</div>
+    </div>
+  </div>
+
+  <div class="stats-sidebar">
+    <div class="stats-card">
+      <h3 class="stats-card-title">Match Info</h3>
+      <div id="matchInfo" style="color: var(--muted); font-size: 14px;">
+        Loading match details...
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const matchId = urlParams.get('match');
+
+let matchData = null;
+let events = [];
+let matchSubscription = null;
+let eventsSubscription = null;
+
+if (!matchId) {
+  showError('No match ID provided');
+} else {
+  init();
+}
+
+async function init() {
+  await loadMatchData();
+  await loadEvents();
+  subscribeToMatch();
+  subscribeToEvents();
+}
+
+async function loadMatchData() {
+  try {
+    const { data, error } = await supabase
+      .from('live_matches')
+      .select('*')
+      .eq('id', matchId)
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new Error('Match not found');
+    if (!data.is_live) throw new Error('Match has ended');
+
+    matchData = data;
+    renderMatchInfo();
+
+  } catch (error) {
+    console.error('Error loading match:', error);
+    showError(error.message);
+  }
+}
+
+async function loadEvents() {
+  try {
+    const { data, error } = await supabase
+      .from('live_events')
+      .select('*')
+      .eq('live_match_id', matchId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    events = data || [];
+    renderEvents();
+
+  } catch (error) {
+    console.error('Error loading events:', error);
+  }
+}
+
+function subscribeToMatch() {
+  matchSubscription = supabase
+    .channel(`match-${matchId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'live_matches',
+        filter: `id=eq.${matchId}`
+      },
+      (payload) => {
+        console.log('Match updated:', payload);
+        matchData = payload.new;
+        renderMatchInfo();
+        
+        // Check if match ended
+        if (!payload.new.is_live) {
+          showMatchEnded();
+        }
+      }
+    )
+    .subscribe();
+}
+
+function subscribeToEvents() {
+  eventsSubscription = supabase
+    .channel(`events-${matchId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'live_events',
+        filter: `live_match_id=eq.${matchId}`
+      },
+      (payload) => {
+        console.log('New event:', payload);
+        events.unshift(payload.new);
+        renderEvents();
+        
+        // Animate score if it's a goal
+        if (payload.new.event_type === 'goal' || payload.new.event_type === 'goal_against') {
+          animateScore();
+        }
+      }
+    )
+    .subscribe();
+}
+
+function renderMatchInfo() {
+  if (!matchData) return;
+
+  document.getElementById('homeTeam').textContent = matchData.team_name;
+  document.getElementById('awayTeam').textContent = matchData.opponent;
+  document.getElementById('homeScore').textContent = matchData.score_home;
+  document.getElementById('awayScore').textContent = matchData.score_away;
+  document.getElementById('matchTimer').textContent = formatTime(matchData.match_time_seconds);
+  document.getElementById('halfLabel').textContent = matchData.current_half === 'first' ? 'First Half' : 'Second Half';
+
+  const info = document.getElementById('matchInfo');
+  info.innerHTML = `
+    <div style="margin-bottom: 12px;">
+      <strong style="color: var(--text);">Started:</strong><br>
+      ${formatStartTime(matchData.started_at)}
+    </div>
+    <div style="margin-bottom: 12px;">
+      <strong style="color: var(--text);">Current Half:</strong><br>
+      ${matchData.current_half === 'first' ? '1st Half' : '2nd Half'}
+    </div>
+    <div>
+      <strong style="color: var(--text);">Match Time:</strong><br>
+      ${formatTime(matchData.match_time_seconds)}
+    </div>
+  `;
+}
+
+function renderEvents() {
+  const container = document.getElementById('eventList');
+
+  if (events.length === 0) {
+    container.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 20px;">No events yet</div>';
+    return;
+  }
+
+  const eventIcons = {
+    goal: '⚽',
+    save: '🧤',
+    shot: '🎯',
+    assist: '🤝',
+    yellow: '🟡',
+    suspension: '⏱',
+    red: '🟥',
+    goal_against: '🥅'
+  };
+
+  container.innerHTML = events.map(event => `
+    <div class="event-item ${event.event_type}">
+      <div class="event-header">
+        <div class="event-type">
+          <span class="event-icon">${eventIcons[event.event_type] || '📋'}</span>
+          <span>${formatEventType(event.event_type)}</span>
+        </div>
+        <div class="event-time">${event.match_time_display || formatTime(event.match_time_seconds)}</div>
+      </div>
+      <div class="event-player">${event.player_name ? `${event.player_name} ${event.player_number ? `(#${event.player_number})` : ''}` : 'Unknown Player'}</div>
+      <div class="event-detail">${event.team_name || ''}${event.detail ? ` • ${event.detail}` : ''}</div>
+    </div>
+  `).join('');
+}
+
+function animateScore() {
+  document.getElementById('homeScore').classList.add('bump');
+  setTimeout(() => document.getElementById('homeScore').classList.remove('bump'), 400);
+}
+
+function formatEventType(type) {
+  const types = {
+    goal: 'Goal',
+    save: 'Save',
+    shot: 'Shot',
+    assist: 'Assist',
+    yellow: 'Yellow Card',
+    suspension: '2-Min Suspension',
+    red: 'Red Card',
+    goal_against: 'Goal Conceded'
+  };
+  return types[type] || type;
+}
+
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
+function formatStartTime(timestamp) {
+  const date = new Date(timestamp);
+  return date.toLocaleString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    day: 'numeric',
+    month: 'short'
+  });
+}
+
+function showError(message) {
+  document.querySelector('.scoreboard-hero').innerHTML = `
+    <div class="error">
+      <div class="error-icon">⚠️</div>
+      <div class="error-text">${message}</div>
+      <div style="margin-top: 20px;">
+        <a href="watch-live-browse.html" class="back-btn">← Back to Live Matches</a>
+      </div>
+    </div>
+  `;
+  document.querySelector('.main-content').style.display = 'none';
+}
+
+function showMatchEnded() {
+  const hero = document.querySelector('.scoreboard-hero');
+  hero.style.opacity = '0.7';
+  
+  const badge = document.querySelector('.live-badge');
+  badge.innerHTML = '<span>Match Ended</span>';
+  badge.style.background = 'rgba(107, 117, 133, 0.15)';
+  badge.style.borderColor = 'var(--muted)';
+}
+
+window.addEventListener('beforeunload', () => {
+  if (matchSubscription) supabase.removeChannel(matchSubscription);
+  if (eventsSubscription) supabase.removeChannel(eventsSubscription);
+});
+</script>
+
+</body>
+</html>
