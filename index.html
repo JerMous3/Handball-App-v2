@@ -1580,7 +1580,7 @@
 </div>
 
 <div class="topbar" id="appTopbar" style="display:none">
-  <div class="topbar-brand" id="topbarBrand">⬡ Handball-Tracker</div>
+  <div class="topbar-brand">⬡</div>
   <div class="topbar-controls">
     <div class="half-badge" id="halfBadge">1st Half</div>
     <div class="timer-block">
@@ -1683,8 +1683,26 @@
 
   <!-- CENTER: PLAYERS -->
   <div class="players-area mobile-active">
+    <!-- Team Names Header (Desktop) -->
+    <div class="team-names-header" id="teamNamesHeader" style="display: none;">
+      <div style="font-family: 'Bebas Neue', cursive; font-size: 24px; letter-spacing: 3px; color: var(--accent); text-align: center; padding: 16px 20px; border-bottom: 2px solid var(--border);">
+        <span id="homeTeamName">Home Team</span>
+        <span style="color: var(--muted); margin: 0 12px;">VS</span>
+        <span id="awayTeamName">Away Team</span>
+      </div>
+    </div>
+    
     <!-- Mobile-only quick action bar -->
     <div class="mobile-actions-bar">
+      <!-- Mobile Team Names (shown in More tab) -->
+      <div class="mobile-team-names" id="mobileTeamNames" style="display: none;">
+        <div class="team-vs">
+          <span id="mobileHomeTeam">Home Team</span>
+          <span style="color: var(--muted); margin: 0 8px;">VS</span>
+          <span id="mobileAwayTeam">Away Team</span>
+        </div>
+      </div>
+      
       <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
       <button class="btn-sm export" onclick="exportToExcel()">⬇ Export</button>
       <button class="btn-sm signout" onclick="signOut()" style="display:none" id="mobileSignout">Sign Out</button>
@@ -2199,15 +2217,27 @@ function launchMatch() {
   // Update team name in topbar if provided
   const teamName = document.getElementById('setupTeamName').value.trim();
   const opponent = document.getElementById('setupOpponent').value.trim();
-  if (teamName || opponent) {
-    const brand = document.getElementById('topbarBrand');
-    if (brand) brand.textContent = `⬡ ${teamName||'Home'} vs ${opponent||'Away'}`;
-    // Update scoreboard labels
-    const labels = document.querySelectorAll('.scoreboard-teams span');
-    if (labels.length === 2) {
-      labels[0].textContent = teamName || 'Home';
-      labels[1].textContent = opponent || 'Away';
-    }
+  
+  // Update team names header above player list (desktop)
+  const homeNameEl = document.getElementById('homeTeamName');
+  const awayNameEl = document.getElementById('awayTeamName');
+  const teamHeaderEl = document.getElementById('teamNamesHeader');
+  
+  if (homeNameEl) homeNameEl.textContent = teamName || 'Home Team';
+  if (awayNameEl) awayNameEl.textContent = opponent || 'Away Team';
+  if (teamHeaderEl) teamHeaderEl.style.display = 'block';
+  
+  // Update mobile team names
+  const mobileHomeEl = document.getElementById('mobileHomeTeam');
+  const mobileAwayEl = document.getElementById('mobileAwayTeam');
+  if (mobileHomeEl) mobileHomeEl.textContent = teamName || 'Home Team';
+  if (mobileAwayEl) mobileAwayEl.textContent = opponent || 'Away Team';
+  
+  // Update scoreboard labels
+  const labels = document.querySelectorAll('.scoreboard-teams span');
+  if (labels.length === 2) {
+    labels[0].textContent = teamName || 'Home';
+    labels[1].textContent = opponent || 'Away';
   }
 
   initMatch(rosterData);
@@ -3280,6 +3310,7 @@ function switchMobileTab(tab) {
   if (tab === 'players') {
     playersArea.classList.add('mobile-active');
     document.getElementById('mobileSignout').style.display = 'none';
+    document.getElementById('mobileTeamNames').style.display = 'none';
   } else if (tab === 'stats') {
     sidebar.classList.add('mobile-active');
   } else if (tab === 'events') {
@@ -3288,6 +3319,7 @@ function switchMobileTab(tab) {
     // Show a minimal "more" panel — reuse players area with sign out visible
     playersArea.classList.add('mobile-active');
     document.getElementById('mobileSignout').style.display = 'flex';
+    document.getElementById('mobileTeamNames').style.display = 'block';
   }
 }
 
