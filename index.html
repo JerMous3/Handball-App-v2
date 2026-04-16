@@ -2378,6 +2378,11 @@ function undoLastAction() {
   updateScoreboard();
   renderPlayers();
   renderEventLog();
+  
+  // LIVE BROADCASTING - Sync score after undo
+  if (typeof updateLiveScore === 'function' && isLiveBroadcasting) {
+    updateLiveScore();
+  }
 }
 
 // ─── TIMER ───────────────────────────────────────────────
@@ -2832,6 +2837,11 @@ window.deleteEvent = function deleteEvent(idx) {
   renderPlayers();
   updateScoreboard();
   updateStats();
+  
+  // LIVE BROADCASTING - Sync score after delete
+  if (typeof updateLiveScore === 'function' && isLiveBroadcasting) {
+    updateLiveScore();
+  }
 }
 
 // ─── PLAYER ACTIONS ──────────────────────────────────────
@@ -3211,12 +3221,22 @@ function initDragAndDrop() {
 
       // Log the substitution event
       const player = allPlayersById[draggedPlayerId];
+      let substitutionDetail = '';
+      
       if (previousZone === 'sub' && targetZone !== 'sub') {
-        addEvent('substitution', player, `→ ${targetZone === 'gk' ? 'Goalkeeper' : 'Field'}`);
+        substitutionDetail = `→ ${targetZone === 'gk' ? 'Goalkeeper' : 'Field'}`;
+        addEvent('substitution', player, substitutionDetail);
       } else if (previousZone !== 'sub' && targetZone === 'sub') {
-        addEvent('substitution', player, '→ Bench');
+        substitutionDetail = '→ Bench';
+        addEvent('substitution', player, substitutionDetail);
       } else {
-        addEvent('substitution', player, `${previousZone} → ${targetZone}`);
+        substitutionDetail = `${previousZone} → ${targetZone}`;
+        addEvent('substitution', player, substitutionDetail);
+      }
+
+      // LIVE BROADCASTING - Broadcast substitution
+      if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
+        broadcastEvent('substitution', player, substitutionDetail);
       }
 
       playerZone[draggedPlayerId] = targetZone;
