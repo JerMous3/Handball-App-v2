@@ -179,6 +179,22 @@ let matchData = null;
 let events = [];
 let matchSubscription = null;
 let eventsSubscription = null;
+let connectionState = {
+  matchSubscribed: false,
+  eventsSubscribed: false
+};
+
+function updateConnectionStatus() {
+  const statusEl = document.getElementById('connectionStatus');
+  if (!statusEl) return;
+  
+  // Hide when both are connected
+  if (connectionState.matchSubscribed && connectionState.eventsSubscribed) {
+    statusEl.style.display = 'none';
+  } else {
+    statusEl.style.display = 'block';
+  }
+}
 
 if (!matchId) {
   showError('No match ID provided');
@@ -260,14 +276,18 @@ function subscribeToMatch() {
       }
     )
     .on('system', {}, (payload) => {
-      // Hide connecting indicator when subscribed
-      if (payload.status === 'SUBSCRIBED' && statusEl) {
-        statusEl.style.display = 'none';
+      console.log('Match subscription status:', payload.status);
+      
+      // Track connection state
+      if (payload.status === 'SUBSCRIBED') {
+        connectionState.matchSubscribed = true;
+        updateConnectionStatus();
       }
       
       // Auto-reconnect on connection errors
       if (payload.status === 'CHANNEL_ERROR') {
-        if (statusEl) statusEl.style.display = 'block';
+        connectionState.matchSubscribed = false;
+        updateConnectionStatus();
         console.log('⚠️ Connection lost, reconnecting in 3 seconds...');
         setTimeout(() => {
           console.log('🔄 Reconnecting...');
@@ -302,8 +322,18 @@ function subscribeToEvents() {
       }
     )
     .on('system', {}, (payload) => {
+      console.log('Events subscription status:', payload.status);
+      
+      // Track connection state
+      if (payload.status === 'SUBSCRIBED') {
+        connectionState.eventsSubscribed = true;
+        updateConnectionStatus();
+      }
+      
       // Auto-reconnect on connection errors
       if (payload.status === 'CHANNEL_ERROR') {
+        connectionState.eventsSubscribed = false;
+        updateConnectionStatus();
         console.log('⚠️ Events connection lost, reconnecting...');
         setTimeout(() => {
           subscribeToEvents();
