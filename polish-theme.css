@@ -353,6 +353,44 @@ body {
   top: 0 !important;
   z-index: 100 !important;
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.3) !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 12px 24px !important;
+}
+
+/* Topbar sections */
+.topbar-left,
+.topbar-center,
+.topbar-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.topbar-left {
+  flex: 0 0 auto !important;
+}
+
+.topbar-center {
+  flex: 0 0 auto !important;
+}
+
+.topbar-right {
+  flex: 0 0 auto !important;
+}
+
+/* Logo smaller and simpler */
+.topbar-brand {
+  font-size: 28px !important;
+  padding: 0 8px !important;
+}
+
+/* Hide user email and cloud status (removed from topbar) */
+.user-badge,
+#userEmail,
+#cloudStatus {
+  display: none !important;
 }
 
 /* ===================================================================
@@ -472,6 +510,47 @@ body {
 }
 
 @media (max-width: 768px) {
+  /* Topbar mobile layout - stack or scroll */
+  .topbar {
+    padding: 8px 12px !important;
+    gap: 8px !important;
+  }
+  
+  .topbar-left,
+  .topbar-center,
+  .topbar-right {
+    gap: 6px !important;
+  }
+  
+  /* Hide some buttons on mobile topbar */
+  .topbar-right .btn-sm.history,
+  .topbar-right .btn-sm.export,
+  .topbar-right .btn-sm.signout {
+    display: none !important; /* Available in mobile tabs instead */
+  }
+  
+  /* Smaller elements on mobile */
+  .topbar-brand {
+    font-size: 20px !important;
+  }
+  
+  .half-badge {
+    min-height: 44px !important;
+    padding: 0 10px !important;
+    font-size: 9px !important;
+  }
+  
+  .timer-block,
+  .scoreboard {
+    min-height: 44px !important;
+  }
+  
+  .btn-sm {
+    min-height: 44px !important;
+    padding: 0 14px !important;
+    font-size: 12px !important;
+  }
+  
   .team-names-header {
     display: none !important;
   }
