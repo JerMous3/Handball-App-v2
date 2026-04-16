@@ -95,7 +95,11 @@ async function startLiveMatch() {
     showLiveMatchLink(viewerUrl);
 
     // Start syncing timer every 5 seconds
-    startTimerSync();
+    try {
+      startTimerSync();
+    } catch (error) {
+      console.error('❌ Failed to start timer sync:', error);
+    }
 
     console.log('✅ Live match started:', currentLiveMatchId);
     console.log('📺 Viewer URL:', viewerUrl);
@@ -147,17 +151,23 @@ function startTimerSync() {
     clearInterval(window.liveTimerInterval);
   }
 
+  console.log('🔄 Starting timer sync...');
+
   // Update timer every 5 seconds
   window.liveTimerInterval = setInterval(() => {
     if (!isLiveBroadcasting || !currentLiveMatchId) {
+      console.log('⏹️ Stopping timer sync - not broadcasting');
       clearInterval(window.liveTimerInterval);
       return;
     }
 
     // Get current match time from DOM
-    const timerText = document.getElementById('matchTimer')?.textContent || '00:00';
+    const timerElement = document.getElementById('matchTimer');
+    const timerText = timerElement?.textContent || '00:00';
     const timerParts = timerText.split(':');
     const matchTimeSeconds = (parseInt(timerParts[0]) * 60) + parseInt(timerParts[1] || '0');
+    
+    console.log('⏱️ Syncing timer:', timerText, '=', matchTimeSeconds, 'seconds');
     
     // Get current half
     const halfLabel = document.getElementById('timerLabel')?.textContent || '1st Half';
@@ -171,14 +181,16 @@ function startTimerSync() {
         current_half: currentHalf
       })
       .eq('id', currentLiveMatchId)
-      .then(({ error }) => {
+      .then(({ data, error }) => {
         if (error) {
-          console.error('Timer sync error:', error);
+          console.error('❌ Timer sync error:', error);
+        } else {
+          console.log('✅ Timer synced:', matchTimeSeconds, 'seconds');
         }
       });
   }, 5000); // Every 5 seconds
 
-  console.log('⏱️ Timer sync started');
+  console.log('⏱️ Timer sync started - updating every 5 seconds');
 }
 
 // ============================================================
