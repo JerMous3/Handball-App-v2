@@ -111,6 +111,19 @@
       <div class="live-dot"></div>
       <span>LIVE</span>
     </div>
+    
+    <!-- Connection Status Indicator -->
+    <div id="connectionStatus" style="
+      background: rgba(255, 193, 7, 0.15);
+      border: 1px solid #ffc107;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      display: none;
+    ">
+      🔄 Connecting...
+    </div>
   </div>
 </div>
 
@@ -221,6 +234,10 @@ async function loadEvents() {
 }
 
 function subscribeToMatch() {
+  // Show connecting indicator
+  const statusEl = document.getElementById('connectionStatus');
+  if (statusEl) statusEl.style.display = 'block';
+  
   matchSubscription = _supabase
     .channel(`match-${matchId}`)
     .on(
@@ -242,6 +259,23 @@ function subscribeToMatch() {
         }
       }
     )
+    .on('system', {}, (payload) => {
+      // Hide connecting indicator when subscribed
+      if (payload.status === 'SUBSCRIBED' && statusEl) {
+        statusEl.style.display = 'none';
+      }
+      
+      // Auto-reconnect on connection errors
+      if (payload.status === 'CHANNEL_ERROR') {
+        if (statusEl) statusEl.style.display = 'block';
+        console.log('⚠️ Connection lost, reconnecting in 3 seconds...');
+        setTimeout(() => {
+          console.log('🔄 Reconnecting...');
+          subscribeToMatch();
+          subscribeToEvents();
+        }, 3000);
+      }
+    })
     .subscribe();
 }
 
@@ -267,6 +301,15 @@ function subscribeToEvents() {
         }
       }
     )
+    .on('system', {}, (payload) => {
+      // Auto-reconnect on connection errors
+      if (payload.status === 'CHANNEL_ERROR') {
+        console.log('⚠️ Events connection lost, reconnecting...');
+        setTimeout(() => {
+          subscribeToEvents();
+        }, 3000);
+      }
+    })
     .subscribe();
 }
 
@@ -382,13 +425,96 @@ function showError(message) {
 }
 
 function showMatchEnded() {
-  const hero = document.querySelector('.scoreboard-hero');
-  hero.style.opacity = '0.7';
+  const overlay = document.createElement('div');
+  overlay.id = 'matchEndedOverlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s ease-out;
+  `;
   
+  overlay.innerHTML = `
+    <style>
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+    <div style="
+      text-align: center;
+      color: var(--text);
+      animation: slideUp 0.5s ease-out;
+    ">
+      <div style="font-size: 64px; margin-bottom: 24px;">🏁</div>
+      <div style="
+        font-family: 'Bebas Neue', cursive;
+        font-size: 36px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        letter-spacing: 2px;
+      ">Match Ended</div>
+      <div style="
+        font-size: 18px;
+        color: var(--muted);
+        margin-bottom: 24px;
+      ">
+        Final Score
+      </div>
+      <div style="
+        font-family: 'Bebas Neue', cursive;
+        font-size: 56px;
+        color: var(--accent);
+        margin-bottom: 8px;
+        letter-spacing: 3px;
+      ">
+        ${matchData.score_home} - ${matchData.score_away}
+      </div>
+      <div style="
+        font-size: 16px;
+        color: var(--muted);
+        margin-bottom: 40px;
+      ">
+        ${matchData.team_name} vs ${matchData.opponent}
+      </div>
+      <button onclick="window.location.href='live.html'" style="
+        background: var(--accent);
+        color: #000;
+        border: none;
+        padding: 16px 32px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: transform 0.2s;
+      " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        ← Back to Live Matches
+      </button>
+    </div>
+  `;
+  
+  document.body.appendChild(overlay);
+  
+  // Dim the live badge
   const badge = document.querySelector('.live-badge');
-  badge.innerHTML = '<span>Match Ended</span>';
-  badge.style.background = 'rgba(107, 117, 133, 0.15)';
-  badge.style.borderColor = 'var(--muted)';
+  if (badge) {
+    badge.innerHTML = '<span style="color: var(--muted);">Ended</span>';
+    badge.style.background = 'rgba(107, 117, 133, 0.15)';
+    badge.style.borderColor = 'var(--muted)';
+  }
 }
 
 window.addEventListener('beforeunload', () => {
