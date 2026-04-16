@@ -2234,11 +2234,11 @@ function launchMatch() {
   if (mobileHomeEl) mobileHomeEl.textContent = teamName || 'Home Team';
   if (mobileAwayEl) mobileAwayEl.textContent = opponent || 'Away Team';
   
-  // Update scoreboard labels
+  // Update scoreboard labels (now has 3 spans: team1, dash, team2)
   const labels = document.querySelectorAll('.scoreboard-teams span');
-  if (labels.length === 2) {
+  if (labels.length >= 2) {
     labels[0].textContent = teamName || 'Home';
-    labels[1].textContent = opponent || 'Away';
+    labels[2].textContent = opponent || 'Away'; // Index 2 because index 1 is the dash
   }
 
   initMatch(rosterData);
@@ -2409,7 +2409,12 @@ function loadTimerState() {
       }
       
       updateTimerDisplay();
-      document.getElementById('halfBadge').textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+      
+      // Update timer label to show current half
+      const timerLabel = document.getElementById('timerLabel');
+      if (timerLabel) {
+        timerLabel.textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+      }
       
       // Restart interval if it was running
       if (timerRunning) {
