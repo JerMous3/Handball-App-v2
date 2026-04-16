@@ -1580,9 +1580,14 @@
 </div>
 
 <div class="topbar" id="appTopbar" style="display:none">
-  <div class="topbar-brand">⬡</div>
-  <div class="topbar-controls">
-    <div class="half-badge" id="halfBadge">1st Half</div>
+  <!-- Left Section: Logo + Reset -->
+  <div class="topbar-left">
+    <div class="topbar-brand">⬡</div>
+    <button class="btn-sm danger" onclick="resetTimer()">🔄 Reset Match</button>
+  </div>
+  
+  <!-- Center Section: Timer, Score, Half Badge -->
+  <div class="topbar-center">
     <div class="timer-block">
       <div class="timer-label">Match Time</div>
       <div class="timer-display" id="matchTimer">00:00</div>
@@ -1599,20 +1604,17 @@
         <span>Away</span>
       </div>
     </div>
-    
-    <div class="timer-btn-group">
-      <button class="btn-sm" id="startStopBtn" onclick="toggleTimer()">▶ Start</button>
-      <button class="btn-sm" onclick="switchHalf()">½ Half</button>
-      <button class="btn-sm danger" onclick="resetTimer()">🔄 Reset Match</button>
-      <button class="btn-sm undo" id="undoBtn" onclick="undoLastAction()" disabled>↩ Undo</button>
-      <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
-      <button class="btn-sm export" onclick="exportToExcel()">⬇ Export</button>
-    </div>
-    <div class="user-badge">
-      <div class="cloud-status" id="cloudStatus"></div>
-      <span id="userEmail"></span>
-      <button class="btn-sm signout" onclick="signOut()">Sign Out</button>
-    </div>
+    <div class="half-badge" id="halfBadge">1st Half</div>
+  </div>
+  
+  <!-- Right Section: Actions -->
+  <div class="topbar-right">
+    <button class="btn-sm" id="startStopBtn" onclick="toggleTimer()">▶ Start</button>
+    <button class="btn-sm" onclick="switchHalf()">½ Half</button>
+    <button class="btn-sm undo" id="undoBtn" onclick="undoLastAction()" disabled>↩ Undo</button>
+    <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
+    <button class="btn-sm export" onclick="exportToExcel()">⬇ Export</button>
+    <button class="btn-sm signout" onclick="signOut()">Sign Out</button>
   </div>
 </div>
 
