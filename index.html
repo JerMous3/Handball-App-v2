@@ -1756,125 +1756,145 @@
 </div>
 
 <!-- MOBILE MORE SECTION (only visible on mobile in More tab) -->
-<div id="mobileMoreSection" style="
-  padding: 20px;
-  background: var(--bg);
-  display: none;
-">
+<div id="mobileMoreSection" class="mobile-panel" style="display: none;">
   <style>
+    .mobile-panel {
+      display: none;
+      position: fixed;
+      top: 60px;
+      left: 0;
+      right: 0;
+      bottom: 60px;
+      background: var(--bg);
+      overflow-y: auto;
+      padding: 16px;
+      z-index: 50;
+    }
+    
     @media (max-width: 768px) {
-      #mobileMoreSection.mobile-active {
+      .mobile-panel.mobile-active {
         display: block !important;
       }
+    }
+    
+    .more-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .more-section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .more-button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .more-button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    
+    .more-button:active {
+      transform: scale(0.98);
+    }
+    
+    .more-button.danger {
+      background: rgba(255, 59, 59, 0.1);
+      border-color: var(--red);
+      color: var(--red);
+    }
+    
+    .more-button.live {
+      background: rgba(255, 59, 59, 0.15);
+      border-color: var(--red);
+      color: var(--red);
+      font-weight: 700;
+    }
+    
+    .more-button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+    
+    .more-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   </style>
   
   <!-- Team Names -->
-  <div style="
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    text-align: center;
-  ">
-    <div class="mobile-team-names">
-      <div class="team-vs">
-        <span id="mobileHomeTeam2">Home Team</span>
-        <span style="color: var(--muted); margin: 0 8px;">VS</span>
-        <span id="mobileAwayTeam2">Away Team</span>
-      </div>
+  <div class="more-section">
+    <div style="
+      text-align: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      padding: 8px 0;
+    ">
+      <span id="mobileHomeTeam2">Home Team</span>
+      <span style="color: var(--muted); margin: 0 8px;">vs</span>
+      <span id="mobileAwayTeam2">Away Team</span>
     </div>
   </div>
   
-  <!-- Action Buttons -->
-  <div style="
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-  ">
-    <div style="
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-    ">
-      Match Actions
-    </div>
-    
-    <div style="display: flex; flex-direction: column; gap: 12px;">
-      <button class="btn-sm" onclick="resetTimer()" style="
-        width: 100%;
-        justify-content: center;
-        background: rgba(255, 59, 59, 0.1);
-        border: 1px solid var(--red);
-        color: var(--red);
-      ">
+  <!-- Match Actions -->
+  <div class="more-section">
+    <div class="more-section-title">Match Actions</div>
+    <div class="more-button-group">
+      <button class="more-button danger" onclick="resetTimer()">
         🔄 Reset Match
       </button>
       
-      <button class="btn-sm" id="mobileUndoBtn" onclick="undoLastAction()" disabled style="
-        width: 100%;
-        justify-content: center;
-      ">
+      <button class="more-button" id="mobileUndoBtn" onclick="undoLastAction()" disabled>
         ↩ Undo Last Action
       </button>
       
-      <button class="btn-sm" id="mobileLiveBtn" onclick="typeof startLiveMatch === 'function' ? startLiveMatch() : alert('Live broadcasting not available')" style="
-        width: 100%;
-        justify-content: center;
-        background: rgba(255, 59, 59, 0.15);
-        border: 1px solid var(--red);
-        color: var(--red);
-        font-weight: 700;
-      ">
+      <button class="more-button live" id="mobileLiveBtn" onclick="typeof startLiveMatch === 'function' ? startLiveMatch() : alert('Live broadcasting not available')">
         🔴 Go Live
       </button>
     </div>
   </div>
   
   <!-- Other Actions -->
-  <div style="
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-  ">
-    <div style="
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-    ">
-      Other Actions
-    </div>
-    
-    <div style="display: flex; flex-direction: column; gap: 12px;">
-      <button class="btn-sm history" onclick="openHistoryModal()" style="
-        width: 100%;
-        justify-content: center;
-      ">
+  <div class="more-section">
+    <div class="more-section-title">Other Actions</div>
+    <div class="more-button-group">
+      <button class="more-button" onclick="openHistoryModal()">
         📋 Match History
       </button>
       
-      <button class="btn-sm export" onclick="exportToExcel()" style="
-        width: 100%;
-        justify-content: center;
-      ">
+      <button class="more-button" onclick="exportToExcel()">
         ⬇ Export to Excel
       </button>
       
-      <button class="btn-sm signout" onclick="signOut()" style="
-        width: 100%;
-        justify-content: center;
-      ">
+      <button class="more-button" onclick="signOut()">
         🚪 Sign Out
       </button>
     </div>
