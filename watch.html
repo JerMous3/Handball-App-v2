@@ -182,7 +182,7 @@ async function init() {
 
 async function loadMatchData() {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await _supabase
       .from('live_matches')
       .select('*')
       .eq('id', matchId)
@@ -203,7 +203,7 @@ async function loadMatchData() {
 
 async function loadEvents() {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await _supabase
       .from('live_events')
       .select('*')
       .eq('live_match_id', matchId)
@@ -221,7 +221,7 @@ async function loadEvents() {
 }
 
 function subscribeToMatch() {
-  matchSubscription = supabase
+  matchSubscription = _supabase
     .channel(`match-${matchId}`)
     .on(
       'postgres_changes',
@@ -246,7 +246,7 @@ function subscribeToMatch() {
 }
 
 function subscribeToEvents() {
-  eventsSubscription = supabase
+  eventsSubscription = _supabase
     .channel(`events-${matchId}`)
     .on(
       'postgres_changes',
@@ -390,8 +390,8 @@ function showMatchEnded() {
 }
 
 window.addEventListener('beforeunload', () => {
-  if (matchSubscription) supabase.removeChannel(matchSubscription);
-  if (eventsSubscription) supabase.removeChannel(eventsSubscription);
+  if (matchSubscription) _supabase.removeChannel(matchSubscription);
+  if (eventsSubscription) _supabase.removeChannel(eventsSubscription);
 });
 </script>
 
