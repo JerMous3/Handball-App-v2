@@ -2751,6 +2751,7 @@ window.deleteEvent = function deleteEvent(idx) {
       }
       stats.yellows = Math.max(0, stats.yellows - 1);
       break;
+    case 'suspension':
     case '2min':
       if (playerId && playerStats[playerId]) {
         playerStats[playerId].suspensions = Math.max(0, playerStats[playerId].suspensions - 1);
