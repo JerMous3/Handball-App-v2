@@ -7,10 +7,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  const SUPABASE_URL = 'https://qgqryeanopdxrwrfczcx._supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFncXJ5ZWFub3BkeHJ3cmZjemN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc3MjQ4NjgsImV4cCI6MjA1MzMwMDg2OH0.p3p6ggbWPf_EGDLOIgz5PBLqCbxM6y3aOx2hqKwxjEQ';
-  const { createClient } = supabase;
-  const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+  const SUPABASE_URL = 'https://qgqryeanopdxrwrfczcx.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_I67bdwmAkdodIk5bAQf1Zw_86KroW5R';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 </script>
 <style>
   :root {
@@ -391,8 +390,8 @@ function showMatchEnded() {
 }
 
 window.addEventListener('beforeunload', () => {
-  if (matchSubscription) _supabase.removeChannel(matchSubscription);
-  if (eventsSubscription) _supabase.removeChannel(eventsSubscription);
+  if (matchSubscription) supabase.removeChannel(matchSubscription);
+  if (eventsSubscription) supabase.removeChannel(eventsSubscription);
 });
 </script>
 
