@@ -108,6 +108,10 @@ body {
   box-shadow: var(--shadow-sm) !important;
   border-radius: var(--radius-md) !important;
   transition: all var(--transition-base);
+  min-height: 58px !important; /* Set standard height */
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
 }
 
 .timer-block:hover {
@@ -125,6 +129,38 @@ body {
 .timer-label {
   font-weight: 700 !important;
   letter-spacing: 2.5px !important;
+}
+
+/* Scoreboard - Match timer size */
+.scoreboard {
+  padding: 8px 20px !important;
+  background: linear-gradient(135deg, #1a1f2a 0%, #12151c 100%) !important;
+  box-shadow: 
+    var(--shadow-glow),
+    var(--shadow-lg) !important;
+  border-radius: var(--radius-lg) !important;
+  min-height: 58px !important; /* Match timer height */
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+
+/* Half badge - Match timer height */
+.half-badge {
+  min-height: 58px !important; /* Match timer height */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 16px !important;
+}
+
+/* Buttons - Match timer height */
+.btn-sm {
+  min-height: 58px !important; /* Match timer height */
+  padding: 0 20px !important; /* Horizontal padding only */
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 /* ===================================================================
@@ -430,7 +466,34 @@ body {
    7. MOBILE IMPROVEMENTS - Better touch targets
    =================================================================== */
 
+/* Team names header - show on desktop, hide on mobile initially */
+.team-names-header {
+  display: block !important;
+}
+
 @media (max-width: 768px) {
+  .team-names-header {
+    display: none !important;
+  }
+  
+  /* Show team names in More tab on mobile */
+  .mobile-team-names {
+    display: block;
+    text-align: center;
+    padding: 20px;
+    background: var(--surface2);
+    border-radius: var(--radius-md);
+    margin-bottom: 20px;
+  }
+  
+  .mobile-team-names .team-vs {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 20px;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+  
+  @media (max-width: 768px) {
   /* Bigger tap targets */
   .mobile-tab {
     padding: 18px 12px !important;
