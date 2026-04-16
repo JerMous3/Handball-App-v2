@@ -25,12 +25,47 @@ async function startLiveMatch() {
     return;
   }
 
-  if (!teamName || !opponent) {
-    alert('Please set team names first');
+  // Get team names from the topbar brand element
+  const topbarBrand = document.getElementById('topbarBrand') || document.querySelector('.topbar-brand');
+  let teamName = 'Home Team';
+  let opponent = 'Away Team';
+  
+  if (topbarBrand && topbarBrand.textContent) {
+    const brandText = topbarBrand.textContent.replace('⬡', '').trim();
+    if (brandText.includes(' vs ')) {
+      const parts = brandText.split(' vs ');
+      teamName = parts[0].trim();
+      opponent = parts[1].trim();
+    }
+  }
+  
+  // Fallback: try to get from scoreboard teams
+  if (teamName === 'Home Team') {
+    const scoreboardTeams = document.querySelector('.scoreboard-teams');
+    if (scoreboardTeams) {
+      const teamSpans = scoreboardTeams.querySelectorAll('span');
+      if (teamSpans.length >= 2) {
+        teamName = teamSpans[0].textContent.trim();
+        opponent = teamSpans[2] ? teamSpans[2].textContent.trim() : 'Away Team';
+      }
+    }
+  }
+
+  if (!teamName || !opponent || teamName === 'Home' || opponent === 'Away') {
+    alert('Please set team names before going live!\n\nMake sure you entered team names when starting the match.');
     return;
   }
 
   try {
+    // Get current match state
+    const scoreHome = parseInt(document.getElementById('sbHome')?.textContent || '0');
+    const scoreAway = parseInt(document.getElementById('sbAway')?.textContent || '0');
+    const timerText = document.getElementById('matchTimer')?.textContent || '00:00';
+    const timerParts = timerText.split(':');
+    const matchTimeSeconds = (parseInt(timerParts[0]) * 60) + parseInt(timerParts[1] || '0');
+    const halfLabel = document.getElementById('timerLabel')?.textContent || '1st Half';
+    const currentHalf = halfLabel.includes('2nd') ? 'second' : 'first';
+
     // Create live match record
     const { data, error } = await _supabase
       .from('live_matches')
@@ -39,10 +74,10 @@ async function startLiveMatch() {
         team_name: teamName,
         opponent: opponent,
         is_live: true,
-        score_home: stats.goals || 0,
-        score_away: stats.goalsAgainst || 0,
-        match_time_seconds: matchTimerSeconds || 0,
-        current_half: currentHalf === 1 ? 'first' : 'second'
+        score_home: scoreHome,
+        score_away: scoreAway,
+        match_time_seconds: matchTimeSeconds,
+        current_half: currentHalf
       })
       .select()
       .single();
@@ -56,7 +91,7 @@ async function startLiveMatch() {
     showLiveStatus(true);
     
     // Create shareable link
-    const viewerUrl = `${window.location.origin}/watch-live.html?match=${currentLiveMatchId}`;
+    const viewerUrl = `${window.location.origin}/watch.html?match=${currentLiveMatchId}`;
     showLiveMatchLink(viewerUrl);
 
     console.log('✅ Live match started:', currentLiveMatchId);
@@ -65,7 +100,9 @@ async function startLiveMatch() {
   } catch (error) {
     console.error('Error starting live match:', error);
     alert('Failed to start live match. Please try again.');
-    logError('live_match_start_failed', error);
+    if (typeof logError === 'function') {
+      logError('live_match_start_failed', error);
+    }
   }
 }
 
@@ -103,7 +140,21 @@ async function stopLiveMatch() {
 async function broadcastEvent(eventType, player, detail = '') {
   if (!isLiveBroadcasting || !currentLiveMatchId) return;
 
-  const matchTime = formatMatchTime(matchTimerSeconds);
+  // Get current match time from DOM
+  const timerText = document.getElementById('matchTimer')?.textContent || '00:00';
+  const timerParts = timerText.split(':');
+  const matchTimeSeconds = (parseInt(timerParts[0]) * 60) + parseInt(timerParts[1] || '0');
+  const matchTime = timerText;
+
+  // Get team name from topbar
+  const topbarBrand = document.getElementById('topbarBrand') || document.querySelector('.topbar-brand');
+  let teamName = 'Home Team';
+  if (topbarBrand && topbarBrand.textContent) {
+    const brandText = topbarBrand.textContent.replace('⬡', '').trim();
+    if (brandText.includes(' vs ')) {
+      teamName = brandText.split(' vs ')[0].trim();
+    }
+  }
   
   const eventData = {
     live_match_id: currentLiveMatchId,
@@ -111,10 +162,10 @@ async function broadcastEvent(eventType, player, detail = '') {
     player_name: player ? player.name : null,
     player_number: player ? player.num : null,
     team_name: teamName,
-    match_time_seconds: matchTimerSeconds,
+    match_time_seconds: matchTimeSeconds,
     match_time_display: matchTime,
-    score_home: stats.goals,
-    score_away: stats.goalsAgainst,
+    score_home: parseInt(document.getElementById('sbHome')?.textContent || '0'),
+    score_away: parseInt(document.getElementById('sbAway')?.textContent || '0'),
     detail: detail
   };
 
@@ -129,13 +180,22 @@ async function broadcastEvent(eventType, player, detail = '') {
 async function updateLiveScore() {
   if (!isLiveBroadcasting || !currentLiveMatchId) return;
 
+  // Get scores from DOM
+  const scoreHome = parseInt(document.getElementById('sbHome')?.textContent || '0');
+  const scoreAway = parseInt(document.getElementById('sbAway')?.textContent || '0');
+  
+  // Get match time from DOM
+  const timerText = document.getElementById('matchTimer')?.textContent || '00:00';
+  const timerParts = timerText.split(':');
+  const matchTimeSeconds = (parseInt(timerParts[0]) * 60) + parseInt(timerParts[1] || '0');
+
   liveUpdateQueue.push({
     type: 'score',
     data: {
       live_match_id: currentLiveMatchId,
-      score_home: stats.goals,
-      score_away: stats.goalsAgainst,
-      match_time_seconds: matchTimerSeconds
+      score_home: scoreHome,
+      score_away: scoreAway,
+      match_time_seconds: matchTimeSeconds
     }
   });
   
@@ -481,8 +541,12 @@ function copyLiveUrl() {
  * Call this after the page loads
  */
 function addLiveBroadcastButton() {
-  const topbarControls = document.querySelector('.topbar-controls');
-  if (!topbarControls) return;
+  // Try both possible topbar locations
+  const topbarControls = document.querySelector('.topbar-controls') || document.querySelector('.topbar-right');
+  if (!topbarControls) {
+    console.error('Could not find topbar element (.topbar-controls or .topbar-right)');
+    return;
+  }
 
   // Check if button already exists
   if (document.getElementById('liveBroadcastBtn')) return;
@@ -500,6 +564,8 @@ function addLiveBroadcastButton() {
   } else {
     topbarControls.appendChild(btn);
   }
+  
+  console.log('✅ Live broadcast button added to topbar');
 }
 
 // ============================================================
