@@ -313,7 +313,8 @@ function renderEvents() {
     yellow: '🟡',
     suspension: '⏱',
     red: '🟥',
-    goal_against: '🥅'
+    goal_against: '🥅',
+    substitution: '🔄'
   };
 
   container.innerHTML = events.map(event => `
@@ -345,7 +346,8 @@ function formatEventType(type) {
     yellow: 'Yellow Card',
     suspension: '2-Min Suspension',
     red: 'Red Card',
-    goal_against: 'Goal Conceded'
+    goal_against: 'Goal Conceded',
+    substitution: 'Substitution'
   };
   return types[type] || type;
 }
