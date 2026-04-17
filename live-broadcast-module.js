@@ -470,59 +470,12 @@ function getZoneName(zoneIdx) {
  * Show/hide live broadcasting status in UI
  */
 function showLiveStatus(isLive) {
-  const topbar = document.querySelector('.topbar');
-  if (!topbar) return;
-
-  // Remove existing live indicator if any
+  // Remove existing live indicator if any (cleanup from old versions)
   const existingIndicator = document.getElementById('liveIndicator');
   if (existingIndicator) existingIndicator.remove();
 
   if (isLive) {
-    // Add live indicator to topbar
-    const indicator = document.createElement('div');
-    indicator.id = 'liveIndicator';
-    indicator.innerHTML = `
-      <div style="
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: rgba(255, 59, 59, 0.15);
-        border: 1px solid var(--red);
-        border-radius: 20px;
-        padding: 6px 14px;
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        animation: pulse 2s ease-in-out infinite;
-      ">
-        <div style="
-          width: 8px;
-          height: 8px;
-          background: var(--red);
-          border-radius: 50%;
-          animation: pulse 1.5s ease-in-out infinite;
-        "></div>
-        <span>🔴 BROADCASTING LIVE</span>
-      </div>
-    `;
-
-    // Add pulse animation if not already defined
-    if (!document.getElementById('liveAnimations')) {
-      const style = document.createElement('style');
-      style.id = 'liveAnimations';
-      style.textContent = `
-        @keyframes livePulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.6; transform: scale(1.05); }
-        }
-      `;
-      document.head.appendChild(style);
-    }
-
-    topbar.insertBefore(indicator, topbar.firstChild);
-
-    // Update desktop live button
+    // Update desktop live button to "Stop Live"
     const liveBtn = document.getElementById('liveBroadcastBtn');
     if (liveBtn) {
       liveBtn.textContent = '⏹ Stop Live';
@@ -530,7 +483,7 @@ function showLiveStatus(isLive) {
       liveBtn.onclick = stopLiveMatch;
     }
     
-    // Update mobile live button
+    // Update mobile live button to "Stop Live"
     const mobileLiveBtn = document.getElementById('mobileLiveBtn');
     if (mobileLiveBtn) {
       mobileLiveBtn.textContent = '⏹ Stop Live';
