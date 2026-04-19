@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Live Match - Handball Tracker</title>
+<title>Live Matches - Handball Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -20,23 +20,76 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: 'Manrope', sans-serif; overflow-x: hidden; }
   
+  /* TOPBAR */
   .topbar { position: sticky; top: 0; z-index: 100; background: linear-gradient(180deg, #12151c 0%, #0f1218 100%);
     border-bottom: 1px solid var(--border); padding: 12px 24px; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
-  .topbar-content { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
+  .topbar-content { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
   .back-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 8px 16px;
     border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: flex;
     align-items: center; gap: 8px; transition: all 0.2s; }
   .back-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .live-badge { display: flex; align-items: center; gap: 8px; background: rgba(255, 59, 59, 0.15);
-    border: 1px solid var(--red); border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 700; }
+  
+  .mode-tabs { display: flex; gap: 8px; }
+  .mode-tab { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 8px 16px;
+    border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+  .mode-tab.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  .mode-tab:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+  
+  .badge { display: flex; align-items: center; gap: 8px; border-radius: 20px; padding: 6px 16px; font-size: 13px; font-weight: 700; }
+  .badge.live { background: rgba(255, 59, 59, 0.15); border: 1px solid var(--red); color: var(--red); }
+  .badge.replay { background: rgba(107, 117, 133, 0.15); border: 1px solid var(--muted); color: var(--muted); }
   .live-dot { width: 8px; height: 8px; background: var(--red); border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.2); } }
+  
+  /* BROWSE MODE */
+  .browse-container { max-width: 1400px; margin: 0 auto; padding: 32px 24px; }
+  .page-header { margin-bottom: 32px; }
+  .page-title { font-family: 'Bebas Neue', cursive; font-size: 48px; color: var(--accent); margin: 0 0 8px 0; letter-spacing: 2px; }
+  .page-subtitle { font-size: 16px; color: var(--muted); margin: 0 0 24px 0; }
+  
+  .filters { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+    margin-bottom: 24px; display: flex; gap: 16px; flex-wrap: wrap; }
+  .filter-group { flex: 1; min-width: 200px; }
+  .filter-label { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px;
+    text-transform: uppercase; letter-spacing: 0.5px; }
+  .filter-select { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 14px; font-family: 'Manrope', sans-serif; }
+  
+  .matches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+  .match-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+    cursor: pointer; transition: all 0.2s; }
+  .match-card:hover { border-color: var(--accent); transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(232, 255, 0, 0.1); }
+  
+  .card-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+  .card-badge.live { background: rgba(255, 59, 59, 0.15); border: 1px solid var(--red); color: var(--red); }
+  .card-badge.replay { background: rgba(107, 117, 133, 0.15); border: 1px solid var(--muted); color: var(--muted); }
+  .card-badge.recent { background: rgba(255, 193, 7, 0.15); border: 1px solid #ffc107; color: #ffc107; }
+  
+  .card-matchup { font-family: 'Bebas Neue', cursive; font-size: 24px; color: var(--text);
+    margin-bottom: 12px; letter-spacing: 1px; }
+  .card-matchup .vs { color: var(--muted); margin: 0 8px; }
+  .card-score { font-family: 'Bebas Neue', cursive; font-size: 32px; color: var(--accent);
+    margin-bottom: 16px; letter-spacing: 2px; }
+  .card-meta { display: flex; gap: 16px; font-size: 13px; color: var(--muted);
+    padding-top: 16px; border-top: 1px solid var(--border); }
+  .card-meta-item { display: flex; align-items: center; gap: 6px; }
+  
+  .empty-state { text-align: center; padding: 80px 20px; }
+  .empty-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.5; }
+  .empty-title { font-family: 'Bebas Neue', cursive; font-size: 32px; color: var(--text); margin-bottom: 8px; }
+  .empty-text { font-size: 16px; color: var(--muted); }
+  
+  /* WATCH MODE */
+  .watch-container { display: none; }
   
   .scoreboard-hero { background: linear-gradient(135deg, #1a1f2a 0%, #12151c 100%); border-bottom: 1px solid var(--border);
     padding: 40px 24px; position: relative; overflow: hidden; }
   .scoreboard-hero::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
     background: radial-gradient(circle at 50% 0%, rgba(232, 255, 0, 0.08) 0%, transparent 70%); pointer-events: none; }
   .scoreboard-content { max-width: 1400px; margin: 0 auto; position: relative; z-index: 1; }
+  
   .match-timer { text-align: center; margin-bottom: 24px; }
   .timer { font-family: 'Bebas Neue', cursive; font-size: 56px; color: var(--accent); letter-spacing: 3px;
     text-shadow: 0 0 30px rgba(232, 255, 0, 0.3); line-height: 1; }
@@ -48,186 +101,384 @@
   .score { font-family: 'Bebas Neue', cursive; font-size: 96px; color: var(--accent); line-height: 1;
     text-shadow: 0 4px 32px rgba(232, 255, 0, 0.4); transition: all 0.3s; }
   .score.bump { animation: scoreBump 0.4s ease-out; }
-  @keyframes scoreBump { 0% { transform: scale(1); } 50% { transform: scale(1.2); color: #fff; } 100% { transform: scale(1); } }
-  .vs { font-family: 'Bebas Neue', cursive; font-size: 32px; color: var(--muted); align-self: center; margin-top: 40px; }
+  @keyframes scoreBump { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+  .vs-divider { font-family: 'Bebas Neue', cursive; font-size: 48px; color: var(--muted); }
   
-  .main-content { max-width: 1400px; margin: 0 auto; padding: 32px 24px; display: grid; grid-template-columns: 1fr 400px; gap: 32px; }
-  .event-feed { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; height: fit-content; }
-  .feed-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
-    padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-  .feed-title { font-family: 'Bebas Neue', cursive; font-size: 24px; letter-spacing: 2px; }
-  .auto-update { font-size: 12px; color: var(--green); display: flex; align-items: center; gap: 6px; }
-  .update-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
+  .events-section { max-width: 1400px; margin: 40px auto; padding: 0 24px; }
+  .section-title { font-family: 'Bebas Neue', cursive; font-size: 32px; color: var(--text);
+    margin-bottom: 20px; letter-spacing: 2px; }
+  .events-feed { background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    max-height: 600px; overflow-y: auto; }
+  .event-item { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center;
+    gap: 16px; animation: slideIn 0.3s ease-out; }
+  .event-item:last-child { border-bottom: none; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
   
-  .event-list { display: flex; flex-direction: column; gap: 12px; max-height: 600px; overflow-y: auto; }
-  .event-list::-webkit-scrollbar { width: 6px; }
-  .event-list::-webkit-scrollbar-track { background: var(--surface2); border-radius: 3px; }
-  .event-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .event-icon { font-size: 24px; flex-shrink: 0; }
+  .event-content { flex: 1; }
+  .event-player { font-weight: 700; font-size: 15px; color: var(--text); margin-bottom: 2px; }
+  .event-desc { font-size: 13px; color: var(--muted); }
+  .event-time { font-family: 'Bebas Neue', cursive; font-size: 20px; color: var(--accent);
+    flex-shrink: 0; letter-spacing: 1px; }
   
-  .event-item { background: var(--surface2); border: 1px solid var(--border); border-left: 3px solid var(--accent);
-    border-radius: 8px; padding: 14px; animation: slideIn 0.3s ease-out; }
-  .event-item.goal { border-left-color: var(--accent); background: linear-gradient(90deg, rgba(232, 255, 0, 0.08) 0%, var(--surface2) 100%); }
-  .event-item.save { border-left-color: var(--gk-accent); }
-  .event-item.yellow { border-left-color: var(--yellow); }
-  .event-item.red { border-left-color: var(--red); }
-  @keyframes slideIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
-  
-  .event-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-  .event-type { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
-  .event-icon { font-size: 18px; }
-  .event-time { font-family: 'Bebas Neue', cursive; font-size: 18px; color: var(--muted); letter-spacing: 1px; }
-  .event-player { font-size: 15px; color: var(--text); font-weight: 600; }
-  .event-detail { font-size: 13px; color: var(--muted); margin-top: 4px; }
-  
-  .stats-sidebar { display: flex; flex-direction: column; gap: 24px; }
-  .stats-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
-  .stats-card-title { font-family: 'Bebas Neue', cursive; font-size: 20px; letter-spacing: 2px; margin-bottom: 20px;
-    padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-  
-  .loading { text-align: center; padding: 60px 20px; font-size: 18px; color: var(--muted); }
-  .error { text-align: center; padding: 60px 20px; }
-  .error-icon { font-size: 48px; margin-bottom: 16px; }
-  .error-text { font-size: 18px; color: var(--red); }
-  
-  @media (max-width: 1024px) { .main-content { grid-template-columns: 1fr; } }
+  /* RESPONSIVE */
   @media (max-width: 768px) {
-    .timer { font-size: 42px; }
+    .topbar-content { flex-wrap: wrap; }
+    .mode-tabs { order: 3; width: 100%; }
+    .mode-tab { flex: 1; text-align: center; }
+    .matches-grid { grid-template-columns: 1fr; }
     .score-display { flex-direction: column; gap: 24px; }
-    .team-name { font-size: 20px; }
-    .score { font-size: 64px; }
-    .vs { display: none; }
+    .score { font-size: 72px; }
+    .timer { font-size: 42px; }
+    .page-title { font-size: 36px; }
   }
 </style>
 </head>
 <body>
-
+<!-- TOPBAR -->
 <div class="topbar">
   <div class="topbar-content">
-    <a href="live.html" class="back-btn">
+    <a href="index.html" class="back-btn">
       <span>←</span>
-      <span>Back to Live Matches</span>
+      <span>Back to Tracker</span>
     </a>
-    <div class="live-badge">
+    
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tabLive" onclick="switchMode('live')">
+        🔴 Live Now
+      </button>
+      <button class="mode-tab" id="tabReplays" onclick="switchMode('replays')">
+        📼 Replays
+      </button>
+    </div>
+    
+    <div class="badge live" id="statusBadge" style="display: none;">
       <div class="live-dot"></div>
       <span>LIVE</span>
     </div>
+  </div>
+</div>
+
+<!-- BROWSE MODE (Live + Replays) -->
+<div class="browse-container" id="browseMode">
+  <div class="page-header">
+    <h1 class="page-title" id="browseTitle">Live Matches</h1>
+    <p class="page-subtitle" id="browseSubtitle">Watch matches in real-time</p>
+  </div>
+  
+  <div class="filters" id="replayFilters" style="display: none;">
+    <div class="filter-group">
+      <div class="filter-label">Time Period</div>
+      <select class="filter-select" id="periodFilter" onchange="loadMatches()">
+        <option value="1">Last 24 hours</option>
+        <option value="3">Last 3 days</option>
+        <option value="7" selected>Last 7 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="all">All time</option>
+      </select>
+    </div>
     
-    <!-- Connection Status Indicator -->
-    <div id="connectionStatus" style="
-      background: rgba(255, 193, 7, 0.15);
-      border: 1px solid #ffc107;
-      border-radius: 20px;
-      padding: 6px 14px;
-      font-size: 11px;
-      font-weight: 600;
-      display: none;
-    ">
-      🔄 Connecting...
+    <div class="filter-group">
+      <div class="filter-label">Sort By</div>
+      <select class="filter-select" id="sortFilter" onchange="renderMatches()">
+        <option value="recent">Most Recent</option>
+        <option value="oldest">Oldest First</option>
+        <option value="score">Highest Score</option>
+      </select>
     </div>
+  </div>
+  
+  <div class="matches-grid" id="matchesGrid">
+    <div style="text-align: center; padding: 40px; color: var(--muted);">
+      Loading matches...
+    </div>
+  </div>
+  
+  <div class="empty-state" id="emptyState" style="display: none;">
+    <div class="empty-icon">🏐</div>
+    <div class="empty-title">No Matches Found</div>
+    <div class="empty-text" id="emptyText">There are no live matches at the moment.</div>
   </div>
 </div>
 
-<div class="scoreboard-hero">
-  <div class="scoreboard-content">
-    <div class="match-timer">
-      <div class="timer" id="matchTimer">--:--</div>
-      <div class="half-label" id="halfLabel">Loading...</div>
-    </div>
-    <div class="score-display">
-      <div class="team-block">
-        <div class="team-name" id="homeTeam">Home</div>
-        <div class="score" id="homeScore">0</div>
+<!-- WATCH MODE (Single Match) -->
+<div class="watch-container" id="watchMode">
+  <div class="scoreboard-hero">
+    <div class="scoreboard-content">
+      <div class="match-timer">
+        <div class="timer" id="matchTimer">00:00</div>
+        <div class="half-label" id="halfLabel">1st Half</div>
       </div>
-      <div class="vs">-</div>
-      <div class="team-block">
-        <div class="team-name" id="awayTeam">Away</div>
-        <div class="score" id="awayScore">0</div>
+      
+      <div class="score-display">
+        <div class="team-block">
+          <div class="team-name" id="homeTeam">Home</div>
+          <div class="score" id="homeScore">0</div>
+        </div>
+        
+        <div class="vs-divider">vs</div>
+        
+        <div class="team-block">
+          <div class="team-name" id="awayTeam">Away</div>
+          <div class="score" id="awayScore">0</div>
+        </div>
       </div>
     </div>
   </div>
-</div>
-
-<div class="main-content">
-  <div class="event-feed">
-    <div class="feed-header">
-      <h2 class="feed-title">Live Event Feed</h2>
-      <div class="auto-update">
-        <div class="update-dot"></div>
-        <span>Auto-updating</span>
-      </div>
-    </div>
-    <div class="event-list" id="eventList">
-      <div class="loading">Loading events...</div>
-    </div>
-  </div>
-
-  <div class="stats-sidebar">
-    <div class="stats-card">
-      <h3 class="stats-card-title">Match Info</h3>
-      <div id="matchInfo" style="color: var(--muted); font-size: 14px;">
-        Loading match details...
+  
+  <div class="events-section">
+    <h2 class="section-title">Match Events</h2>
+    <div class="events-feed" id="eventsFeed">
+      <div style="text-align: center; padding: 40px; color: var(--muted);">
+        No events yet
       </div>
     </div>
   </div>
 </div>
 
 <script>
+// URL Parameters
 const urlParams = new URLSearchParams(window.location.search);
 const matchId = urlParams.get('match');
 
+// App State
+let currentMode = matchId ? 'watch' : 'live'; // Auto-switch to watch if match ID present
+let matches = [];
 let matchData = null;
 let events = [];
 let matchSubscription = null;
 let eventsSubscription = null;
-let connectionState = {
-  matchSubscribed: false,
-  eventsSubscribed: false
-};
+let isReplayMode = false;
 
-function updateConnectionStatus() {
-  const statusEl = document.getElementById('connectionStatus');
-  if (!statusEl) return;
-  
-  // Hide when both are connected
-  if (connectionState.matchSubscribed && connectionState.eventsSubscribed) {
-    statusEl.style.display = 'none';
+// Initialize
+initApp();
+
+function initApp() {
+  if (matchId) {
+    // Watch specific match
+    showWatchMode();
+    loadMatch(matchId);
   } else {
-    statusEl.style.display = 'block';
+    // Browse mode
+    showBrowseMode();
+    loadMatches();
   }
 }
 
-if (!matchId) {
-  showError('No match ID provided');
-} else {
-  init();
+// MODE SWITCHING
+function switchMode(mode) {
+  currentMode = mode;
+  
+  // Update tab buttons
+  document.getElementById('tabLive').classList.toggle('active', mode === 'live');
+  document.getElementById('tabReplays').classList.toggle('active', mode === 'replays');
+  
+  // Update page content
+  if (mode === 'live') {
+    document.getElementById('browseTitle').textContent = 'Live Matches';
+    document.getElementById('browseSubtitle').textContent = 'Watch matches in real-time';
+    document.getElementById('replayFilters').style.display = 'none';
+    document.getElementById('emptyText').textContent = 'There are no live matches at the moment.';
+  } else {
+    document.getElementById('browseTitle').textContent = 'Match Replays';
+    document.getElementById('browseSubtitle').textContent = 'Watch previously broadcasted matches';
+    document.getElementById('replayFilters').style.display = 'flex';
+    document.getElementById('emptyText').textContent = 'No replays found for the selected time period.';
+  }
+  
+  loadMatches();
 }
 
-async function init() {
-  await loadMatchData();
-  await loadEvents();
-  subscribeToMatch();
-  subscribeToEvents();
+function showBrowseMode() {
+  document.getElementById('browseMode').style.display = 'block';
+  document.getElementById('watchMode').style.display = 'none';
+  document.getElementById('statusBadge').style.display = 'none';
 }
 
-async function loadMatchData() {
+function showWatchMode() {
+  document.getElementById('browseMode').style.display = 'none';
+  document.getElementById('watchMode').style.display = 'block';
+}
+
+// BROWSE MODE - LOAD MATCHES
+async function loadMatches() {
+  const grid = document.getElementById('matchesGrid');
+  const emptyState = document.getElementById('emptyState');
+  
+  grid.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--muted);">Loading...</div>';
+  emptyState.style.display = 'none';
+  
+  try {
+    let query = _supabase.from('live_matches').select('*');
+    
+    if (currentMode === 'live') {
+      // Show only live matches
+      query = query.eq('is_live', true).order('started_at', { ascending: false });
+    } else {
+      // Show replays
+      query = query.eq('is_live', false).order('ended_at', { ascending: false });
+      
+      // Apply time filter for replays
+      const periodFilter = document.getElementById('periodFilter').value;
+      if (periodFilter !== 'all') {
+        const daysBack = parseInt(periodFilter);
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+        query = query.gte('ended_at', cutoffDate.toISOString());
+      }
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    
+    matches = data || [];
+    renderMatches();
+    
+  } catch (error) {
+    console.error('Error loading matches:', error);
+    grid.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--red);">Failed to load matches</div>';
+  }
+}
+
+function renderMatches() {
+  const grid = document.getElementById('matchesGrid');
+  const emptyState = document.getElementById('emptyState');
+  const sortFilter = document.getElementById('sortFilter').value;
+  
+  // Sort matches
+  let sortedMatches = [...matches];
+  
+  if (sortFilter === 'recent') {
+    sortedMatches.sort((a, b) => {
+      const dateA = new Date(a.ended_at || a.started_at);
+      const dateB = new Date(b.ended_at || b.started_at);
+      return dateB - dateA;
+    });
+  } else if (sortFilter === 'oldest') {
+    sortedMatches.sort((a, b) => {
+      const dateA = new Date(a.ended_at || a.started_at);
+      const dateB = new Date(b.ended_at || b.started_at);
+      return dateA - dateB;
+    });
+  } else if (sortFilter === 'score') {
+    sortedMatches.sort((a, b) => (b.score_home + b.score_away) - (a.score_home + a.score_away));
+  }
+  
+  if (sortedMatches.length === 0) {
+    grid.innerHTML = '';
+    emptyState.style.display = 'block';
+    return;
+  }
+  
+  emptyState.style.display = 'none';
+  
+  grid.innerHTML = sortedMatches.map(match => {
+    const endedDate = match.ended_at ? new Date(match.ended_at) : null;
+    const startedDate = new Date(match.started_at);
+    const isLive = match.is_live;
+    const isRecent = endedDate && (Date.now() - endedDate.getTime()) < 24 * 60 * 60 * 1000;
+    const duration = Math.floor(match.match_time_seconds / 60);
+    
+    let badgeClass = isLive ? 'live' : isRecent ? 'recent' : 'replay';
+    let badgeText = isLive ? '🔴 Live Now' : isRecent ? '🔥 Recent' : '📼 Replay';
+    
+    return `
+      <div class="match-card" onclick="watchMatch('${match.id}', ${!isLive})">
+        <div class="card-badge ${badgeClass}">${badgeText}</div>
+        
+        <div class="card-matchup">
+          ${match.team_name || 'Home'}
+          <span class="vs">vs</span>
+          ${match.opponent || 'Away'}
+        </div>
+        
+        <div class="card-score">
+          ${match.score_home} - ${match.score_away}
+        </div>
+        
+        <div class="card-meta">
+          <div class="card-meta-item">
+            📅 ${formatDate(endedDate || startedDate)}
+          </div>
+          ${duration > 0 ? `<div class="card-meta-item">⏱️ ${duration} min</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function formatDate(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
+
+function watchMatch(id, isReplay) {
+  window.location.href = `?match=${id}`;
+}
+
+// WATCH MODE - LOAD MATCH
+async function loadMatch(id) {
   try {
     const { data, error } = await _supabase
       .from('live_matches')
       .select('*')
-      .eq('id', matchId)
+      .eq('id', id)
       .single();
-
+    
     if (error) throw error;
-    if (!data) throw new Error('Match not found');
-    if (!data.is_live) throw new Error('Match has ended');
-
+    
     matchData = data;
+    isReplayMode = !data.is_live;
+    
     renderMatchInfo();
-
+    await loadEvents();
+    
+    if (isReplayMode) {
+      updateReplayBadge();
+    } else {
+      updateLiveBadge();
+      subscribeToMatch();
+      subscribeToEvents();
+    }
+    
   } catch (error) {
     console.error('Error loading match:', error);
-    showError(error.message);
+    document.getElementById('watchMode').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">❌</div>
+        <div class="empty-title">Match Not Found</div>
+        <div class="empty-text">This match may have been deleted or does not exist.</div>
+        <button onclick="window.location.href='watch.html'" class="back-btn" style="margin-top: 20px;">
+          ← Back to Matches
+        </button>
+      </div>
+    `;
   }
+}
+
+function renderMatchInfo() {
+  if (!matchData) return;
+  
+  document.getElementById('homeTeam').textContent = matchData.team_name || 'Home';
+  document.getElementById('awayTeam').textContent = matchData.opponent || 'Away';
+  document.getElementById('homeScore').textContent = matchData.score_home || 0;
+  document.getElementById('awayScore').textContent = matchData.score_away || 0;
+  
+  const seconds = matchData.match_time_seconds || 0;
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  document.getElementById('matchTimer').textContent = 
+    `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
 async function loadEvents() {
@@ -237,23 +488,96 @@ async function loadEvents() {
       .select('*')
       .eq('live_match_id', matchId)
       .order('created_at', { ascending: false })
-      .limit(50);
-
+      .limit(100);
+    
     if (error) throw error;
-
+    
     events = data || [];
     renderEvents();
-
+    
   } catch (error) {
     console.error('Error loading events:', error);
   }
 }
 
-function subscribeToMatch() {
-  // Show connecting indicator
-  const statusEl = document.getElementById('connectionStatus');
-  if (statusEl) statusEl.style.display = 'block';
+function renderEvents() {
+  const feed = document.getElementById('eventsFeed');
   
+  if (events.length === 0) {
+    feed.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--muted);">No events yet</div>';
+    return;
+  }
+  
+  feed.innerHTML = events.map(event => {
+    const icon = getEventIcon(event.event_type);
+    const time = formatEventTime(event.match_time_seconds);
+    
+    return `
+      <div class="event-item">
+        <div class="event-icon">${icon}</div>
+        <div class="event-content">
+          <div class="event-player">${event.player_name || 'Team'}</div>
+          <div class="event-desc">${formatEventType(event.event_type)}</div>
+        </div>
+        <div class="event-time">${time}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function getEventIcon(type) {
+  const icons = {
+    goal: '⚽',
+    goal_against: '🥅',
+    assist: '🎯',
+    save: '🧤',
+    yellow: '🟨',
+    suspension: '⏱️',
+    red: '🟥',
+    substitution: '🔄',
+    shot: '🎾'
+  };
+  return icons[type] || '📝';
+}
+
+function formatEventType(type) {
+  const types = {
+    goal: 'Goal scored',
+    goal_against: 'Goal conceded',
+    assist: 'Assist',
+    save: 'Save',
+    yellow: 'Yellow card',
+    suspension: '2-minute suspension',
+    red: 'Red card',
+    substitution: 'Substitution',
+    shot: 'Shot attempt'
+  };
+  return types[type] || type;
+}
+
+function formatEventTime(seconds) {
+  if (!seconds) return '00:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function updateLiveBadge() {
+  const badge = document.getElementById('statusBadge');
+  badge.className = 'badge live';
+  badge.innerHTML = '<div class="live-dot"></div><span>LIVE</span>';
+  badge.style.display = 'flex';
+}
+
+function updateReplayBadge() {
+  const badge = document.getElementById('statusBadge');
+  badge.className = 'badge replay';
+  badge.innerHTML = '<span>📼 Replay</span>';
+  badge.style.display = 'flex';
+}
+
+// REAL-TIME SUBSCRIPTIONS (for live matches only)
+function subscribeToMatch() {
   matchSubscription = _supabase
     .channel(`match-${matchId}`)
     .on(
@@ -265,37 +589,14 @@ function subscribeToMatch() {
         filter: `id=eq.${matchId}`
       },
       (payload) => {
-        console.log('Match updated:', payload);
         matchData = payload.new;
         renderMatchInfo();
         
-        // Check if match ended
         if (!payload.new.is_live) {
           showMatchEnded();
         }
       }
     )
-    .on('system', {}, (payload) => {
-      console.log('Match subscription status:', payload.status);
-      
-      // Track connection state
-      if (payload.status === 'SUBSCRIBED') {
-        connectionState.matchSubscribed = true;
-        updateConnectionStatus();
-      }
-      
-      // Auto-reconnect on connection errors
-      if (payload.status === 'CHANNEL_ERROR') {
-        connectionState.matchSubscribed = false;
-        updateConnectionStatus();
-        console.log('⚠️ Connection lost, reconnecting in 3 seconds...');
-        setTimeout(() => {
-          console.log('🔄 Reconnecting...');
-          subscribeToMatch();
-          subscribeToEvents();
-        }, 3000);
-      }
-    })
     .subscribe();
 }
 
@@ -311,152 +612,29 @@ function subscribeToEvents() {
         filter: `live_match_id=eq.${matchId}`
       },
       (payload) => {
-        console.log('New event:', payload);
         events.unshift(payload.new);
         renderEvents();
         
-        // Animate score if it's a goal
         if (payload.new.event_type === 'goal' || payload.new.event_type === 'goal_against') {
           animateScore();
         }
       }
     )
-    .on('system', {}, (payload) => {
-      console.log('Events subscription status:', payload.status);
-      
-      // Track connection state
-      if (payload.status === 'SUBSCRIBED') {
-        connectionState.eventsSubscribed = true;
-        updateConnectionStatus();
-      }
-      
-      // Auto-reconnect on connection errors
-      if (payload.status === 'CHANNEL_ERROR') {
-        connectionState.eventsSubscribed = false;
-        updateConnectionStatus();
-        console.log('⚠️ Events connection lost, reconnecting...');
-        setTimeout(() => {
-          subscribeToEvents();
-        }, 3000);
-      }
-    })
     .subscribe();
-}
-
-function renderMatchInfo() {
-  if (!matchData) return;
-
-  document.getElementById('homeTeam').textContent = matchData.team_name;
-  document.getElementById('awayTeam').textContent = matchData.opponent;
-  document.getElementById('homeScore').textContent = matchData.score_home;
-  document.getElementById('awayScore').textContent = matchData.score_away;
-  document.getElementById('matchTimer').textContent = formatTime(matchData.match_time_seconds);
-  document.getElementById('halfLabel').textContent = matchData.current_half === 'first' ? 'First Half' : 'Second Half';
-
-  const info = document.getElementById('matchInfo');
-  info.innerHTML = `
-    <div style="margin-bottom: 12px;">
-      <strong style="color: var(--text);">Started:</strong><br>
-      ${formatStartTime(matchData.started_at)}
-    </div>
-    <div style="margin-bottom: 12px;">
-      <strong style="color: var(--text);">Current Half:</strong><br>
-      ${matchData.current_half === 'first' ? '1st Half' : '2nd Half'}
-    </div>
-    <div>
-      <strong style="color: var(--text);">Match Time:</strong><br>
-      ${formatTime(matchData.match_time_seconds)}
-    </div>
-  `;
-}
-
-function renderEvents() {
-  const container = document.getElementById('eventList');
-
-  if (events.length === 0) {
-    container.innerHTML = '<div style="text-align: center; color: var(--muted); padding: 20px;">No events yet</div>';
-    return;
-  }
-
-  const eventIcons = {
-    goal: '⚽',
-    save: '🧤',
-    shot: '🎯',
-    assist: '🤝',
-    yellow: '🟡',
-    suspension: '⏱',
-    red: '🟥',
-    goal_against: '🥅',
-    substitution: '🔄'
-  };
-
-  container.innerHTML = events.map(event => `
-    <div class="event-item ${event.event_type}">
-      <div class="event-header">
-        <div class="event-type">
-          <span class="event-icon">${eventIcons[event.event_type] || '📋'}</span>
-          <span>${formatEventType(event.event_type)}</span>
-        </div>
-        <div class="event-time">${event.match_time_display || formatTime(event.match_time_seconds)}</div>
-      </div>
-      <div class="event-player">${event.player_name ? `${event.player_name} ${event.player_number ? `(#${event.player_number})` : ''}` : 'Unknown Player'}</div>
-      <div class="event-detail">${event.team_name || ''}${event.detail ? ` • ${event.detail}` : ''}</div>
-    </div>
-  `).join('');
 }
 
 function animateScore() {
   document.getElementById('homeScore').classList.add('bump');
-  setTimeout(() => document.getElementById('homeScore').classList.remove('bump'), 400);
-}
-
-function formatEventType(type) {
-  const types = {
-    goal: 'Goal',
-    save: 'Save',
-    shot: 'Shot',
-    assist: 'Assist',
-    yellow: 'Yellow Card',
-    suspension: '2-Min Suspension',
-    red: 'Red Card',
-    goal_against: 'Goal Conceded',
-    substitution: 'Substitution'
-  };
-  return types[type] || type;
-}
-
-function formatTime(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${String(secs).padStart(2, '0')}`;
-}
-
-function formatStartTime(timestamp) {
-  const date = new Date(timestamp);
-  return date.toLocaleString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    day: 'numeric',
-    month: 'short'
-  });
-}
-
-function showError(message) {
-  document.querySelector('.scoreboard-hero').innerHTML = `
-    <div class="error">
-      <div class="error-icon">⚠️</div>
-      <div class="error-text">${message}</div>
-      <div style="margin-top: 20px;">
-        <a href="watch-live-browse.html" class="back-btn">← Back to Live Matches</a>
-      </div>
-    </div>
-  `;
-  document.querySelector('.main-content').style.display = 'none';
+  document.getElementById('awayScore').classList.add('bump');
+  
+  setTimeout(() => {
+    document.getElementById('homeScore').classList.remove('bump');
+    document.getElementById('awayScore').classList.remove('bump');
+  }, 400);
 }
 
 function showMatchEnded() {
   const overlay = document.createElement('div');
-  overlay.id = 'matchEndedOverlay';
   overlay.style.cssText = `
     position: fixed;
     top: 0;
@@ -468,57 +646,25 @@ function showMatchEnded() {
     align-items: center;
     justify-content: center;
     z-index: 10000;
-    animation: fadeIn 0.3s ease-out;
+    animation: fadeIn 0.3s;
   `;
   
   overlay.innerHTML = `
     <style>
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-      @keyframes slideUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
-    <div style="
-      text-align: center;
-      color: var(--text);
-      animation: slideUp 0.5s ease-out;
-    ">
+    <div style="text-align: center; color: var(--text); max-width: 500px; padding: 40px;">
       <div style="font-size: 64px; margin-bottom: 24px;">🏁</div>
-      <div style="
-        font-family: 'Bebas Neue', cursive;
-        font-size: 36px;
-        font-weight: 700;
-        margin-bottom: 16px;
-        letter-spacing: 2px;
-      ">Match Ended</div>
-      <div style="
-        font-size: 18px;
-        color: var(--muted);
-        margin-bottom: 24px;
-      ">
+      <div style="font-family: 'Bebas Neue', cursive; font-size: 36px; margin-bottom: 16px; letter-spacing: 2px;">
+        Match Ended
+      </div>
+      <div style="font-size: 18px; color: var(--muted); margin-bottom: 24px;">
         Final Score
       </div>
-      <div style="
-        font-family: 'Bebas Neue', cursive;
-        font-size: 56px;
-        color: var(--accent);
-        margin-bottom: 8px;
-        letter-spacing: 3px;
-      ">
+      <div style="font-family: 'Bebas Neue', cursive; font-size: 56px; color: var(--accent); margin-bottom: 40px; letter-spacing: 3px;">
         ${matchData.score_home} - ${matchData.score_away}
       </div>
-      <div style="
-        font-size: 16px;
-        color: var(--muted);
-        margin-bottom: 40px;
-      ">
-        ${matchData.team_name} vs ${matchData.opponent}
-      </div>
-      <button onclick="window.location.href='live.html'" style="
+      <button onclick="window.location.href='watch.html'" style="
         background: var(--accent);
         color: #000;
         border: none;
@@ -529,29 +675,15 @@ function showMatchEnded() {
         cursor: pointer;
         text-transform: uppercase;
         letter-spacing: 1px;
-        transition: transform 0.2s;
-      " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-        ← Back to Live Matches
+      ">
+        ← Back to Matches
       </button>
     </div>
   `;
   
   document.body.appendChild(overlay);
-  
-  // Dim the live badge
-  const badge = document.querySelector('.live-badge');
-  if (badge) {
-    badge.innerHTML = '<span style="color: var(--muted);">Ended</span>';
-    badge.style.background = 'rgba(107, 117, 133, 0.15)';
-    badge.style.borderColor = 'var(--muted)';
-  }
+  updateReplayBadge();
 }
-
-window.addEventListener('beforeunload', () => {
-  if (matchSubscription) _supabase.removeChannel(matchSubscription);
-  if (eventsSubscription) _supabase.removeChannel(eventsSubscription);
-});
 </script>
-
 </body>
 </html>
