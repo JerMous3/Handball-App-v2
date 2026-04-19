@@ -1612,8 +1612,8 @@
     <button class="btn-sm" id="startStopBtn" onclick="toggleTimer()">▶ Start</button>
     <button class="btn-sm" onclick="switchHalf()">½ Half</button>
     <button class="btn-sm undo" id="undoBtn" onclick="undoLastAction()" disabled>↩ Undo</button>
-    <button class="btn-sm" onclick="window.open('watch.html', '_blank')">📺 Live</button>
-    <button class="btn-sm" onclick="window.open('stats.html', '_blank')">📊 Stats</button>
+    <a href="watch.html" target="_blank" class="btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">📺 Live</a>
+    <a href="stats.html" target="_blank" class="btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">📊 Stats</a>
     <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
     <button class="btn-sm export" onclick="exportToExcel()">⬇ Export</button>
     <button class="btn-sm signout" onclick="signOut()">Sign Out</button>
@@ -1888,13 +1888,13 @@
   <div class="more-section">
     <div class="more-section-title">Other Actions</div>
     <div class="more-button-group">
-      <button class="more-button" onclick="window.open('watch.html', '_blank')">
+      <a href="watch.html" target="_blank" class="more-button" style="text-decoration: none;">
         📺 Live Matches
-      </button>
+      </a>
       
-      <button class="more-button" onclick="window.open('stats.html', '_blank')">
+      <a href="stats.html" target="_blank" class="more-button" style="text-decoration: none;">
         📊 Season Stats
-      </button>
+      </a>
       
       <button class="more-button" onclick="openHistoryModal()">
         📋 Match History
