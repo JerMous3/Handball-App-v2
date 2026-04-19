@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Season Statistics - Handball Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="polish-theme.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <style>
+    body {
+      font-family: 'Manrope', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+    }
+    
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .topbar-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .back-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+    
+    .back-btn:hover {
+      color: var(--accent);
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+    
+    .page-header {
+      margin-bottom: 32px;
+    }
+    
+    .page-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 48px;
+      color: var(--accent);
+      margin: 0 0 8px 0;
+      letter-spacing: 2px;
+    }
+    
+    .page-subtitle {
+      font-size: 16px;
+      color: var(--muted);
+      margin: 0;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    
+    .stat-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .stat-icon {
+      font-size: 24px;
+    }
+    
+    .stat-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 20px;
+      letter-spacing: 1px;
+      color: var(--text);
+    }
+    
+    .leaderboard {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .leaderboard-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--surface2);
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    
+    .leaderboard-item:hover {
+      background: var(--surface);
+      transform: translateX(4px);
+    }
+    
+    .leaderboard-rank {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 24px;
+      color: var(--muted);
+      min-width: 32px;
+    }
+    
+    .leaderboard-rank.gold { color: #FFD700; }
+    .leaderboard-rank.silver { color: #C0C0C0; }
+    .leaderboard-rank.bronze { color: #CD7F32; }
+    
+    .leaderboard-player {
+      flex: 1;
+    }
+    
+    .player-name {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+    
+    .player-stats {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    
+    .leaderboard-value {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 28px;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+    
+    .section-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 32px;
+      color: var(--text);
+      margin: 40px 0 20px 0;
+      letter-spacing: 2px;
+    }
+    
+    .matches-table {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .table-header {
+      display: grid;
+      grid-template-columns: 120px 2fr 80px 2fr 100px;
+      gap: 16px;
+      padding: 16px 20px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+    }
+    
+    .table-row {
+      display: grid;
+      grid-template-columns: 120px 2fr 80px 2fr 100px;
+      gap: 16px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.2s;
+    }
+    
+    .table-row:last-child {
+      border-bottom: none;
+    }
+    
+    .table-row:hover {
+      background: var(--surface2);
+    }
+    
+    .match-date {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    
+    .match-team {
+      font-weight: 600;
+      color: var(--text);
+    }
+    
+    .match-score {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 20px;
+      letter-spacing: 1px;
+      color: var(--accent);
+      text-align: center;
+    }
+    
+    .match-result {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .match-result.win {
+      background: rgba(76, 217, 100, 0.15);
+      color: #4CD964;
+    }
+    
+    .match-result.loss {
+      background: rgba(255, 59, 59, 0.15);
+      color: var(--red);
+    }
+    
+    .match-result.draw {
+      background: rgba(255, 193, 7, 0.15);
+      color: #ffc107;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+    }
+    
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+    
+    .empty-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 32px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    
+    .empty-text {
+      font-size: 16px;
+      color: var(--muted);
+    }
+    
+    @media (max-width: 768px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .table-header,
+      .table-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      
+      .table-header {
+        display: none;
+      }
+      
+      .table-row {
+        padding: 16px;
+      }
+      
+      .page-title {
+        font-size: 36px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-content">
+      <a href="index.html" class="back-btn">
+        <span>←</span>
+        <span>Back to Tracker</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="page-header">
+      <h1 class="page-title">Season Statistics</h1>
+      <p class="page-subtitle">Aggregated player and team performance from match history</p>
+    </div>
+    
+    <!-- Leaderboards Grid -->
+    <div class="stats-grid" id="leaderboards">
+      <!-- Top Scorers -->
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon">⚽</div>
+          <div class="stat-title">Top Scorers</div>
+        </div>
+        <div class="leaderboard" id="topScorers">
+          <div style="text-align: center; padding: 20px; color: var(--muted);">Loading...</div>
+        </div>
+      </div>
+      
+      <!-- Top Assisters -->
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-title">Top Assisters</div>
+        </div>
+        <div class="leaderboard" id="topAssisters">
+          <div style="text-align: center; padding: 20px; color: var(--muted);">Loading...</div>
+        </div>
+      </div>
+      
+      <!-- Best Goalkeepers -->
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon">🧤</div>
+          <div class="stat-title">Best Goalkeepers</div>
+        </div>
+        <div class="leaderboard" id="topGoalkeepers">
+          <div style="text-align: center; padding: 20px; color: var(--muted);">Loading...</div>
+        </div>
+      </div>
+      
+      <!-- Most Disciplined -->
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon">🟨</div>
+          <div class="stat-title">Most Cards</div>
+        </div>
+        <div class="leaderboard" id="mostCards">
+          <div style="text-align: center; padding: 20px; color: var(--muted);">Loading...</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Match History -->
+    <h2 class="section-title">Match History</h2>
+    <div class="matches-table">
+      <div class="table-header">
+        <div>Date</div>
+        <div>Home Team</div>
+        <div>Score</div>
+        <div>Away Team</div>
+        <div>Result</div>
+      </div>
+      <div id="matchHistory">
+        <div style="text-align: center; padding: 40px; color: var(--muted);">Loading match history...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://qgqryeanopdxrwrfczcx.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFncXJ5ZWFub3BkeHJ3cmZjemN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU5MTk1NzMsImV4cCI6MjA1MTQ5NTU3M30.I67bdwmAkdodIk5bAQf1Zw_86KroW5R';
+    
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    let allMatches = [];
+    
+    async function loadData() {
+      await loadMatchHistory();
+      calculateStats();
+    }
+    
+    async function loadMatchHistory() {
+      try {
+        const { data, error } = await _supabase
+          .from('match_history')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        allMatches = data || [];
+        renderMatchHistory();
+        
+      } catch (error) {
+        console.error('Error loading match history:', error);
+        document.getElementById('matchHistory').innerHTML = `
+          <div style="text-align: center; padding: 40px; color: var(--red);">
+            Failed to load match history
+          </div>
+        `;
+      }
+    }
+    
+    function calculateStats() {
+      const playerStats = {};
+      
+      // Aggregate all player stats from matches
+      allMatches.forEach(match => {
+        const matchData = match.match_data || {};
+        const players = matchData.players || [];
+        
+        players.forEach(player => {
+          if (!playerStats[player.name]) {
+            playerStats[player.name] = {
+              name: player.name,
+              goals: 0,
+              assists: 0,
+              saves: 0,
+              shots: 0,
+              yellows: 0,
+              suspensions: 0,
+              reds: 0,
+              matches: 0
+            };
+          }
+          
+          const stats = playerStats[player.name];
+          stats.goals += player.goals || 0;
+          stats.assists += player.assists || 0;
+          stats.saves += player.saves || 0;
+          stats.shots += player.shots || 0;
+          stats.yellows += player.yellowCards || 0;
+          stats.suspensions += player.suspensions || 0;
+          stats.reds += player.redCards || 0;
+          stats.matches += 1;
+        });
+      });
+      
+      renderLeaderboards(playerStats);
+    }
+    
+    function renderLeaderboards(playerStats) {
+      const players = Object.values(playerStats);
+      
+      // Top Scorers
+      const topScorers = players
+        .filter(p => p.goals > 0)
+        .sort((a, b) => b.goals - a.goals)
+        .slice(0, 5);
+      
+      document.getElementById('topScorers').innerHTML = topScorers.length > 0
+        ? topScorers.map((player, index) => renderLeaderboardItem(
+            index + 1,
+            player.name,
+            player.goals,
+            `${player.matches} matches`,
+            '⚽'
+          )).join('')
+        : '<div style="text-align: center; padding: 20px; color: var(--muted);">No data yet</div>';
+      
+      // Top Assisters
+      const topAssisters = players
+        .filter(p => p.assists > 0)
+        .sort((a, b) => b.assists - a.assists)
+        .slice(0, 5);
+      
+      document.getElementById('topAssisters').innerHTML = topAssisters.length > 0
+        ? topAssisters.map((player, index) => renderLeaderboardItem(
+            index + 1,
+            player.name,
+            player.assists,
+            `${player.goals} goals`,
+            '🎯'
+          )).join('')
+        : '<div style="text-align: center; padding: 20px; color: var(--muted);">No data yet</div>';
+      
+      // Best Goalkeepers
+      const topGoalkeepers = players
+        .filter(p => p.saves > 0)
+        .sort((a, b) => b.saves - a.saves)
+        .slice(0, 5);
+      
+      document.getElementById('topGoalkeepers').innerHTML = topGoalkeepers.length > 0
+        ? topGoalkeepers.map((player, index) => renderLeaderboardItem(
+            index + 1,
+            player.name,
+            player.saves,
+            `${player.matches} matches`,
+            '🧤'
+          )).join('')
+        : '<div style="text-align: center; padding: 20px; color: var(--muted);">No data yet</div>';
+      
+      // Most Cards
+      const mostCards = players
+        .filter(p => (p.yellows + p.suspensions + p.reds) > 0)
+        .map(p => ({
+          ...p,
+          totalCards: p.yellows + p.suspensions + p.reds
+        }))
+        .sort((a, b) => b.totalCards - a.totalCards)
+        .slice(0, 5);
+      
+      document.getElementById('mostCards').innerHTML = mostCards.length > 0
+        ? mostCards.map((player, index) => renderLeaderboardItem(
+            index + 1,
+            player.name,
+            player.totalCards,
+            `${player.yellows}🟨 ${player.suspensions}⏱️ ${player.reds}🟥`,
+            '🟨'
+          )).join('')
+        : '<div style="text-align: center; padding: 20px; color: var(--muted);">No data yet</div>';
+    }
+    
+    function renderLeaderboardItem(rank, name, value, subtitle, icon) {
+      const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+      
+      return `
+        <div class="leaderboard-item">
+          <div class="leaderboard-rank ${rankClass}">${rank}</div>
+          <div class="leaderboard-player">
+            <div class="player-name">${name}</div>
+            <div class="player-stats">${subtitle}</div>
+          </div>
+          <div class="leaderboard-value">${value}</div>
+        </div>
+      `;
+    }
+    
+    function renderMatchHistory() {
+      const container = document.getElementById('matchHistory');
+      
+      if (allMatches.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📊</div>
+            <div class="empty-title">No Match History</div>
+            <div class="empty-text">Your completed matches will appear here</div>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = allMatches.map(match => {
+        const date = new Date(match.created_at);
+        const teamName = match.team_name || 'Home';
+        const opponent = match.opponent || 'Away';
+        const scoreHome = match.score_home || 0;
+        const scoreAway = match.score_away || 0;
+        
+        let result = 'draw';
+        if (scoreHome > scoreAway) result = 'win';
+        if (scoreHome < scoreAway) result = 'loss';
+        
+        return `
+          <div class="table-row">
+            <div class="match-date">${formatDate(date)}</div>
+            <div class="match-team">${teamName}</div>
+            <div class="match-score">${scoreHome} - ${scoreAway}</div>
+            <div class="match-team">${opponent}</div>
+            <div>
+              <span class="match-result ${result}">
+                ${result === 'win' ? 'Won' : result === 'loss' ? 'Lost' : 'Draw'}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function formatDate(date) {
+      const options = { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      };
+      return date.toLocaleDateString('en-US', options);
+    }
+    
+    // Load data on page load
+    loadData();
+  </script>
+</body>
+</html>
