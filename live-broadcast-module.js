@@ -142,6 +142,12 @@ async function stopLiveMatch() {
       p_live_match_id: currentLiveMatchId 
     });
 
+    // Set ended_at timestamp for replay viewing
+    await _supabase
+      .from('live_matches')
+      .update({ ended_at: new Date().toISOString() })
+      .eq('id', currentLiveMatchId);
+
     isLiveBroadcasting = false;
     currentLiveMatchId = null;
     showLiveStatus(false);
