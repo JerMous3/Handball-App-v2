@@ -380,8 +380,8 @@ async function saveCurrentMatch() {
   }
   
   // Don't save if no match is active
-  const hasTeamName = (typeof teamName !== 'undefined' && teamName) || window.restoredTeamName;
-  const hasOpponent = (typeof opponent !== 'undefined' && opponent) || window.restoredOpponent;
+  const hasTeamName = window.teamName || window.restoredTeamName;
+  const hasOpponent = window.opponent || window.restoredOpponent;
   const hasPlayers = currentPlayers && currentPlayers.length > 0;
   
   if (!hasTeamName && !hasOpponent && !hasPlayers) {
@@ -389,9 +389,9 @@ async function saveCurrentMatch() {
   }
   
   try {
-    // Safely access variables that might not exist
-    const safeTeamName = (typeof teamName !== 'undefined' ? teamName : '') || window.restoredTeamName || '';
-    const safeOpponent = (typeof opponent !== 'undefined' ? opponent : '') || window.restoredOpponent || '';
+    // Safely access variables - prioritize window.teamName over fallbacks
+    const safeTeamName = window.teamName || window.restoredTeamName || '';
+    const safeOpponent = window.opponent || window.restoredOpponent || '';
     const safeMatchSeconds = typeof matchSeconds !== 'undefined' ? matchSeconds : 0;
     const safeIsTimerRunning = typeof isTimerRunning !== 'undefined' ? isTimerRunning : false;
     const safeCurrentHalf = typeof currentHalf !== 'undefined' ? (currentHalf === 2 ? 'second' : 'first') : 'first';
