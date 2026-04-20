@@ -381,17 +381,17 @@ async function saveCurrentMatch() {
   console.log('✅ currentUser exists:', currentUser.id);
   
   // Check if match variables exist (they're created by initMatch)
-  if (typeof currentPlayers === 'undefined') {
-    console.log('❌ currentPlayers is undefined, match not started');
+  if (typeof window.currentPlayers === 'undefined' || !window.currentPlayers) {
+    console.log('❌ window.currentPlayers is undefined, match not started');
     return;
   }
   
-  console.log('✅ currentPlayers exists:', currentPlayers.length, 'players');
+  console.log('✅ window.currentPlayers exists:', window.currentPlayers.length, 'players');
   
   // Don't save if no match is active
   const hasTeamName = window.teamName || window.restoredTeamName;
   const hasOpponent = window.opponent || window.restoredOpponent;
-  const hasPlayers = currentPlayers && currentPlayers.length > 0;
+  const hasPlayers = window.currentPlayers && window.currentPlayers.length > 0;
   
   console.log('Team check:');
   console.log('  window.teamName:', window.teamName);
@@ -408,26 +408,26 @@ async function saveCurrentMatch() {
   }
   
   try {
-    // Safely access variables - prioritize window.teamName over fallbacks
+    // Safely access variables from window
     const safeTeamName = window.teamName || window.restoredTeamName || '';
     const safeOpponent = window.opponent || window.restoredOpponent || '';
     const safeMatchSeconds = typeof matchSeconds !== 'undefined' ? matchSeconds : 0;
     const safeIsTimerRunning = typeof isTimerRunning !== 'undefined' ? isTimerRunning : false;
     const safeCurrentHalf = typeof currentHalf !== 'undefined' ? (currentHalf === 2 ? 'second' : 'first') : 'first';
-    const safePlayerStats = typeof playerStats !== 'undefined' ? playerStats : {};
-    const safePlayerZone = typeof playerZone !== 'undefined' ? playerZone : {};
-    const safeStats = typeof stats !== 'undefined' ? stats : {};
-    const safeUndoStack = typeof undoStack !== 'undefined' ? undoStack : [];
+    const safePlayerStats = window.playerStats || {};
+    const safePlayerZone = window.playerZone || {};
+    const safeStats = window.stats || {};
+    const safeUndoStack = window.undoStack || [];
     
     console.log('📦 Preparing match state:');
     console.log('  Team:', safeTeamName);
     console.log('  Opponent:', safeOpponent);
     console.log('  Timer:', safeMatchSeconds);
     console.log('  Score:', safeStats?.goals || 0, '-', safeStats?.goalsAgainst || 0);
-    console.log('  Players:', currentPlayers.length);
+    console.log('  Players:', window.currentPlayers.length);
     
     // Enrich players with their current stats and zone
-    const playersWithStats = currentPlayers.map(player => ({
+    const playersWithStats = window.currentPlayers.map(player => ({
       ...player,
       stats: safePlayerStats[player.id] || {},
       zone: safePlayerZone[player.id] || 'field'
