@@ -127,9 +127,29 @@
     .mode-tabs { order: 3; width: 100%; }
     .mode-tab { flex: 1; text-align: center; }
     .matches-grid { grid-template-columns: 1fr; }
-    .score-display { flex-direction: column; gap: 24px; }
-    .score { font-size: 72px; }
-    .timer { font-size: 42px; }
+    
+    /* Compact scoreboard for mobile */
+    .scoreboard-hero { padding: 20px 16px; }
+    .match-timer { margin-bottom: 16px; }
+    .timer { font-size: 32px; }
+    .half-label { font-size: 10px; margin-top: 4px; }
+    
+    .score-display { 
+      flex-direction: row; 
+      gap: 16px; 
+      margin-bottom: 16px;
+      justify-content: space-around;
+    }
+    .team-block { flex: 0 0 auto; min-width: 0; }
+    .team-name { font-size: 14px; margin-bottom: 8px; }
+    .score { font-size: 48px; }
+    .vs-divider { font-size: 24px; }
+    
+    /* Make events section take up more space */
+    .events-section { margin: 20px auto; padding: 0 16px; }
+    .section-title { font-size: 20px; margin-bottom: 12px; }
+    .events-feed { max-height: calc(100vh - 320px); }
+    
     .page-title { font-size: 36px; }
   }
 </style>
