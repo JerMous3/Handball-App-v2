@@ -2561,6 +2561,15 @@ const activeSuspensions = [];
 const eventLog = [];
 const undoStack = []; // each entry: { applyUndo: fn }
 
+// Expose variables globally for cross-device sync
+window.currentPlayers = [...rosterData.gk, ...rosterData.players, ...rosterData.subs];
+window.stats = stats;
+window.playerStats = playerStats;
+window.playerZone = playerZone;
+window.undoStack = undoStack;
+window.eventLog = eventLog;
+window.activeSuspensions = activeSuspensions;
+
 function pushUndo(fn) {
   undoStack.push({ applyUndo: fn });
   if (undoStack.length > 30) undoStack.shift();
