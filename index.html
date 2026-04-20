@@ -2110,6 +2110,12 @@ async function onSignedIn(user) {
   }
   
   currentUser = user;
+  
+  // Load active match from cloud (cross-device sync)
+  if (typeof onUserSignedIn === 'function') {
+    await onUserSignedIn();
+  }
+  
   document.getElementById('authScreen').classList.add('hidden');
   document.getElementById('setupScreen').classList.remove('hidden');
 
@@ -2129,6 +2135,11 @@ async function onSignedIn(user) {
 }
 
 async function signOut() {
+  // Stop auto-saving and clear session (cross-device sync)
+  if (typeof onUserSignOut === 'function') {
+    await onUserSignOut();
+  }
+  
   await _supabase.auth.signOut();
   currentUser = null;
   document.getElementById('authScreen').classList.remove('hidden');
@@ -2778,6 +2789,11 @@ function resetTimer() {
   renderPlayers();
   renderSuspensions();
   saveTimerState();
+  
+  // Clear current match from cloud and restart auto-save (cross-device sync)
+  if (typeof onMatchReset === 'function') {
+    onMatchReset();
+  }
   
   console.log('Match reset complete');
 }
@@ -3619,6 +3635,11 @@ function saveMatchToHistory(matchData) {
   entries.unshift(matchData);
   if (entries.length > 20) entries.pop();
   saveHistory(entries);
+  
+  // Clear current match from cloud (cross-device sync)
+  if (typeof onMatchSavedToHistory === 'function') {
+    onMatchSavedToHistory();
+  }
 }
 
 function openHistoryModal() {
@@ -3672,5 +3693,8 @@ document.getElementById('historyModalOverlay').addEventListener('click', functio
 
 <!-- Live Broadcasting Module -->
 <script src="live-broadcast-module.js"></script>
+<!-- Cross-Device Session Sync Module -->
+<script src="cross-device-sync-module.js"></script>
+
 </body>
 </html>
