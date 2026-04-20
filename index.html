@@ -2112,26 +2112,31 @@ async function onSignedIn(user) {
   currentUser = user;
   
   // Load active match from cloud (cross-device sync)
+  let matchRestored = false;
   if (typeof onUserSignedIn === 'function') {
-    await onUserSignedIn();
+    matchRestored = await onUserSignedIn();
   }
   
   document.getElementById('authScreen').classList.add('hidden');
-  document.getElementById('setupScreen').classList.remove('hidden');
+  
+  // Only show setup screen if no active match was restored
+  if (!matchRestored) {
+    document.getElementById('setupScreen').classList.remove('hidden');
 
-  // Check for saved roster
-  const { data } = await _supabase.from('rosters').select('*').eq('user_id', user.id).maybeSingle();
-  const rosterBar = document.getElementById('rosterBar');
-  const rosterInfo = document.getElementById('rosterBarInfo');
-  rosterBar.style.display = 'flex';
-  if (data) {
-    const players = data.players || [];
-    const updated = new Date(data.updated_at).toLocaleDateString('en-GB');
-    rosterInfo.innerHTML = `<strong>${data.name}</strong> — ${players.length} players saved &nbsp;·&nbsp; Last updated ${updated}`;
-  } else {
-    rosterInfo.innerHTML = 'No saved roster yet — fill in your squad and click <strong>↑ Save Roster</strong>';
-    document.getElementById('rosterBar').querySelector('button:first-child').style.display = 'none';
-  }
+    // Check for saved roster
+    const { data } = await _supabase.from('rosters').select('*').eq('user_id', user.id).maybeSingle();
+    const rosterBar = document.getElementById('rosterBar');
+    const rosterInfo = document.getElementById('rosterBarInfo');
+    rosterBar.style.display = 'flex';
+    if (data) {
+      const players = data.players || [];
+      const updated = new Date(data.updated_at).toLocaleDateString('en-GB');
+      rosterInfo.innerHTML = `<strong>${data.name}</strong> — ${players.length} players saved &nbsp;·&nbsp; Last updated ${updated}`;
+    } else {
+      rosterInfo.innerHTML = 'No saved roster yet — fill in your squad and click <strong>↑ Save Roster</strong>';
+      document.getElementById('rosterBar').querySelector('button:first-child').style.display = 'none';
+    }
+  } // end if (!matchRestored)
 }
 
 async function signOut() {
