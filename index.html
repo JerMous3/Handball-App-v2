@@ -909,6 +909,16 @@
       height: 56px;
     }
     .topbar-brand { font-size: 16px; letter-spacing: 2px; }
+    
+    /* Hide left section on mobile (Reset button - available in More tab) */
+    .topbar-left { display: none; }
+    
+    /* Center section takes more space */
+    .topbar-center { flex: 1; }
+    
+    /* Simplify right section - only show essential buttons */
+    .topbar-right { gap: 4px; }
+    
     .topbar-controls { gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
     .half-badge { display: none; }
     .timer-block { padding: 4px 10px; }
@@ -920,8 +930,16 @@
     .scoreboard-teams { display: none; }
     .timer-btn-group { gap: 4px; }
     .btn-sm { padding: 5px 9px; font-size: 11px; }
-    /* Hide less-critical topbar buttons — accessible via tab bar */
-    .btn-sm.history, .btn-sm.export { display: none; }
+    
+    /* Hide buttons on mobile - accessible via More tab */
+    .btn-sm.history, 
+    .btn-sm.export, 
+    .btn-sm.signout,
+    .topbar-right a[href="watch.html"],
+    .topbar-right a[href="stats.html"] { 
+      display: none !important; 
+    }
+    
     .user-badge { display: none; }
 
     /* ── Main grid → single column, fill viewport ── */
