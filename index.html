@@ -3623,6 +3623,9 @@ initMobileLayout();
 
 } // end initMatch
 
+// Expose initMatch globally for cross-device sync
+window.initMatch = initMatch;
+
 // ─── MATCH HISTORY (localStorage) ───────────────────────
 const HISTORY_KEY = 'handballtrack_history';
 
