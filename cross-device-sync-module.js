@@ -373,33 +373,54 @@ function stopAutoSave() {
 async function saveCurrentMatch() {
   if (!currentUser) return;
   
+  // Check if match variables exist (they're created by initMatch)
+  if (typeof currentPlayers === 'undefined') {
+    // Match not started yet, nothing to save
+    return;
+  }
+  
   // Don't save if no match is active
-  if ((!window.restoredTeamName && !teamName) && (!window.restoredOpponent && !opponent) && currentPlayers.length === 0) {
+  const hasTeamName = (typeof teamName !== 'undefined' && teamName) || window.restoredTeamName;
+  const hasOpponent = (typeof opponent !== 'undefined' && opponent) || window.restoredOpponent;
+  const hasPlayers = currentPlayers && currentPlayers.length > 0;
+  
+  if (!hasTeamName && !hasOpponent && !hasPlayers) {
     return;
   }
   
   try {
+    // Safely access variables that might not exist
+    const safeTeamName = (typeof teamName !== 'undefined' ? teamName : '') || window.restoredTeamName || '';
+    const safeOpponent = (typeof opponent !== 'undefined' ? opponent : '') || window.restoredOpponent || '';
+    const safeMatchSeconds = typeof matchSeconds !== 'undefined' ? matchSeconds : 0;
+    const safeIsTimerRunning = typeof isTimerRunning !== 'undefined' ? isTimerRunning : false;
+    const safeCurrentHalf = typeof currentHalf !== 'undefined' ? (currentHalf === 2 ? 'second' : 'first') : 'first';
+    const safePlayerStats = typeof playerStats !== 'undefined' ? playerStats : {};
+    const safePlayerZone = typeof playerZone !== 'undefined' ? playerZone : {};
+    const safeStats = typeof stats !== 'undefined' ? stats : {};
+    const safeUndoStack = typeof undoStack !== 'undefined' ? undoStack : [];
+    
     // Enrich players with their current stats and zone
     const playersWithStats = currentPlayers.map(player => ({
       ...player,
-      stats: playerStats[player.id] || {},
-      zone: playerZone[player.id] || 'field'
+      stats: safePlayerStats[player.id] || {},
+      zone: safePlayerZone[player.id] || 'field'
     }));
     
     const matchState = {
       coach_user_id: currentUser.id,
-      team_name: window.restoredTeamName || teamName || '',
-      opponent: window.restoredOpponent || opponent || '',
-      timer_seconds: matchSeconds || 0,
-      is_timer_running: isTimerRunning || false,
-      current_half: currentHalf === 2 ? 'second' : 'first',
-      score_home: stats?.goals || 0,
-      score_away: stats?.goalsAgainst || 0,
+      team_name: safeTeamName,
+      opponent: safeOpponent,
+      timer_seconds: safeMatchSeconds,
+      is_timer_running: safeIsTimerRunning,
+      current_half: safeCurrentHalf,
+      score_home: safeStats?.goals || 0,
+      score_away: safeStats?.goalsAgainst || 0,
       players: playersWithStats,
-      undo_stack: (undoStack || []).slice(-30), // Keep last 30 undo actions
-      stats: stats || {},
-      live_match_id: currentLiveMatchId || null,
-      is_broadcasting: isLiveBroadcasting || false
+      undo_stack: safeUndoStack.slice(-30), // Keep last 30 undo actions
+      stats: safeStats,
+      live_match_id: (typeof currentLiveMatchId !== 'undefined' ? currentLiveMatchId : null),
+      is_broadcasting: (typeof isLiveBroadcasting !== 'undefined' ? isLiveBroadcasting : false)
     };
     
     // Upsert (insert or update)
@@ -511,8 +532,8 @@ async function onUserSignedIn() {
     console.log('ℹ️ No active match - showing setup screen');
     console.log('════════════════════════════════════════');
     
-    // No active match, start auto-save for new session
-    startAutoSave();
+    // Don't start auto-save yet - wait for user to start a match
+    // Auto-save will start when initMatch() is called
     return false;
   }
 }
