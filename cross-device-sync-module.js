@@ -148,22 +148,22 @@ function restoreMatchState(data) {
   }
   
   // Restore score
-  if (data.score_home !== undefined) stats.goals = data.score_home;
-  if (data.score_away !== undefined) stats.goalsAgainst = data.score_away;
+  if (data.score_home !== undefined) window.stats.goals = data.score_home;
+  if (data.score_away !== undefined) window.stats.goalsAgainst = data.score_away;
   
-  console.log('   Score:', stats.goals, '-', stats.goalsAgainst);
+  console.log('   Score:', window.stats.goals, '-', window.stats.goalsAgainst);
   
   // Restore all stats
   if (data.stats && Object.keys(data.stats).length > 0) {
-    Object.assign(stats, data.stats);
+    Object.assign(window.stats, data.stats);
     console.log('✅ Stats restored');
   }
   
   // Restore player stats
   if (data.players && data.players.length > 0) {
     data.players.forEach(savedPlayer => {
-      if (playerStats[savedPlayer.id]) {
-        Object.assign(playerStats[savedPlayer.id], savedPlayer.stats || {});
+      if (window.playerStats[savedPlayer.id]) {
+        Object.assign(window.playerStats[savedPlayer.id], savedPlayer.stats || {});
       }
     });
     console.log('✅ Player stats restored');
@@ -177,7 +177,10 @@ function restoreMatchState(data) {
   
   // Restore undo stack
   if (data.undo_stack && data.undo_stack.length > 0) {
-    undoStack = data.undo_stack;
+    // Update window.undoStack
+    window.undoStack.length = 0; // Clear it first
+    data.undo_stack.forEach(item => window.undoStack.push(item));
+    
     const undoBtn = document.getElementById('undoBtn');
     const mobileUndoBtn = document.getElementById('mobileUndoBtn');
     if (undoBtn) undoBtn.disabled = false;
@@ -307,24 +310,24 @@ function syncFromCloud(data) {
   
   // Update score
   if (data.score_home !== undefined || data.score_away !== undefined) {
-    if (stats.goals !== data.score_home || stats.goalsAgainst !== data.score_away) {
-      stats.goals = data.score_home || 0;
-      stats.goalsAgainst = data.score_away || 0;
+    if (window.stats.goals !== data.score_home || window.stats.goalsAgainst !== data.score_away) {
+      window.stats.goals = data.score_home || 0;
+      window.stats.goalsAgainst = data.score_away || 0;
       updateScoreboard();
     }
   }
   
   // Update all stats
   if (data.stats && Object.keys(data.stats).length > 0) {
-    Object.assign(stats, data.stats);
+    Object.assign(window.stats, data.stats);
     updateStats();
   }
   
   // Update player stats
   if (data.players && data.players.length > 0) {
     data.players.forEach(savedPlayer => {
-      if (playerStats[savedPlayer.id] && savedPlayer.stats) {
-        Object.assign(playerStats[savedPlayer.id], savedPlayer.stats);
+      if (window.playerStats[savedPlayer.id] && savedPlayer.stats) {
+        Object.assign(window.playerStats[savedPlayer.id], savedPlayer.stats);
       }
     });
     renderPlayers();
@@ -332,11 +335,12 @@ function syncFromCloud(data) {
   
   // Update undo stack
   if (data.undo_stack && data.undo_stack.length > 0) {
-    undoStack = data.undo_stack;
+    window.undoStack.length = 0;
+    data.undo_stack.forEach(item => window.undoStack.push(item));
     const undoBtn = document.getElementById('undoBtn');
     const mobileUndoBtn = document.getElementById('mobileUndoBtn');
-    if (undoBtn) undoBtn.disabled = undoStack.length === 0;
-    if (mobileUndoBtn) mobileUndoBtn.disabled = undoStack.length === 0;
+    if (undoBtn) undoBtn.disabled = window.undoStack.length === 0;
+    if (mobileUndoBtn) mobileUndoBtn.disabled = window.undoStack.length === 0;
   }
   
   console.log('✅ Synced from other device');
