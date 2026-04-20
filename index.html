@@ -3621,6 +3621,12 @@ updateStats();
 updateTimerDisplay();
 initMobileLayout();
 
+// Start auto-save for cross-device sync
+if (typeof startAutoSave === 'function') {
+  startAutoSave();
+  console.log('✅ Auto-save started for new match');
+}
+
 } // end initMatch
 
 // Expose initMatch globally for cross-device sync
