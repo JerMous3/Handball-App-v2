@@ -371,20 +371,39 @@ function stopAutoSave() {
  * Save current match state to Supabase
  */
 async function saveCurrentMatch() {
-  if (!currentUser) return;
+  console.log('💾 saveCurrentMatch() called');
+  
+  if (!currentUser) {
+    console.log('❌ No currentUser, exiting');
+    return;
+  }
+  
+  console.log('✅ currentUser exists:', currentUser.id);
   
   // Check if match variables exist (they're created by initMatch)
   if (typeof currentPlayers === 'undefined') {
-    // Match not started yet, nothing to save
+    console.log('❌ currentPlayers is undefined, match not started');
     return;
   }
+  
+  console.log('✅ currentPlayers exists:', currentPlayers.length, 'players');
   
   // Don't save if no match is active
   const hasTeamName = window.teamName || window.restoredTeamName;
   const hasOpponent = window.opponent || window.restoredOpponent;
   const hasPlayers = currentPlayers && currentPlayers.length > 0;
   
+  console.log('Team check:');
+  console.log('  window.teamName:', window.teamName);
+  console.log('  window.opponent:', window.opponent);
+  console.log('  window.restoredTeamName:', window.restoredTeamName);
+  console.log('  window.restoredOpponent:', window.restoredOpponent);
+  console.log('  hasTeamName:', hasTeamName);
+  console.log('  hasOpponent:', hasOpponent);
+  console.log('  hasPlayers:', hasPlayers);
+  
   if (!hasTeamName && !hasOpponent && !hasPlayers) {
+    console.log('❌ No team name, opponent, or players - exiting');
     return;
   }
   
@@ -399,6 +418,13 @@ async function saveCurrentMatch() {
     const safePlayerZone = typeof playerZone !== 'undefined' ? playerZone : {};
     const safeStats = typeof stats !== 'undefined' ? stats : {};
     const safeUndoStack = typeof undoStack !== 'undefined' ? undoStack : [];
+    
+    console.log('📦 Preparing match state:');
+    console.log('  Team:', safeTeamName);
+    console.log('  Opponent:', safeOpponent);
+    console.log('  Timer:', safeMatchSeconds);
+    console.log('  Score:', safeStats?.goals || 0, '-', safeStats?.goalsAgainst || 0);
+    console.log('  Players:', currentPlayers.length);
     
     // Enrich players with their current stats and zone
     const playersWithStats = currentPlayers.map(player => ({
@@ -417,11 +443,13 @@ async function saveCurrentMatch() {
       score_home: safeStats?.goals || 0,
       score_away: safeStats?.goalsAgainst || 0,
       players: playersWithStats,
-      undo_stack: safeUndoStack.slice(-30), // Keep last 30 undo actions
+      undo_stack: safeUndoStack.slice(-30),
       stats: safeStats,
       live_match_id: (typeof currentLiveMatchId !== 'undefined' ? currentLiveMatchId : null),
       is_broadcasting: (typeof isLiveBroadcasting !== 'undefined' ? isLiveBroadcasting : false)
     };
+    
+    console.log('🚀 Saving to Supabase...');
     
     // Upsert (insert or update)
     const { data, error } = await _supabase
@@ -433,7 +461,16 @@ async function saveCurrentMatch() {
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Supabase error:', error);
+      throw error;
+    }
+    
+    console.log('✅ Saved successfully!', data);
+    
+    if (data) {
+      currentMatchId = data.id;
+    }
     
     if (data) {
       currentMatchId = data.id;
