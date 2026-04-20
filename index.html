@@ -2409,6 +2409,10 @@ function launchMatch() {
   const teamName = document.getElementById('setupTeamName').value.trim();
   const opponent = document.getElementById('setupOpponent').value.trim();
   
+  // Expose team names globally for cross-device sync
+  window.teamName = teamName;
+  window.opponent = opponent;
+  
   // Update team names header above player list (desktop)
   const homeNameEl = document.getElementById('homeTeamName');
   const awayNameEl = document.getElementById('awayTeamName');
