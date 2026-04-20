@@ -166,6 +166,143 @@ function startAutoSave() {
   autoSaveInterval = setInterval(() => {
     saveCurrentMatch();
   }, 5000); // Save every 5 seconds
+  
+  // Also start listening for changes from other devices
+  startRealtimeSync();
+}
+
+/**
+ * Listen for changes from other devices in real-time
+ */
+function startRealtimeSync() {
+  if (!currentUser) return;
+  
+  // Subscribe to changes on the current_match table
+  const subscription = _supabase
+    .channel('current_match_sync')
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'current_match',
+        filter: `coach_user_id=eq.${currentUser.id}`
+      },
+      (payload) => {
+        console.log('📱 Match updated from another device!', payload);
+        
+        // Only update if the change came from a different session
+        // (we don't want to reload our own changes)
+        if (payload.new && payload.new.last_updated) {
+          const lastUpdate = new Date(payload.new.last_updated);
+          const now = new Date();
+          const timeDiff = now - lastUpdate;
+          
+          // If update was more than 2 seconds ago, it's from another device
+          if (timeDiff > 2000) {
+            console.log('🔄 Syncing changes from other device...');
+            syncFromCloud(payload.new);
+          }
+        }
+      }
+    )
+    .subscribe();
+  
+  // Store subscription for cleanup
+  window.currentMatchSubscription = subscription;
+  
+  console.log('👂 Listening for changes from other devices');
+}
+
+/**
+ * Sync specific fields from cloud without full page reload
+ */
+function syncFromCloud(data) {
+  // Update timer
+  if (data.timer_seconds !== undefined && matchSeconds !== data.timer_seconds) {
+    matchSeconds = data.timer_seconds;
+    updateTimerDisplay();
+  }
+  
+  // Update timer running state
+  if (data.is_timer_running !== undefined && isTimerRunning !== data.is_timer_running) {
+    isTimerRunning = data.is_timer_running;
+    if (isTimerRunning && !timerInterval) {
+      startTimer();
+    } else if (!isTimerRunning && timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+    
+    const startStopBtn = document.getElementById('startStopBtn');
+    if (startStopBtn) {
+      startStopBtn.textContent = isTimerRunning ? '⏸ Pause' : '▶ Start';
+      if (isTimerRunning) {
+        startStopBtn.classList.add('active');
+      } else {
+        startStopBtn.classList.remove('active');
+      }
+    }
+  }
+  
+  // Update half
+  if (data.current_half !== undefined) {
+    const newHalf = data.current_half === 'second' ? 2 : 1;
+    if (currentHalf !== newHalf) {
+      currentHalf = newHalf;
+      const timerLabel = document.getElementById('timerLabel');
+      if (timerLabel) {
+        timerLabel.textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+      }
+    }
+  }
+  
+  // Update score
+  if (data.score_home !== undefined || data.score_away !== undefined) {
+    if (stats.goals !== data.score_home || stats.goalsAgainst !== data.score_away) {
+      stats.goals = data.score_home || 0;
+      stats.goalsAgainst = data.score_away || 0;
+      updateScoreboard();
+    }
+  }
+  
+  // Update all stats
+  if (data.stats && Object.keys(data.stats).length > 0) {
+    Object.assign(stats, data.stats);
+    updateStats();
+  }
+  
+  // Update player stats
+  if (data.players && data.players.length > 0) {
+    data.players.forEach(savedPlayer => {
+      if (playerStats[savedPlayer.id] && savedPlayer.stats) {
+        Object.assign(playerStats[savedPlayer.id], savedPlayer.stats);
+      }
+    });
+    renderPlayers();
+  }
+  
+  // Update undo stack
+  if (data.undo_stack && data.undo_stack.length > 0) {
+    undoStack = data.undo_stack;
+    const undoBtn = document.getElementById('undoBtn');
+    const mobileUndoBtn = document.getElementById('mobileUndoBtn');
+    if (undoBtn) undoBtn.disabled = undoStack.length === 0;
+    if (mobileUndoBtn) mobileUndoBtn.disabled = undoStack.length === 0;
+  }
+  
+  console.log('✅ Synced from other device');
+}
+
+/**
+ * Stop real-time sync listener
+ */
+function stopRealtimeSync() {
+  if (window.currentMatchSubscription) {
+    window.currentMatchSubscription.unsubscribe();
+    window.currentMatchSubscription = null;
+    console.log('👂 Stopped listening for changes');
+  }
 }
 
 /**
@@ -177,6 +314,9 @@ function stopAutoSave() {
     autoSaveInterval = null;
     console.log('Auto-save stopped');
   }
+  
+  // Also stop listening for changes
+  stopRealtimeSync();
 }
 
 /**
