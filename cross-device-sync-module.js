@@ -15,7 +15,12 @@ let currentMatchId = null;
  * Call this after user signs in
  */
 async function loadCurrentMatch() {
-  if (!currentUser) return;
+  if (!currentUser) {
+    console.log('❌ No user signed in, cannot load match');
+    return false;
+  }
+  
+  console.log('🔍 Checking for active match in cloud...');
   
   try {
     const { data, error } = await _supabase
@@ -25,27 +30,35 @@ async function loadCurrentMatch() {
       .single();
     
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error('❌ Error loading match:', error);
       throw error;
     }
     
     if (data) {
-      console.log('📱 Found active match on another device - restoring...');
+      console.log('✅ Found active match!', data);
+      console.log('   Team:', data.team_name, 'vs', data.opponent);
+      console.log('   Score:', data.score_home, '-', data.score_away);
+      console.log('   Timer:', data.timer_seconds, 'seconds');
+      console.log('   Players:', data.players?.length || 0);
+      
       currentMatchId = data.id;
       
       // Restore match state
+      console.log('🔄 Restoring match state...');
       restoreMatchState(data);
       
       // Start auto-save
       startAutoSave();
       
+      console.log('✅ Match restoration complete!');
       return true;
     } else {
-      console.log('No active match found');
+      console.log('ℹ️ No active match found in cloud');
       return false;
     }
     
   } catch (error) {
-    console.error('Error loading current match:', error);
+    console.error('❌ Error loading current match:', error);
     return false;
   }
 }
@@ -54,8 +67,18 @@ async function loadCurrentMatch() {
  * Restore all match state from saved data
  */
 function restoreMatchState(data) {
+  console.log('🔧 Starting match restoration...');
+  
+  // Check if initMatch is available
+  if (typeof initMatch !== 'function') {
+    console.error('❌ initMatch function not found! Cannot restore match.');
+    alert('Error: Cannot restore match. Please refresh the page and try again.');
+    return;
+  }
+  
   // Convert saved players back to roster format for initMatch
   const players = data.players || [];
+  console.log('   Players to restore:', players.length);
   
   // Separate players by zone
   const rosterData = {
@@ -64,15 +87,24 @@ function restoreMatchState(data) {
     subs: players.filter(p => p.zone === 'sub')
   };
   
+  console.log('   Goalkeepers:', rosterData.gk.length);
+  console.log('   Field players:', rosterData.players.length);
+  console.log('   Substitutes:', rosterData.subs.length);
+  
   // Set team names globally so initMatch can access them
   window.restoredTeamName = data.team_name || '';
   window.restoredOpponent = data.opponent || '';
   
+  console.log('   Team names:', window.restoredTeamName, 'vs', window.restoredOpponent);
+  
   // Call initMatch to set up all the match functionality
-  if (typeof initMatch === 'function') {
+  console.log('📞 Calling initMatch()...');
+  try {
     initMatch(rosterData);
-  } else {
-    console.error('initMatch function not found!');
+    console.log('✅ initMatch() completed');
+  } catch (error) {
+    console.error('❌ Error calling initMatch:', error);
+    alert('Error restoring match: ' + error.message);
     return;
   }
   
@@ -80,14 +112,20 @@ function restoreMatchState(data) {
   const topbarBrand = document.getElementById('topbarBrand');
   if (topbarBrand && window.restoredTeamName && window.restoredOpponent) {
     topbarBrand.textContent = `⬡ ${window.restoredTeamName} vs ${window.restoredOpponent}`;
+    console.log('✅ Updated topbar brand');
   }
   
   // Now restore the dynamic state that initMatch doesn't handle
+  console.log('🔧 Restoring dynamic state...');
   
   // Restore timer state
   matchSeconds = data.timer_seconds || 0;
   isTimerRunning = data.is_timer_running || false;
   currentHalf = data.current_half === 'second' ? 2 : 1;
+  
+  console.log('   Timer:', matchSeconds, 'seconds');
+  console.log('   Running:', isTimerRunning);
+  console.log('   Half:', currentHalf);
   
   updateTimerDisplay();
   const timerLabel = document.getElementById('timerLabel');
@@ -102,15 +140,19 @@ function restoreMatchState(data) {
       startStopBtn.classList.add('active');
     }
     startTimer();
+    console.log('✅ Timer started');
   }
   
   // Restore score
   if (data.score_home !== undefined) stats.goals = data.score_home;
   if (data.score_away !== undefined) stats.goalsAgainst = data.score_away;
   
+  console.log('   Score:', stats.goals, '-', stats.goalsAgainst);
+  
   // Restore all stats
   if (data.stats && Object.keys(data.stats).length > 0) {
     Object.assign(stats, data.stats);
+    console.log('✅ Stats restored');
   }
   
   // Restore player stats
@@ -120,12 +162,14 @@ function restoreMatchState(data) {
         Object.assign(playerStats[savedPlayer.id], savedPlayer.stats || {});
       }
     });
+    console.log('✅ Player stats restored');
   }
   
   // Update all displays
   updateScoreboard();
   updateStats();
   renderPlayers();
+  console.log('✅ UI updated');
   
   // Restore undo stack
   if (data.undo_stack && data.undo_stack.length > 0) {
@@ -134,6 +178,7 @@ function restoreMatchState(data) {
     const mobileUndoBtn = document.getElementById('mobileUndoBtn');
     if (undoBtn) undoBtn.disabled = false;
     if (mobileUndoBtn) mobileUndoBtn.disabled = false;
+    console.log('✅ Undo stack restored (', data.undo_stack.length, 'actions)');
   }
   
   // Restore live broadcasting state
@@ -143,12 +188,11 @@ function restoreMatchState(data) {
     if (typeof showLiveStatus === 'function') {
       showLiveStatus(true);
     }
+    console.log('✅ Live broadcasting state restored');
   }
   
-  console.log('✅ Match state fully restored from cloud');
-  console.log('   Timer:', matchSeconds, 'seconds');
-  console.log('   Score:', stats.goals, '-', stats.goalsAgainst);
-  console.log('   Players:', data.players?.length || 0);
+  console.log('🎉 Match state fully restored from cloud!');
+  console.log('════════════════════════════════════════');
 }
 
 // ============================================================
@@ -407,14 +451,25 @@ async function clearCurrentMatch() {
  * Returns true if active match was restored, false if not
  */
 async function onUserSignedIn() {
+  console.log('════════════════════════════════════════');
+  console.log('🔐 User signed in - checking for active match...');
+  
   // Try to load existing match
   const hasActiveMatch = await loadCurrentMatch();
   
   if (hasActiveMatch) {
+    console.log('✅ Active match found and restored!');
+    
     // Match restored - hide setup screen, show tracker
-    document.getElementById('setupScreen').classList.add('hidden');
-    document.getElementById('appTopbar').style.display = 'flex';
-    document.getElementById('appMain').style.display = 'grid';
+    const setupScreen = document.getElementById('setupScreen');
+    const appTopbar = document.getElementById('appTopbar');
+    const appMain = document.getElementById('appMain');
+    
+    if (setupScreen) setupScreen.classList.add('hidden');
+    if (appTopbar) appTopbar.style.display = 'flex';
+    if (appMain) appMain.style.display = 'grid';
+    
+    console.log('✅ UI switched to tracker view');
     
     // Show notification
     const notification = document.createElement('div');
@@ -430,14 +485,25 @@ async function onUserSignedIn() {
       font-weight: 700;
       z-index: 10000;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      animation: slideDown 0.3s ease;
     `;
     notification.textContent = '📱 Continuing your match from another device';
     document.body.appendChild(notification);
     
-    setTimeout(() => notification.remove(), 3000);
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transition = 'opacity 0.3s';
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
+    
+    console.log('✅ Notification shown');
+    console.log('════════════════════════════════════════');
     
     return true;
   } else {
+    console.log('ℹ️ No active match - showing setup screen');
+    console.log('════════════════════════════════════════');
+    
     // No active match, start auto-save for new session
     startAutoSave();
     return false;
