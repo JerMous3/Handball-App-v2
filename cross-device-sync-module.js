@@ -69,6 +69,10 @@ async function loadCurrentMatch() {
 function restoreMatchState(data) {
   console.log('🔧 Starting match restoration...');
   
+  // CRITICAL: Clear localStorage timer to prevent conflicts
+  console.log('🧹 Clearing localStorage timer (preventing conflicts)...');
+  localStorage.removeItem('handballtrack_timer');
+  
   // Check if initMatch is available
   if (typeof initMatch !== 'function') {
     console.error('❌ initMatch function not found! Cannot restore match.');
@@ -434,6 +438,9 @@ async function clearCurrentMatch() {
     
     currentMatchId = null;
     stopAutoSave();
+    
+    // Also clear localStorage timer to prevent conflicts
+    localStorage.removeItem('handballtrack_timer');
     
     console.log('Current match cleared from cloud');
     
