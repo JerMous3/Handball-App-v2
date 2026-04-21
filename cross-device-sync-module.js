@@ -174,20 +174,31 @@ function restoreMatchState(data) {
   let restoredTimerRunning = data.is_timer_running || false;
   let restoredCurrentHalf = data.current_half === 'second' ? 2 : 1;
   
-  // Update global variables if they exist
-  if (typeof matchSeconds !== 'undefined') {
-    matchSeconds = restoredMatchSeconds;
-  }
-  if (typeof timerRunning !== 'undefined') {
-    timerRunning = restoredTimerRunning;
-  }
-  if (typeof currentHalf !== 'undefined') {
-    currentHalf = restoredCurrentHalf;
-  }
+  // Update global variables via window (they exist in main script scope)
+  window.matchSeconds = restoredMatchSeconds;
+  window.timerRunning = restoredTimerRunning;
+  window.currentHalf = restoredCurrentHalf;
   
-  console.log('   Timer:', restoredMatchSeconds, 'seconds');
-  console.log('   Running:', restoredTimerRunning);
-  console.log('   Half:', restoredCurrentHalf);
+  console.log('   Set window.matchSeconds:', window.matchSeconds);
+  console.log('   Set window.timerRunning:', window.timerRunning);
+  console.log('   Set window.currentHalf:', window.currentHalf);
+  
+  // CRITICAL: Also update the local variables by executing in the main window context
+  // This ensures both local and window variables are synchronized
+  try {
+    // Execute in the main script's scope to update local variables
+    const script = document.createElement('script');
+    script.textContent = `
+      if (typeof matchSeconds !== 'undefined') matchSeconds = ${restoredMatchSeconds};
+      if (typeof timerRunning !== 'undefined') timerRunning = ${restoredTimerRunning};
+      if (typeof currentHalf !== 'undefined') currentHalf = ${restoredCurrentHalf};
+      console.log('✅ Local timer variables synchronized');
+    `;
+    document.body.appendChild(script);
+    document.body.removeChild(script);
+  } catch (e) {
+    console.error('Error synchronizing local variables:', e);
+  }
   
   // Update timer display
   if (typeof updateTimerDisplay === 'function') {
