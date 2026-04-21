@@ -1,7 +1,10 @@
 // ============================================================
-// CROSS-DEVICE SESSION SYNC MODULE
+// CROSS-DEVICE SESSION SYNC MODULE v2.1
+// Last updated: 2026-04-21 16:30
 // Add this to index.html after Supabase initialization
 // ============================================================
+
+console.log('📱 Loading sync module v2.1...');
 
 let autoSaveInterval = null;
 let currentMatchId = null;
@@ -190,14 +193,26 @@ function restoreMatchState(data) {
   if (typeof updateTimerDisplay === 'function') {
     try {
       updateTimerDisplay();
+      console.log('✅ Timer display updated via updateTimerDisplay()');
     } catch (e) {
       console.error('Error calling updateTimerDisplay:', e);
+    }
+  } else {
+    // Fallback: manually update timer display if function doesn't exist yet
+    console.log('⚠️ updateTimerDisplay not available, updating manually');
+    const timerDisplayEl = document.querySelector('.timer-display');
+    if (timerDisplayEl) {
+      const mins = Math.floor(restoredMatchSeconds / 60);
+      const secs = restoredMatchSeconds % 60;
+      timerDisplayEl.textContent = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+      console.log('✅ Timer display updated manually:', timerDisplayEl.textContent);
     }
   }
   
   const timerLabel = document.getElementById('timerLabel');
   if (timerLabel) {
     timerLabel.textContent = restoredCurrentHalf === 1 ? '1st Half' : '2nd Half';
+    console.log('✅ Half label updated:', timerLabel.textContent);
   }
   
   if (restoredTimerRunning && typeof startTimer === 'function') {
