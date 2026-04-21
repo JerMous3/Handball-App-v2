@@ -123,44 +123,66 @@ function restoreMatchState(data) {
   console.log('🔧 Restoring dynamic state...');
   
   // Restore timer state
-  matchSeconds = data.timer_seconds || 0;
-  isTimerRunning = data.is_timer_running || false;
-  currentHalf = data.current_half === 'second' ? 2 : 1;
+  if (typeof matchSeconds !== 'undefined') {
+    matchSeconds = data.timer_seconds || 0;
+  }
+  if (typeof isTimerRunning !== 'undefined') {
+    isTimerRunning = data.is_timer_running || false;
+  }
+  if (typeof currentHalf !== 'undefined') {
+    currentHalf = data.current_half === 'second' ? 2 : 1;
+  }
   
-  console.log('   Timer:', matchSeconds, 'seconds');
-  console.log('   Running:', isTimerRunning);
-  console.log('   Half:', currentHalf);
+  console.log('   Timer:', data.timer_seconds, 'seconds');
+  console.log('   Running:', data.is_timer_running);
+  console.log('   Half:', data.current_half);
   
-  updateTimerDisplay();
+  // Update timer display
+  if (typeof updateTimerDisplay === 'function') {
+    try {
+      updateTimerDisplay();
+    } catch (e) {
+      console.error('Error calling updateTimerDisplay:', e);
+    }
+  }
+  
   const timerLabel = document.getElementById('timerLabel');
   if (timerLabel) {
     timerLabel.textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
   }
   
-  if (isTimerRunning) {
-    const startStopBtn = document.getElementById('startStopBtn');
-    if (startStopBtn) {
-      startStopBtn.textContent = '⏸ Pause';
-      startStopBtn.classList.add('active');
+  if (isTimerRunning && typeof startTimer === 'function') {
+    try {
+      const startStopBtn = document.getElementById('startStopBtn');
+      if (startStopBtn) {
+        startStopBtn.textContent = '⏸ Pause';
+        startStopBtn.classList.add('active');
+      }
+      startTimer();
+      console.log('✅ Timer started');
+    } catch (e) {
+      console.error('Error starting timer:', e);
     }
-    startTimer();
-    console.log('✅ Timer started');
   }
   
   // Restore score
-  if (data.score_home !== undefined) window.stats.goals = data.score_home;
-  if (data.score_away !== undefined) window.stats.goalsAgainst = data.score_away;
+  if (data.score_home !== undefined && window.stats) {
+    window.stats.goals = data.score_home;
+  }
+  if (data.score_away !== undefined && window.stats) {
+    window.stats.goalsAgainst = data.score_away;
+  }
   
-  console.log('   Score:', window.stats.goals, '-', window.stats.goalsAgainst);
+  console.log('   Score:', window.stats?.goals || 0, '-', window.stats?.goalsAgainst || 0);
   
   // Restore all stats
-  if (data.stats && Object.keys(data.stats).length > 0) {
+  if (data.stats && Object.keys(data.stats).length > 0 && window.stats) {
     Object.assign(window.stats, data.stats);
     console.log('✅ Stats restored');
   }
   
   // Restore player stats
-  if (data.players && data.players.length > 0) {
+  if (data.players && data.players.length > 0 && window.playerStats) {
     data.players.forEach(savedPlayer => {
       if (window.playerStats[savedPlayer.id]) {
         Object.assign(window.playerStats[savedPlayer.id], savedPlayer.stats || {});
@@ -169,14 +191,18 @@ function restoreMatchState(data) {
     console.log('✅ Player stats restored');
   }
   
-  // Update all displays
-  updateScoreboard();
-  updateStats();
-  renderPlayers();
-  console.log('✅ UI updated');
+  // Update all displays - wrap in try-catch in case functions don't exist
+  try {
+    if (typeof updateScoreboard === 'function') updateScoreboard();
+    if (typeof updateStats === 'function') updateStats();
+    if (typeof renderPlayers === 'function') renderPlayers();
+    console.log('✅ UI updated');
+  } catch (e) {
+    console.error('Error updating UI:', e);
+  }
   
   // Restore undo stack
-  if (data.undo_stack && data.undo_stack.length > 0) {
+  if (data.undo_stack && data.undo_stack.length > 0 && window.undoStack) {
     // Update window.undoStack
     window.undoStack.length = 0; // Clear it first
     data.undo_stack.forEach(item => window.undoStack.push(item));
@@ -269,6 +295,11 @@ function startRealtimeSync() {
  * Sync specific fields from cloud without full page reload
  */
 function syncFromCloud(data) {
+  console.log('🔄 Received update from another device');
+  
+  // Show notification that another device made changes
+  showSyncNotification();
+  
   // Update timer
   if (data.timer_seconds !== undefined && matchSeconds !== data.timer_seconds) {
     matchSeconds = data.timer_seconds;
@@ -344,6 +375,42 @@ function syncFromCloud(data) {
   }
   
   console.log('✅ Synced from other device');
+}
+
+/**
+ * Show notification when another device updates the match
+ */
+function showSyncNotification() {
+  // Don't spam notifications - only show once every 30 seconds
+  const now = Date.now();
+  if (window.lastSyncNotification && (now - window.lastSyncNotification) < 30000) {
+    return;
+  }
+  window.lastSyncNotification = now;
+  
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: #FF9500;
+    color: #000;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s ease;
+  `;
+  notification.textContent = '📱 Updated from another device';
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.style.opacity = '0';
+    notification.style.transition = 'opacity 0.3s';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
 }
 
 /**
