@@ -557,9 +557,9 @@ async function saveCurrentMatch() {
     // Safely access variables from window
     const safeTeamName = window.teamName || window.restoredTeamName || '';
     const safeOpponent = window.opponent || window.restoredOpponent || '';
-    const safeMatchSeconds = typeof matchSeconds !== 'undefined' ? matchSeconds : 0;
-    const safeIsTimerRunning = typeof timerRunning !== 'undefined' ? timerRunning : false;
-    const safeCurrentHalf = typeof currentHalf !== 'undefined' ? (currentHalf === 2 ? 'second' : 'first') : 'first';
+    const safeMatchSeconds = typeof window.matchSeconds !== 'undefined' ? window.matchSeconds : 0;
+    const safeTimerRunning = typeof window.timerRunning !== 'undefined' ? window.timerRunning : false;
+    const safeCurrentHalf = typeof window.currentHalf !== 'undefined' ? (window.currentHalf === 2 ? 'second' : 'first') : 'first';
     const safePlayerStats = window.playerStats || {};
     const safePlayerZone = window.playerZone || {};
     const safeStats = window.stats || {};
@@ -568,7 +568,9 @@ async function saveCurrentMatch() {
     console.log('📦 Preparing match state:');
     console.log('  Team:', safeTeamName);
     console.log('  Opponent:', safeOpponent);
-    console.log('  Timer:', safeMatchSeconds);
+    console.log('  Timer:', safeMatchSeconds, 'seconds');
+    console.log('  Timer running:', safeTimerRunning);
+    console.log('  Half:', safeCurrentHalf);
     console.log('  Score:', safeStats?.goals || 0, '-', safeStats?.goalsAgainst || 0);
     console.log('  Players:', window.currentPlayers.length);
     
@@ -584,7 +586,7 @@ async function saveCurrentMatch() {
       team_name: safeTeamName,
       opponent: safeOpponent,
       timer_seconds: safeMatchSeconds,
-      is_timer_running: safeIsTimerRunning,
+      is_timer_running: safeTimerRunning,
       current_half: safeCurrentHalf,
       score_home: safeStats?.goals || 0,
       score_away: safeStats?.goalsAgainst || 0,
