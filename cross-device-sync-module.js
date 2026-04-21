@@ -522,9 +522,13 @@ async function clearCurrentMatch() {
 async function onUserSignedIn() {
   console.log('════════════════════════════════════════');
   console.log('🔐 User signed in - checking for active match...');
+  console.log('   User ID:', currentUser?.id);
+  console.log('   User email:', currentUser?.email);
   
   // Try to load existing match
   const hasActiveMatch = await loadCurrentMatch();
+  
+  console.log('🔍 hasActiveMatch result:', hasActiveMatch);
   
   if (hasActiveMatch) {
     console.log('✅ Active match found and restored!');
@@ -534,11 +538,32 @@ async function onUserSignedIn() {
     const appTopbar = document.getElementById('appTopbar');
     const appMain = document.getElementById('appMain');
     
-    if (setupScreen) setupScreen.classList.add('hidden');
-    if (appTopbar) appTopbar.style.display = 'flex';
-    if (appMain) appMain.style.display = 'grid';
+    console.log('📱 Switching UI to tracker view...');
+    console.log('   setupScreen element:', !!setupScreen);
+    console.log('   appTopbar element:', !!appTopbar);
+    console.log('   appMain element:', !!appMain);
+    
+    if (setupScreen) {
+      setupScreen.classList.add('hidden');
+      console.log('   ✅ Setup screen hidden');
+    }
+    if (appTopbar) {
+      appTopbar.style.display = ''; // Use CSS default
+      console.log('   ✅ Topbar shown');
+    }
+    if (appMain) {
+      appMain.style.display = ''; // Use CSS default
+      console.log('   ✅ Main area shown');
+    }
     
     console.log('✅ UI switched to tracker view');
+    
+    // Verify data was restored
+    console.log('🔍 Verifying restored data:');
+    console.log('   window.currentPlayers:', window.currentPlayers?.length);
+    console.log('   window.teamName:', window.teamName);
+    console.log('   window.opponent:', window.opponent);
+    console.log('   window.stats:', window.stats);
     
     // Show notification
     const notification = document.createElement('div');
