@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Handball Tracker</title>
+
+<!-- Eruda mobile console for debugging -->
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>
+  // Only enable Eruda on mobile devices or when ?debug=1 is in URL
+  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.location.search.includes('debug=1')) {
+    eruda.init();
+    console.log('📱 Eruda mobile console enabled');
+  }
+</script>
+
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="polish-theme.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -2709,6 +2720,10 @@ function startTimerInterval() {
     tickSuspensions();
   }, 1000);
 }
+
+// Expose to window for cross-device sync
+window.startTimerInterval = startTimerInterval;
+window.updateTimerDisplay = updateTimerDisplay;
 
 function toggleTimer() {
   timerRunning = !timerRunning;
