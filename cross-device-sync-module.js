@@ -227,35 +227,58 @@ function restoreMatchState(data) {
   }
   
   // Restore timer state variables for proper timer continuation
-  if (restoredTimerRunning && typeof startTimer === 'function') {
+  if (restoredTimerRunning) {
     try {
-      // CRITICAL: Set timerPausedAt so timer continues from correct point
-      // Execute in main scope to set the variable
+      console.log('⏰ Restoring running timer...');
+      
+      // CRITICAL: Set all timer state variables and start interval in main scope
       const script = document.createElement('script');
       script.textContent = `
-        if (typeof timerPausedAt !== 'undefined') timerPausedAt = ${restoredMatchSeconds};
-        if (typeof timerStartTime !== 'undefined') timerStartTime = Date.now();
-        console.log('✅ Timer state variables set: timerPausedAt=${restoredMatchSeconds}, timerStartTime=', Date.now());
+        console.log('  Setting timer variables in main scope...');
+        if (typeof timerPausedAt !== 'undefined') {
+          timerPausedAt = ${restoredMatchSeconds};
+          console.log('  ✅ timerPausedAt =', timerPausedAt);
+        }
+        if (typeof timerStartTime !== 'undefined') {
+          timerStartTime = Date.now();
+          console.log('  ✅ timerStartTime =', new Date(timerStartTime).toISOString());
+        }
+        if (typeof timerRunning !== 'undefined') {
+          timerRunning = true;
+          console.log('  ✅ timerRunning = true');
+        }
+        
+        // Start the timer interval
+        if (typeof startTimerInterval === 'function') {
+          startTimerInterval();
+          console.log('  ✅ startTimerInterval() called');
+          
+          // Verify it worked
+          if (timerInterval) {
+            console.log('  ✅✅ Timer interval is now ACTIVE!');
+          } else {
+            console.error('  ❌ Timer interval is still null after calling startTimerInterval!');
+          }
+        } else {
+          console.error('  ❌ startTimerInterval function not found!');
+        }
       `;
       document.body.appendChild(script);
       document.body.removeChild(script);
       
+      // Update button UI
       const startStopBtn = document.getElementById('startStopBtn');
       if (startStopBtn) {
         startStopBtn.textContent = '⏸ Pause';
         startStopBtn.classList.add('active');
       }
       
-      // Now start the timer interval
-      if (typeof startTimerInterval === 'function') {
-        startTimerInterval();
-      }
-      console.log('✅ Timer started and running');
+      console.log('✅ Timer restore complete');
     } catch (e) {
-      console.error('Error starting timer:', e);
+      console.error('❌ Error starting timer:', e);
     }
   } else {
-    console.log('ℹ️ Timer not running (was paused)');
+    console.log('ℹ️ Timer was paused - not starting interval');
   }
   
   // Restore score
