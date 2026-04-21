@@ -126,8 +126,8 @@ function restoreMatchState(data) {
   if (typeof matchSeconds !== 'undefined') {
     matchSeconds = data.timer_seconds || 0;
   }
-  if (typeof isTimerRunning !== 'undefined') {
-    isTimerRunning = data.is_timer_running || false;
+  if (typeof timerRunning !== 'undefined') {
+    timerRunning = data.is_timer_running || false;
   }
   if (typeof currentHalf !== 'undefined') {
     currentHalf = data.current_half === 'second' ? 2 : 1;
@@ -151,7 +151,7 @@ function restoreMatchState(data) {
     timerLabel.textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
   }
   
-  if (isTimerRunning && typeof startTimer === 'function') {
+  if (timerRunning && typeof startTimer === 'function') {
     try {
       const startStopBtn = document.getElementById('startStopBtn');
       if (startStopBtn) {
@@ -307,19 +307,19 @@ function syncFromCloud(data) {
   }
   
   // Update timer running state
-  if (data.is_timer_running !== undefined && isTimerRunning !== data.is_timer_running) {
-    isTimerRunning = data.is_timer_running;
-    if (isTimerRunning && !timerInterval) {
+  if (data.is_timer_running !== undefined && timerRunning !== data.is_timer_running) {
+    timerRunning = data.is_timer_running;
+    if (timerRunning && !timerInterval) {
       startTimer();
-    } else if (!isTimerRunning && timerInterval) {
+    } else if (!timerRunning && timerInterval) {
       clearInterval(timerInterval);
       timerInterval = null;
     }
     
     const startStopBtn = document.getElementById('startStopBtn');
     if (startStopBtn) {
-      startStopBtn.textContent = isTimerRunning ? '⏸ Pause' : '▶ Start';
-      if (isTimerRunning) {
+      startStopBtn.textContent = timerRunning ? '⏸ Pause' : '▶ Start';
+      if (timerRunning) {
         startStopBtn.classList.add('active');
       } else {
         startStopBtn.classList.remove('active');
@@ -483,7 +483,7 @@ async function saveCurrentMatch() {
     const safeTeamName = window.teamName || window.restoredTeamName || '';
     const safeOpponent = window.opponent || window.restoredOpponent || '';
     const safeMatchSeconds = typeof matchSeconds !== 'undefined' ? matchSeconds : 0;
-    const safeIsTimerRunning = typeof isTimerRunning !== 'undefined' ? isTimerRunning : false;
+    const safeIsTimerRunning = typeof timerRunning !== 'undefined' ? timerRunning : false;
     const safeCurrentHalf = typeof currentHalf !== 'undefined' ? (currentHalf === 2 ? 'second' : 'first') : 'first';
     const safePlayerStats = window.playerStats || {};
     const safePlayerZone = window.playerZone || {};
