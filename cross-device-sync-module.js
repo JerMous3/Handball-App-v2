@@ -41,6 +41,24 @@ async function loadCurrentMatch() {
       console.log('   Timer:', data.timer_seconds, 'seconds');
       console.log('   Players:', data.players?.length || 0);
       
+      // Check if this is actually a real match (has players OR team names)
+      const hasPlayers = data.players && data.players.length > 0;
+      const hasTeamNames = data.team_name || data.opponent;
+      
+      if (!hasPlayers && !hasTeamNames) {
+        console.log('⚠️ Match found but has no data - treating as empty');
+        console.log('   Deleting empty match from cloud...');
+        
+        // Delete this empty match
+        await _supabase
+          .from('current_match')
+          .delete()
+          .eq('id', data.id);
+        
+        console.log('ℹ️ No active match found in cloud');
+        return false;
+      }
+      
       currentMatchId = data.id;
       
       // Restore match state
@@ -112,11 +130,37 @@ function restoreMatchState(data) {
     return;
   }
   
-  // Update team names in topbar
+  // Set team names globally
+  window.teamName = data.team_name || '';
+  window.opponent = data.opponent || '';
+  
+  // Update ALL team name displays in the UI
+  const homeNameEl = document.getElementById('homeTeamName');
+  const awayNameEl = document.getElementById('awayTeamName');
+  const mobileHomeEl = document.getElementById('mobileHomeTeam');
+  const mobileAwayEl = document.getElementById('mobileAwayTeam');
+  const mobileHomeEl2 = document.getElementById('mobileHomeTeam2');
+  const mobileAwayEl2 = document.getElementById('mobileAwayTeam2');
+  
+  if (homeNameEl) homeNameEl.textContent = window.teamName || 'Home Team';
+  if (awayNameEl) awayNameEl.textContent = window.opponent || 'Away Team';
+  if (mobileHomeEl) mobileHomeEl.textContent = window.teamName || 'Home Team';
+  if (mobileAwayEl) mobileAwayEl.textContent = window.opponent || 'Away Team';
+  if (mobileHomeEl2) mobileHomeEl2.textContent = window.teamName || 'Home Team';
+  if (mobileAwayEl2) mobileAwayEl2.textContent = window.opponent || 'Away Team';
+  
+  // Update scoreboard labels
+  const labels = document.querySelectorAll('.scoreboard-teams span');
+  if (labels.length >= 2) {
+    labels[0].textContent = window.teamName || 'Home';
+    labels[2].textContent = window.opponent || 'Away';
+  }
+  
+  // Update topbar brand
   const topbarBrand = document.getElementById('topbarBrand');
-  if (topbarBrand && window.restoredTeamName && window.restoredOpponent) {
-    topbarBrand.textContent = `⬡ ${window.restoredTeamName} vs ${window.restoredOpponent}`;
-    console.log('✅ Updated topbar brand');
+  if (topbarBrand && window.teamName && window.opponent) {
+    topbarBrand.textContent = `⬡ ${window.teamName} vs ${window.opponent}`;
+    console.log('✅ Updated all team name displays');
   }
   
   // Now restore the dynamic state that initMatch doesn't handle
@@ -732,4 +776,3 @@ console.log('📱 Cross-device sync module loaded');
 4. When signing out (in signOut):
    await onUserSignOut();
 
-*/
