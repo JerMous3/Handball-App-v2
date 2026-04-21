@@ -1484,9 +1484,9 @@
   .setup-roster-info strong { color: var(--text); }
 </style>
 <body>
-
 <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 <script>eruda.init();</script>
+  
 <!-- AUTH SCREEN -->
 <div class="auth-screen" id="authScreen">
   <div class="auth-card">
@@ -2114,15 +2114,20 @@ async function onSignedIn(user) {
   currentUser = user;
   
   // Load active match from cloud (cross-device sync)
+  console.log('🔐 Checking for active match...');
   let matchRestored = false;
   if (typeof onUserSignedIn === 'function') {
     matchRestored = await onUserSignedIn();
+    console.log('🔍 matchRestored result:', matchRestored);
+  } else {
+    console.log('⚠️ onUserSignedIn function not found!');
   }
   
   document.getElementById('authScreen').classList.add('hidden');
   
   // Only show setup screen if no active match was restored
   if (!matchRestored) {
+    console.log('ℹ️ Showing setup screen (matchRestored = false)');
     document.getElementById('setupScreen').classList.remove('hidden');
 
     // Check for saved roster
@@ -2732,7 +2737,7 @@ function toggleTimer() {
   saveTimerState();
 }
 
-function resetTimer() {
+async function resetTimer() {
   // Confirmation dialog to prevent accidental resets
   const confirmed = confirm(
     '⚠️ Reset entire match?\n\n' +
@@ -2812,7 +2817,8 @@ function resetTimer() {
   
   // Clear current match from cloud and restart auto-save (cross-device sync)
   if (typeof onMatchReset === 'function') {
-    onMatchReset();
+    await onMatchReset();
+    console.log('✅ Match cleared from cloud');
   }
   
   console.log('Match reset complete');
