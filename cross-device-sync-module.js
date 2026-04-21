@@ -226,18 +226,36 @@ function restoreMatchState(data) {
     console.log('✅ Half label updated:', timerLabel.textContent);
   }
   
+  // Restore timer state variables for proper timer continuation
   if (restoredTimerRunning && typeof startTimer === 'function') {
     try {
+      // CRITICAL: Set timerPausedAt so timer continues from correct point
+      // Execute in main scope to set the variable
+      const script = document.createElement('script');
+      script.textContent = `
+        if (typeof timerPausedAt !== 'undefined') timerPausedAt = ${restoredMatchSeconds};
+        if (typeof timerStartTime !== 'undefined') timerStartTime = Date.now();
+        console.log('✅ Timer state variables set: timerPausedAt=${restoredMatchSeconds}, timerStartTime=', Date.now());
+      `;
+      document.body.appendChild(script);
+      document.body.removeChild(script);
+      
       const startStopBtn = document.getElementById('startStopBtn');
       if (startStopBtn) {
         startStopBtn.textContent = '⏸ Pause';
         startStopBtn.classList.add('active');
       }
-      startTimer();
-      console.log('✅ Timer started');
+      
+      // Now start the timer interval
+      if (typeof startTimerInterval === 'function') {
+        startTimerInterval();
+      }
+      console.log('✅ Timer started and running');
     } catch (e) {
       console.error('Error starting timer:', e);
     }
+  } else {
+    console.log('ℹ️ Timer not running (was paused)');
   }
   
   // Restore score
@@ -341,20 +359,24 @@ function startRealtimeSync() {
         filter: `coach_user_id=eq.${currentUser.id}`
       },
       (payload) => {
-        console.log('📱 Match updated from another device!', payload);
+        console.log('📱 Received change notification from Supabase', payload);
         
-        // Only update if the change came from a different session
-        // (we don't want to reload our own changes)
-        if (payload.new && payload.new.last_updated) {
+        // Sync the changes from the other device
+        // We use a small debounce to avoid syncing our own rapid-fire changes
+        if (payload.new) {
+          // Check if this might be our own save (within last 1 second)
           const lastUpdate = new Date(payload.new.last_updated);
           const now = new Date();
           const timeDiff = now - lastUpdate;
           
-          // If update was more than 2 seconds ago, it's from another device
-          if (timeDiff > 2000) {
-            console.log('🔄 Syncing changes from other device...');
-            syncFromCloud(payload.new);
+          // Small window to ignore our own very recent saves
+          if (timeDiff < 500) {
+            console.log('ℹ️ Ignoring own recent update (', timeDiff, 'ms ago)');
+            return;
           }
+          
+          console.log('🔄 Syncing changes from other device (', timeDiff, 'ms ago)...');
+          syncFromCloud(payload.new);
         }
       }
     )
@@ -375,26 +397,42 @@ function syncFromCloud(data) {
   // Show notification that another device made changes
   showSyncNotification();
   
-  // Update timer
-  if (data.timer_seconds !== undefined && matchSeconds !== data.timer_seconds) {
-    matchSeconds = data.timer_seconds;
-    updateTimerDisplay();
+  // Update timer - use window variables
+  if (data.timer_seconds !== undefined && window.matchSeconds !== data.timer_seconds) {
+    window.matchSeconds = data.timer_seconds;
+    // Also update local variable via script injection
+    const script = document.createElement('script');
+    script.textContent = `if (typeof matchSeconds !== 'undefined') matchSeconds = ${data.timer_seconds};`;
+    document.body.appendChild(script);
+    document.body.removeChild(script);
+    
+    if (typeof updateTimerDisplay === 'function') updateTimerDisplay();
   }
   
   // Update timer running state
-  if (data.is_timer_running !== undefined && timerRunning !== data.is_timer_running) {
-    timerRunning = data.is_timer_running;
-    if (timerRunning && !timerInterval) {
-      startTimer();
-    } else if (!timerRunning && timerInterval) {
-      clearInterval(timerInterval);
-      timerInterval = null;
-    }
+  if (data.is_timer_running !== undefined && window.timerRunning !== data.is_timer_running) {
+    window.timerRunning = data.is_timer_running;
+    
+    // Update local variable and start/stop timer
+    const script2 = document.createElement('script');
+    script2.textContent = `
+      if (typeof timerRunning !== 'undefined') timerRunning = ${data.is_timer_running};
+      if (${data.is_timer_running} && typeof timerInterval !== 'undefined' && !timerInterval) {
+        if (typeof timerPausedAt !== 'undefined') timerPausedAt = ${data.timer_seconds};
+        if (typeof timerStartTime !== 'undefined') timerStartTime = Date.now();
+        if (typeof startTimerInterval === 'function') startTimerInterval();
+      } else if (!${data.is_timer_running} && typeof timerInterval !== 'undefined' && timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    `;
+    document.body.appendChild(script2);
+    document.body.removeChild(script2);
     
     const startStopBtn = document.getElementById('startStopBtn');
     if (startStopBtn) {
-      startStopBtn.textContent = timerRunning ? '⏸ Pause' : '▶ Start';
-      if (timerRunning) {
+      startStopBtn.textContent = data.is_timer_running ? '⏸ Pause' : '▶ Start';
+      if (data.is_timer_running) {
         startStopBtn.classList.add('active');
       } else {
         startStopBtn.classList.remove('active');
@@ -405,11 +443,18 @@ function syncFromCloud(data) {
   // Update half
   if (data.current_half !== undefined) {
     const newHalf = data.current_half === 'second' ? 2 : 1;
-    if (currentHalf !== newHalf) {
-      currentHalf = newHalf;
+    if (window.currentHalf !== newHalf) {
+      window.currentHalf = newHalf;
+      
+      // Update local variable
+      const script3 = document.createElement('script');
+      script3.textContent = `if (typeof currentHalf !== 'undefined') currentHalf = ${newHalf};`;
+      document.body.appendChild(script3);
+      document.body.removeChild(script3);
+      
       const timerLabel = document.getElementById('timerLabel');
       if (timerLabel) {
-        timerLabel.textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+        timerLabel.textContent = newHalf === 1 ? '1st Half' : '2nd Half';
       }
     }
   }
