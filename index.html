@@ -1484,9 +1484,7 @@
   .setup-roster-info strong { color: var(--text); }
 </style>
 <body>
-<!-- Mobile debugging console -->
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
+
 <!-- AUTH SCREEN -->
 <div class="auth-screen" id="authScreen">
   <div class="auth-card">
@@ -2692,6 +2690,7 @@ function updateTimerDisplay() {
     const now = Date.now();
     const elapsed = Math.floor((now - timerStartTime) / 1000);
     matchSeconds = timerPausedAt + elapsed;
+    window.matchSeconds = matchSeconds; // Sync to window
   }
   
   const m = Math.floor(matchSeconds/60);
@@ -2713,6 +2712,7 @@ function startTimerInterval() {
 
 function toggleTimer() {
   timerRunning = !timerRunning;
+  window.timerRunning = timerRunning; // Sync to window
   const btn = document.getElementById('startStopBtn');
   
   if (timerRunning) {
@@ -2732,6 +2732,7 @@ function toggleTimer() {
       const elapsed = Math.floor((now - timerStartTime) / 1000);
       timerPausedAt += elapsed;
       matchSeconds = timerPausedAt;
+      window.matchSeconds = matchSeconds; // Sync to window
     }
     
     timerStartTime = null;
