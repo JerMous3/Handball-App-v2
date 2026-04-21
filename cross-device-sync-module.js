@@ -122,20 +122,25 @@ function restoreMatchState(data) {
   // Now restore the dynamic state that initMatch doesn't handle
   console.log('🔧 Restoring dynamic state...');
   
-  // Restore timer state
+  // Restore timer state - use let to ensure local scope
+  let restoredMatchSeconds = data.timer_seconds || 0;
+  let restoredTimerRunning = data.is_timer_running || false;
+  let restoredCurrentHalf = data.current_half === 'second' ? 2 : 1;
+  
+  // Update global variables if they exist
   if (typeof matchSeconds !== 'undefined') {
-    matchSeconds = data.timer_seconds || 0;
+    matchSeconds = restoredMatchSeconds;
   }
   if (typeof timerRunning !== 'undefined') {
-    timerRunning = data.is_timer_running || false;
+    timerRunning = restoredTimerRunning;
   }
   if (typeof currentHalf !== 'undefined') {
-    currentHalf = data.current_half === 'second' ? 2 : 1;
+    currentHalf = restoredCurrentHalf;
   }
   
-  console.log('   Timer:', data.timer_seconds, 'seconds');
-  console.log('   Running:', data.is_timer_running);
-  console.log('   Half:', data.current_half);
+  console.log('   Timer:', restoredMatchSeconds, 'seconds');
+  console.log('   Running:', restoredTimerRunning);
+  console.log('   Half:', restoredCurrentHalf);
   
   // Update timer display
   if (typeof updateTimerDisplay === 'function') {
@@ -148,10 +153,10 @@ function restoreMatchState(data) {
   
   const timerLabel = document.getElementById('timerLabel');
   if (timerLabel) {
-    timerLabel.textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+    timerLabel.textContent = restoredCurrentHalf === 1 ? '1st Half' : '2nd Half';
   }
   
-  if (timerRunning && typeof startTimer === 'function') {
+  if (restoredTimerRunning && typeof startTimer === 'function') {
     try {
       const startStopBtn = document.getElementById('startStopBtn');
       if (startStopBtn) {
