@@ -1484,9 +1484,9 @@
   .setup-roster-info strong { color: var(--text); }
 </style>
 <body>
+<!-- Mobile debugging console -->
 <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 <script>eruda.init();</script>
-  
 <!-- AUTH SCREEN -->
 <div class="auth-screen" id="authScreen">
   <div class="auth-card">
@@ -2614,6 +2614,12 @@ let timerInterval = null;
 let currentHalf = 1;
 let timerStartTime = null; // Store when timer was started
 let timerPausedAt = 0; // Store accumulated seconds when paused
+
+// Expose timer variables to window for cross-device sync
+window.matchSeconds = matchSeconds;
+window.timerRunning = timerRunning;
+window.currentHalf = currentHalf;
+window.timerInterval = timerInterval;
 
 // Load timer state from localStorage on init
 function loadTimerState() {
