@@ -2097,6 +2097,9 @@ async function handleAuth() {
   }
 }
 
+// Expose to window for onclick handlers
+window.handleAuth = handleAuth;
+
 // Allow Enter key to submit auth form
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Enter' && !document.getElementById('authScreen').classList.contains('hidden')) {
@@ -3618,7 +3621,7 @@ window.switchMobileTab = switchMobileTab;
 window.saveRosterToCloud = saveRosterToCloud;
 window.loadSavedRoster = loadSavedRoster;
 window.switchAuthTab = switchAuthTab;
-window.handleAuth = handleAuth;
+// window.handleAuth already exposed at function definition
 window.deleteCloudEntry = deleteCloudEntry;
 
 // ─── MOBILE TAB NAVIGATION ───────────────────────────────
