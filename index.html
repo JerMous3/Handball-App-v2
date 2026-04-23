@@ -2947,6 +2947,10 @@ function updateStats() {
   document.getElementById('shotsOnGoal').innerHTML = `${stats.shots}<span>shots</span>`;
   document.getElementById('yellowCount').innerHTML = `${stats.yellows}<span>cards</span>`;
   document.getElementById('suspCount').innerHTML = `${stats.suspensions}<span>total</span>`;
+}
+
+// Expose to window for cross-device sync
+window.updateStats = updateStats;
 
   // heatmap
   const maxZone = Math.max(...stats.zones, 1);
@@ -3105,6 +3109,9 @@ function updateScoreboard() {
   document.getElementById('sbHome').textContent = stats.goals;
   document.getElementById('sbAway').textContent = stats.goalsAgainst;
 }
+
+// Expose to window for cross-device sync
+window.updateScoreboard = updateScoreboard;
 
 window.recordAttack = function recordAttack() {
   stats.attacks++;
@@ -3426,6 +3433,9 @@ function renderPlayers() {
 
   initDragAndDrop();
 }
+
+// Expose to window for cross-device sync
+window.renderPlayers = renderPlayers;
 
 // ─── DRAG AND DROP ───────────────────────────────────────
 let draggedPlayerId = null;
