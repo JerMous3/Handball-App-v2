@@ -20,7 +20,7 @@ let processingQueue = false;
  * Call this when coach clicks "Start Live Match" button
  */
 async function startLiveMatch() {
-  if (!currentUser) {
+  if (!window.currentUser) {
     alert('Please sign in to broadcast live matches');
     return;
   }
@@ -72,7 +72,7 @@ async function startLiveMatch() {
     const { data, error } = await _supabase
       .from('live_matches')
       .insert({
-        coach_user_id: currentUser.id,
+        coach_user_id: window.currentUser.id,
         team_name: teamName,
         opponent: opponent,
         is_live: true,
@@ -141,12 +141,6 @@ async function stopLiveMatch() {
     await _supabase.rpc('end_live_match', { 
       p_live_match_id: currentLiveMatchId 
     });
-
-    // Set ended_at timestamp for replay viewing
-    await _supabase
-      .from('live_matches')
-      .update({ ended_at: new Date().toISOString() })
-      .eq('id', currentLiveMatchId);
 
     isLiveBroadcasting = false;
     currentLiveMatchId = null;
@@ -222,11 +216,11 @@ function startTimerSync() {
 async function trackMatchAnalytics(matchId, teamName, opponent) {
   try {
     // Only track if user exists
-    if (!currentUser) return;
+    if (!window.currentUser) return;
     
     const analyticsData = {
       match_id: matchId,
-      coach_id: currentUser.id,
+      coach_id: window.currentUser.id,
       team_name: teamName,
       opponent: opponent,
       started_at: new Date().toISOString(),
@@ -750,7 +744,7 @@ function initializeLiveBroadcasting() {
   addLiveBroadcastButton();
 
   // Check if there's an active live match for this user
-  if (currentUser) {
+  if (window.currentUser) {
     checkForActiveLiveMatch();
   }
 
@@ -761,13 +755,13 @@ function initializeLiveBroadcasting() {
  * Check if user has an active live match (in case of page reload)
  */
 async function checkForActiveLiveMatch() {
-  if (!currentUser) return;
+  if (!window.currentUser) return;
 
   try {
     const { data, error } = await _supabase
       .from('live_matches')
       .select('id, is_live')
-      .eq('coach_user_id', currentUser.id)
+      .eq('coach_user_id', window.currentUser.id)
       .eq('is_live', true)
       .order('created_at', { ascending: false })
       .limit(1)
