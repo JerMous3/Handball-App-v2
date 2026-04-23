@@ -394,7 +394,12 @@ function startAutoSave() {
  * Listen for changes from other devices in real-time
  */
 function startRealtimeSync() {
-  if (!currentUser) return;
+  if (!currentUser) {
+    console.log('⚠️ Cannot start realtime sync - no user');
+    return;
+  }
+  
+  console.log('👂 Setting up realtime subscription for coach_user_id:', currentUser.id);
   
   // Subscribe to changes on the current_match table
   const subscription = _supabase
@@ -429,12 +434,31 @@ function startRealtimeSync() {
         }
       }
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      console.log('📡 Realtime subscription status:', status);
+      
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ Successfully subscribed to realtime updates!');
+        console.log('   Listening for changes to current_match where coach_user_id =', currentUser.id);
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('❌ Realtime subscription FAILED!');
+        console.error('   Error:', err);
+        console.error('   Realtime might not be enabled in Supabase.');
+        console.error('   Check: Database Settings → Realtime → Enable for current_match table');
+      } else if (status === 'TIMED_OUT') {
+        console.error('❌ Realtime subscription TIMED OUT!');
+        console.error('   Network issues or Realtime not enabled.');
+      } else if (status === 'CLOSED') {
+        console.log('⚠️ Realtime subscription closed');
+      } else {
+        console.log('ℹ️ Subscription status:', status);
+      }
+    });
   
   // Store subscription for cleanup
   window.currentMatchSubscription = subscription;
   
-  console.log('👂 Listening for changes from other devices');
+  console.log('👂 Realtime sync setup initiated - waiting for SUBSCRIBED status...');
 }
 
 /**
@@ -520,7 +544,13 @@ function syncFromCloud(data) {
   // Update all stats
   if (data.stats && Object.keys(data.stats).length > 0) {
     Object.assign(window.stats, data.stats);
-    updateStats();
+    
+    // Call updateStats if it exists
+    if (typeof updateStats === 'function') {
+      updateStats();
+    } else {
+      console.log('⚠️ updateStats function not found, skipping');
+    }
   }
   
   // Update player stats
@@ -693,15 +723,39 @@ async function saveCurrentMatch() {
     
     console.log('🚀 Saving to Supabase...');
     
-    // Upsert (insert or update)
-    const { data, error } = await _supabase
+    // Check if a row already exists (RLS-friendly approach)
+    const { data: existing } = await _supabase
       .from('current_match')
-      .upsert(matchState, { 
-        onConflict: 'coach_user_id',
-        ignoreDuplicates: false 
-      })
-      .select()
-      .single();
+      .select('id')
+      .eq('coach_user_id', currentUser.id)
+      .maybeSingle();
+    
+    let data, error;
+    
+    if (existing) {
+      // Row exists - UPDATE it
+      console.log('  Updating existing match...');
+      const result = await _supabase
+        .from('current_match')
+        .update(matchState)
+        .eq('coach_user_id', currentUser.id)
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    } else {
+      // No row exists - INSERT it
+      console.log('  Creating new match...');
+      const result = await _supabase
+        .from('current_match')
+        .insert(matchState)
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    }
     
     if (error) {
       console.error('❌ Supabase error:', error);
@@ -709,10 +763,6 @@ async function saveCurrentMatch() {
     }
     
     console.log('✅ Saved successfully!', data);
-    
-    if (data) {
-      currentMatchId = data.id;
-    }
     
     if (data) {
       currentMatchId = data.id;
