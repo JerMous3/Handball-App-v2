@@ -2100,6 +2100,7 @@ async function handleAuth() {
 
 // Expose to window for onclick handlers (replaces early stub)
 window.handleAuth = handleAuth;
+console.log('✅ Real handleAuth function loaded and assigned to window');
 
 // Allow Enter key to submit auth form
 document.addEventListener('keydown', function(e) {
