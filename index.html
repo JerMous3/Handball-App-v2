@@ -1519,7 +1519,7 @@
       <label>Team Name</label>
       <input class="auth-input" id="authTeamName" placeholder="e.g. HV Helius" />
     </div>
-    <button class="auth-submit" id="authSubmit" onclick="handleAuth()">Sign In</button>
+    <button class="auth-submit" id="authSubmit">Sign In</button>
   </div>
 </div>
 
@@ -2099,6 +2099,9 @@ async function handleAuth() {
 
 // Expose to window for onclick handlers
 window.handleAuth = handleAuth;
+
+// Attach click handler to auth button
+document.getElementById('authSubmit').addEventListener('click', handleAuth);
 
 // Allow Enter key to submit auth form
 document.addEventListener('keydown', function(e) {
