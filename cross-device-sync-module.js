@@ -537,7 +537,12 @@ function syncFromCloud(data) {
     if (window.stats.goals !== data.score_home || window.stats.goalsAgainst !== data.score_away) {
       window.stats.goals = data.score_home || 0;
       window.stats.goalsAgainst = data.score_away || 0;
-      updateScoreboard();
+      
+      if (typeof updateScoreboard === 'function') {
+        updateScoreboard();
+      } else {
+        console.log('⚠️ updateScoreboard function not found, skipping');
+      }
     }
   }
   
@@ -560,7 +565,12 @@ function syncFromCloud(data) {
         Object.assign(window.playerStats[savedPlayer.id], savedPlayer.stats);
       }
     });
-    renderPlayers();
+    
+    if (typeof renderPlayers === 'function') {
+      renderPlayers();
+    } else {
+      console.log('⚠️ renderPlayers function not found, skipping');
+    }
   }
   
   // Update undo stack
