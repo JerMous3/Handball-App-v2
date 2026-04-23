@@ -247,6 +247,10 @@ function restoreMatchState(data) {
           timerRunning = true;
           console.log('  ✅ timerRunning = true');
         }
+        if (typeof matchSeconds !== 'undefined') {
+          matchSeconds = ${restoredMatchSeconds};
+          console.log('  ✅ matchSeconds =', matchSeconds);
+        }
         
         // Start the timer interval
         if (typeof startTimerInterval === 'function') {
@@ -262,6 +266,14 @@ function restoreMatchState(data) {
         } else {
           console.error('  ❌ startTimerInterval function not found!');
         }
+        
+        // Force immediate timer display update
+        if (typeof updateTimerDisplay === 'function') {
+          updateTimerDisplay();
+          console.log('  ✅ updateTimerDisplay() called - display should show', matchSeconds, 'seconds');
+        } else {
+          console.error('  ❌ updateTimerDisplay function not found!');
+        }
       `;
       document.body.appendChild(script);
       document.body.removeChild(script);
@@ -273,12 +285,26 @@ function restoreMatchState(data) {
         startStopBtn.classList.add('active');
       }
       
-      console.log('✅ Timer restore complete');
+      console.log('✅ Timer restore complete - timer should be running and displaying');
     } catch (e) {
       console.error('❌ Error starting timer:', e);
     }
   } else {
     console.log('ℹ️ Timer was paused - not starting interval');
+    
+    // Still need to update the display even if paused
+    const script2 = document.createElement('script');
+    script2.textContent = `
+      if (typeof matchSeconds !== 'undefined') {
+        matchSeconds = ${restoredMatchSeconds};
+      }
+      if (typeof updateTimerDisplay === 'function') {
+        updateTimerDisplay();
+        console.log('  ✅ Timer display updated (paused at', ${restoredMatchSeconds}, 'seconds)');
+      }
+    `;
+    document.body.appendChild(script2);
+    document.body.removeChild(script2);
   }
   
   // Restore score
