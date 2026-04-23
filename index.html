@@ -67,6 +67,7 @@
   
   // Declare functions globally so onclick handlers work
   // These will be properly implemented later in the main script
+  window.handleAuth = function() { console.log('handleAuth not ready yet'); };
   window.recordAttack = function() { console.log('recordAttack not ready yet'); };
   window.deleteEvent = function() { console.log('deleteEvent not ready yet'); };
 </script>
@@ -1519,7 +1520,7 @@
       <label>Team Name</label>
       <input class="auth-input" id="authTeamName" placeholder="e.g. HV Helius" />
     </div>
-    <button class="auth-submit" id="authSubmit">Sign In</button>
+    <button class="auth-submit" id="authSubmit" onclick="handleAuth()">Sign In</button>
   </div>
 </div>
 
@@ -2097,11 +2098,8 @@ async function handleAuth() {
   }
 }
 
-// Expose to window for onclick handlers
+// Expose to window for onclick handlers (replaces early stub)
 window.handleAuth = handleAuth;
-
-// Attach click handler to auth button
-document.getElementById('authSubmit').addEventListener('click', handleAuth);
 
 // Allow Enter key to submit auth form
 document.addEventListener('keydown', function(e) {
