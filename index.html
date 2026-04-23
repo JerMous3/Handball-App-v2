@@ -2121,6 +2121,7 @@ async function onSignedIn(user) {
   }
   
   currentUser = user;
+  window.currentUser = user; // Expose for external modules like live-broadcast-module.js
   
   // Load active match from cloud (cross-device sync)
   console.log('🔐 Checking for active match...');
@@ -2163,6 +2164,7 @@ async function signOut() {
   
   await _supabase.auth.signOut();
   currentUser = null;
+  window.currentUser = null; // Clear for external modules
   document.getElementById('authScreen').classList.remove('hidden');
   document.getElementById('setupScreen').classList.add('hidden');
   document.getElementById('appTopbar').style.display = 'none';
