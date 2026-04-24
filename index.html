@@ -1713,6 +1713,11 @@
       <span>Top L</span><span>Top C</span><span>Top R</span>
       <span>Bot L</span><span>Bot C</span><span>Bot R</span>
     </div>
+    <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.4">
+      Format: <span style="color:var(--accent)">Saves/Goals</span><br>
+      <span style="color:#22c55e">🟢 Green = Mostly saves</span><br>
+      <span style="color:#ef4444">🔴 Red = Mostly goals</span>
+    </div>
   </div>
 
   <!-- CENTER: PLAYERS -->
@@ -2735,7 +2740,9 @@ const stats = {
   goals: 0, shots: 0, assists: 0,
   yellows: 0, suspensions: 0, redCards: 0,
   saves: 0, goalsAgainst: 0,
-  zones: [0,0,0,0,0,0],
+  zones: [0,0,0,0,0,0], // Total shots faced per zone
+  zonesSaves: [0,0,0,0,0,0], // Saves per zone
+  zonesGoals: [0,0,0,0,0,0], // Goals conceded per zone
   attacks: 0, // New: track number of attacks
 };
 
@@ -3019,6 +3026,8 @@ async function resetTimer() {
   stats.redCards = 0;
   stats.saves = 0;
   stats.zones = [0, 0, 0, 0, 0, 0];
+  stats.zonesSaves = [0, 0, 0, 0, 0, 0];
+  stats.zonesGoals = [0, 0, 0, 0, 0, 0];
   stats.attacks = 0;
   
   // Reset player stats
@@ -3170,20 +3179,43 @@ function updateStats() {
   document.getElementById('shotsOnGoal').innerHTML = `${stats.shots}<span>shots</span>`;
   document.getElementById('yellowCount').innerHTML = `${stats.yellows}<span>cards</span>`;
   document.getElementById('suspCount').innerHTML = `${stats.suspensions}<span>total</span>`;
+  
+  // Update shot zone heatmap with color coding
+  const maxZone = Math.max(...stats.zones, 1);
+  stats.zones.forEach((z, i) => {
+    const el = document.getElementById('hm'+i);
+    if (el) {
+      const saves = stats.zonesSaves[i] || 0;
+      const goals = stats.zonesGoals[i] || 0;
+      
+      // Show both numbers: saves / goals
+      el.textContent = z > 0 ? `${saves}/${goals}` : '0';
+      
+      // Color: more saves = green, more goals = red, balanced = purple
+      if (z === 0) {
+        el.style.background = 'rgba(123,92,250,0.05)';
+      } else {
+        const saveRatio = saves / z; // 0 to 1
+        if (saveRatio >= 0.7) {
+          // Mostly saves - green
+          const intensity = z / maxZone;
+          el.style.background = `rgba(34,197,94,${intensity * 0.7 + 0.2})`;
+        } else if (saveRatio <= 0.3) {
+          // Mostly goals - red
+          const intensity = z / maxZone;
+          el.style.background = `rgba(239,68,68,${intensity * 0.7 + 0.2})`;
+        } else {
+          // Mixed - purple
+          const intensity = z / maxZone;
+          el.style.background = `rgba(123,92,250,${intensity * 0.7 + 0.2})`;
+        }
+      }
+    }
+  });
 }
 
 // Expose to window for cross-device sync
 window.updateStats = updateStats;
-
-  // heatmap
-  const maxZone = Math.max(...stats.zones, 1);
-  stats.zones.forEach((z, i) => {
-    const el = document.getElementById('hm'+i);
-    el.textContent = z;
-    const intensity = z/maxZone;
-    el.style.background = `rgba(123,92,250,${intensity * 0.7 + 0.05})`;
-  });
-}
 
 // ─── EVENT LOG ───────────────────────────────────────────
 const eventIcons = {
@@ -3526,23 +3558,35 @@ function confirmShot() {
   if (shotType === 'save') {
     stats.saves++;
     playerStats[gkPlayer.id].saves++;
-    if (zoneIdx !== null) stats.zones[zoneIdx]++;
+    if (zoneIdx !== null) {
+      stats.zones[zoneIdx]++;
+      stats.zonesSaves[zoneIdx]++;
+    }
     addEvent('save', gkPlayer, detail);
     pushUndo(() => {
       stats.saves--;
       playerStats[gkPlayer.id].saves--;
-      if (zoneIdx !== null) stats.zones[zoneIdx]--;
+      if (zoneIdx !== null) {
+        stats.zones[zoneIdx]--;
+        stats.zonesSaves[zoneIdx]--;
+      }
       eventLog.shift();
     });
   } else {
     stats.goalsAgainst++;
     stats.attacks++; // Auto-increment attacks when opponent scores
-    if (zoneIdx !== null) stats.zones[zoneIdx]++;
+    if (zoneIdx !== null) {
+      stats.zones[zoneIdx]++;
+      stats.zonesGoals[zoneIdx]++;
+    }
     addEvent('goal_against', gkPlayer, detail);
     pushUndo(() => {
       stats.goalsAgainst--;
       stats.attacks = Math.max(0, stats.attacks - 1); // Decrement attacks on undo
-      if (zoneIdx !== null) stats.zones[zoneIdx]--;
+      if (zoneIdx !== null) {
+        stats.zones[zoneIdx]--;
+        stats.zonesGoals[zoneIdx]--;
+      }
       eventLog.shift();
     });
   }
@@ -3835,6 +3879,8 @@ window.saveRosterToCloud = saveRosterToCloud;
 window.loadSavedRoster = loadSavedRoster;
 window.switchAuthTab = switchAuthTab;
 window.deleteCloudEntry = deleteCloudEntry;
+
+} // end initMatch
 
 // ─── MATCH HISTORY (localStorage) ───────────────────────
 const HISTORY_KEY = 'handballtrack_history';
