@@ -8,6 +8,7 @@ console.log('📱 Cross-device sync: Loading...');
 let syncInterval = null;
 let lastSyncTime = 0;
 let deviceId = null;
+let realtimeChannel = null; // Track active subscription
 
 // Generate unique device ID
 function getDeviceId() {
@@ -81,7 +82,13 @@ async function saveMatchToCloud() {
 // ============================================================
 
 async function loadMatchFromCloud() {
-  if (!window.currentUser) return false;
+  // Guard: Don't run if no user
+  if (!window.currentUser) {
+    console.log('⚠️ loadMatchFromCloud called but no user - skipping');
+    return false;
+  }
+  
+  console.log('🔍 Loading match for user:', window.currentUser.id);
   
   try {
     const { data, error } = await _supabase
@@ -91,7 +98,10 @@ async function loadMatchFromCloud() {
       .maybeSingle();
     
     if (error) throw error;
-    if (!data) return false;
+    if (!data) {
+      console.log('ℹ️ No active match found in cloud');
+      return false;
+    }
     
     // Check if empty match
     if (!data.team_name && !data.opponent) {
@@ -185,6 +195,12 @@ function stopAutoSave() {
     clearInterval(syncInterval);
     syncInterval = null;
   }
+  
+  if (realtimeChannel) {
+    realtimeChannel.unsubscribe();
+    realtimeChannel = null;
+    console.log('📡 Realtime sync stopped');
+  }
 }
 
 // ============================================================
@@ -195,6 +211,12 @@ function startRealtimeSync() {
   if (!window.currentUser) {
     console.log('⚠️ Cannot start realtime - no user');
     return;
+  }
+  
+  // Don't subscribe twice
+  if (realtimeChannel) {
+    console.log('ℹ️ Realtime already active');
+    return realtimeChannel;
   }
   
   console.log('📡 Starting realtime sync for user:', window.currentUser.id);
@@ -248,6 +270,7 @@ function startRealtimeSync() {
       }
     });
   
+  realtimeChannel = channel;
   return channel;
 }
 
