@@ -3617,6 +3617,33 @@ function exportToExcel() {
   XLSX.writeFile(wb, filename);
 }
 
+// ─── INIT ────────────────────────────────────────────────
+loadTimerState(); // Restore timer state if page was reloaded
+renderPlayers();
+updateStats();
+updateTimerDisplay();
+initMobileLayout();
+
+// Start auto-save for cross-device sync
+if (typeof startAutoSave === 'function') {
+  startAutoSave();
+  console.log('✅ Auto-save started for new match');
+}
+
+} // end initMatch
+
+// Expose initMatch globally for cross-device sync
+window.initMatch = initMatch;
+
+// Expose other functions to window for onclick handlers and external modules
+window.exportToExcel = exportToExcel;
+window.signOut = signOut;
+window.switchMobileTab = switchMobileTab;
+window.saveRosterToCloud = saveRosterToCloud;
+window.loadSavedRoster = loadSavedRoster;
+window.switchAuthTab = switchAuthTab;
+window.deleteCloudEntry = deleteCloudEntry;
+
 // ─── MOBILE TAB NAVIGATION ───────────────────────────────
 function switchMobileTab(tab) {
   // Only applies on mobile
@@ -3664,33 +3691,6 @@ function initMobileLayout() {
     switchMobileTab('players');
   }
 }
-
-// ─── INIT ────────────────────────────────────────────────
-loadTimerState(); // Restore timer state if page was reloaded
-renderPlayers();
-updateStats();
-updateTimerDisplay();
-initMobileLayout();
-
-// Start auto-save for cross-device sync
-if (typeof startAutoSave === 'function') {
-  startAutoSave();
-  console.log('✅ Auto-save started for new match');
-}
-
-} // end initMatch
-
-// Expose initMatch globally for cross-device sync
-window.initMatch = initMatch;
-
-// Expose other functions to window for onclick handlers and external modules
-window.exportToExcel = exportToExcel;
-window.signOut = signOut;
-window.switchMobileTab = switchMobileTab;
-window.saveRosterToCloud = saveRosterToCloud;
-window.loadSavedRoster = loadSavedRoster;
-window.switchAuthTab = switchAuthTab;
-window.deleteCloudEntry = deleteCloudEntry;
 
 // ─── MATCH HISTORY (localStorage) ───────────────────────
 const HISTORY_KEY = 'handballtrack_history';
