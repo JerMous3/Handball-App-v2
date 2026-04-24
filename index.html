@@ -2128,14 +2128,13 @@ async function onSignedIn(user) {
   currentUser = user;
   window.currentUser = user; // Expose for external modules like live-broadcast-module.js
   
-  // Load active match from cloud (cross-device sync)
+  // Try to load active match from cloud
   console.log('🔐 Checking for active match...');
-  let matchRestored = false;
-  if (typeof onUserSignedIn === 'function') {
-    matchRestored = await onUserSignedIn();
-    console.log('🔍 matchRestored result:', matchRestored);
-  } else {
-    console.log('⚠️ onUserSignedIn function not found!');
+  const matchRestored = await loadMatchFromCloud();
+  
+  if (matchRestored) {
+    console.log('✅ Match restored from cloud');
+    return; // Match was restored, don't show setup screen
   }
   
   document.getElementById('authScreen').classList.add('hidden');
@@ -2162,9 +2161,9 @@ async function onSignedIn(user) {
 }
 
 async function signOut() {
-  // Stop auto-saving and clear session (cross-device sync)
-  if (typeof onUserSignOut === 'function') {
-    await onUserSignOut();
+  // Stop auto-saving
+  if (typeof stopAutoSave === 'function') {
+    stopAutoSave();
   }
   
   await _supabase.auth.signOut();
@@ -2573,6 +2572,48 @@ function initMobileLayout() {
   }
 }
 
+// ─── RESTORE MATCH STATE (for cross-device sync) ────────
+window.restoreMatchState = function(data) {
+  console.log('🔄 Restoring match state from cloud...');
+  
+  // Update team names
+  const homeTeam = data.team_name || 'Team';
+  const awayTeam = data.opponent || 'Opponent';
+  
+  const homeTeamEls = document.querySelectorAll('#homeTeamName, #mobileHomeTeam');
+  const awayTeamEls = document.querySelectorAll('#awayTeamName, #mobileAwayTeam');
+  
+  homeTeamEls.forEach(el => el.textContent = homeTeam);
+  awayTeamEls.forEach(el => el.textContent = awayTeam);
+  document.getElementById('topbarBrand').textContent = `⬡ ${homeTeam} vs ${awayTeam}`;
+  
+  // Update timer
+  window.matchSeconds = data.timer_seconds;
+  window.timerRunning = data.is_timer_running;
+  window.currentHalf = data.current_half;
+  
+  if (typeof updateTimerDisplay === 'function') {
+    updateTimerDisplay();
+  }
+  
+  // Update score
+  if (window.stats) {
+    window.stats.goals = data.score_home;
+    window.stats.goalsAgainst = data.score_away;
+  }
+  
+  if (typeof updateScoreboard === 'function') {
+    updateScoreboard();
+  }
+  
+  // Show UI
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('appTopbar').style.display = '';
+  document.getElementById('appMain').style.display = '';
+  
+  console.log('✅ Match restored from cloud');
+};
+
 // ─── MATCH INIT (called after setup) ────────────────────
 function initMatch(rosterData) {
 
@@ -2892,9 +2933,9 @@ async function resetTimer() {
   renderSuspensions();
   saveTimerState();
   
-  // Clear current match from cloud and restart auto-save (cross-device sync)
-  if (typeof onMatchReset === 'function') {
-    await onMatchReset();
+  // Clear current match from cloud
+  if (typeof clearMatchFromCloud === 'function') {
+    await clearMatchFromCloud();
     console.log('✅ Match cleared from cloud');
   }
   
@@ -3710,9 +3751,9 @@ function saveMatchToHistory(matchData) {
   if (entries.length > 20) entries.pop();
   saveHistory(entries);
   
-  // Clear current match from cloud (cross-device sync)
-  if (typeof onMatchSavedToHistory === 'function') {
-    onMatchSavedToHistory();
+  // Clear current match from cloud
+  if (typeof clearMatchFromCloud === 'function') {
+    clearMatchFromCloud();
   }
 }
 
@@ -3768,7 +3809,7 @@ document.getElementById('historyModalOverlay').addEventListener('click', functio
 <!-- Live Broadcasting Module -->
 <script src="live-broadcast-module.js"></script>
 <!-- Cross-Device Session Sync Module -->
-<script src="cross-device-sync-module.js"></script>
+<script src="sync-clean.js"></script>
 
 </body>
 </html>
