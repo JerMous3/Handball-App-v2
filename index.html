@@ -2462,6 +2462,12 @@ function launchMatch() {
   }
 
   initMatch(rosterData);
+  
+  // Start auto-save for cross-device sync
+  if (typeof startAutoSave === 'function') {
+    startAutoSave();
+  }
+  
   document.getElementById('setupScreen').classList.add('hidden');
   document.getElementById('appTopbar').style.display = '';
   document.getElementById('appMain').style.display = '';
@@ -3723,19 +3729,6 @@ function exportToExcel() {
   // ── Download ──
   const filename = `handball_match_${dateStr.replace(/\//g,'-')}.xlsx`;
   XLSX.writeFile(wb, filename);
-}
-
-// ─── INIT ────────────────────────────────────────────────
-loadTimerState(); // Restore timer state if page was reloaded
-renderPlayers();
-updateStats();
-updateTimerDisplay();
-initMobileLayout();
-
-// Start auto-save for cross-device sync
-if (typeof startAutoSave === 'function') {
-  startAutoSave();
-  console.log('✅ Auto-save started for new match');
 }
 
 // end initMatch
