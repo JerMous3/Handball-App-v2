@@ -18,7 +18,7 @@ let currentMatchId = null;
  * Call this after user signs in
  */
 async function loadCurrentMatch() {
-  if (!window.currentUser) {
+  if (!currentUser) {
     console.log('❌ No user signed in, cannot load match');
     return false;
   }
@@ -29,7 +29,7 @@ async function loadCurrentMatch() {
     const { data, error } = await _supabase
       .from('current_match')
       .select('*')
-      .eq('coach_user_id', window.currentUser.id)
+      .eq('coach_user_id', currentUser.id)
       .single();
     
     if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
@@ -394,12 +394,12 @@ function startAutoSave() {
  * Listen for changes from other devices in real-time
  */
 function startRealtimeSync() {
-  if (!window.currentUser) {
+  if (!currentUser) {
     console.log('⚠️ Cannot start realtime sync - no user');
     return;
   }
   
-  console.log('👂 Setting up realtime subscription for coach_user_id:', window.currentUser.id);
+  console.log('👂 Setting up realtime subscription for coach_user_id:', currentUser.id);
   
   // Subscribe to changes on the current_match table
   const subscription = _supabase
@@ -410,7 +410,7 @@ function startRealtimeSync() {
         event: 'UPDATE',
         schema: 'public',
         table: 'current_match',
-        filter: `coach_user_id=eq.${window.currentUser.id}`
+        filter: `coach_user_id=eq.${currentUser.id}`
       },
       (payload) => {
         console.log('📱 Received change notification from Supabase', payload);
@@ -439,7 +439,7 @@ function startRealtimeSync() {
       
       if (status === 'SUBSCRIBED') {
         console.log('✅ Successfully subscribed to realtime updates!');
-        console.log('   Listening for changes to current_match where coach_user_id =', window.currentUser.id);
+        console.log('   Listening for changes to current_match where coach_user_id =', currentUser.id);
       } else if (status === 'CHANNEL_ERROR') {
         console.error('❌ Realtime subscription FAILED!');
         console.error('   Error:', err);
@@ -653,12 +653,12 @@ function stopAutoSave() {
 async function saveCurrentMatch() {
   console.log('💾 saveCurrentMatch() called');
   
-  if (!window.currentUser) {
-    console.log('❌ No window.currentUser, exiting');
+  if (!currentUser) {
+    console.log('❌ No currentUser, exiting');
     return;
   }
   
-  console.log('✅ currentUser exists:', window.currentUser.id);
+  console.log('✅ currentUser exists:', currentUser.id);
   
   // Check if match variables exist (they're created by initMatch)
   if (typeof window.currentPlayers === 'undefined' || !window.currentPlayers) {
@@ -716,7 +716,7 @@ async function saveCurrentMatch() {
     }));
     
     const matchState = {
-      coach_user_id: window.currentUser.id,
+      coach_user_id: currentUser.id,
       team_name: safeTeamName,
       opponent: safeOpponent,
       timer_seconds: safeMatchSeconds,
@@ -737,7 +737,7 @@ async function saveCurrentMatch() {
     const { data: existing } = await _supabase
       .from('current_match')
       .select('id')
-      .eq('coach_user_id', window.currentUser.id)
+      .eq('coach_user_id', currentUser.id)
       .maybeSingle();
     
     let data, error;
@@ -748,7 +748,7 @@ async function saveCurrentMatch() {
       const result = await _supabase
         .from('current_match')
         .update(matchState)
-        .eq('coach_user_id', window.currentUser.id)
+        .eq('coach_user_id', currentUser.id)
         .select()
         .single();
       
@@ -788,13 +788,13 @@ async function saveCurrentMatch() {
  * Call this when match is saved to history or reset
  */
 async function clearCurrentMatch() {
-  if (!window.currentUser) return;
+  if (!currentUser) return;
   
   try {
     await _supabase
       .from('current_match')
       .delete()
-      .eq('coach_user_id', window.currentUser.id);
+      .eq('coach_user_id', currentUser.id);
     
     currentMatchId = null;
     stopAutoSave();
@@ -820,8 +820,8 @@ async function clearCurrentMatch() {
 async function onUserSignedIn() {
   console.log('════════════════════════════════════════');
   console.log('🔐 User signed in - checking for active match...');
-  console.log('   User ID:', window.currentUser?.id);
-  console.log('   User email:', window.currentUser?.email);
+  console.log('   User ID:', currentUser?.id);
+  console.log('   User email:', currentUser?.email);
   
   // Try to load existing match
   const hasActiveMatch = await loadCurrentMatch();
