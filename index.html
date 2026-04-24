@@ -3379,12 +3379,6 @@ function recordGoal(player) {
     eventLog.shift();
   });
   updateStats(); updateScoreboard(); bumpScore('sbHome'); renderPlayers(); flashRow(player.id, 'var(--accent)');
-  
-  // LIVE BROADCASTING
-  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
-    broadcastEvent('goal', player);
-    updateLiveScore();
-  }
 }
 
 function recordShot(player) {
@@ -3397,11 +3391,6 @@ function recordShot(player) {
     eventLog.shift();
   });
   updateStats(); renderPlayers();
-  
-  // LIVE BROADCASTING
-  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
-    broadcastEvent('shot', player);
-  }
 }
 
 function recordAssist(player) {
@@ -3412,11 +3401,6 @@ function recordAssist(player) {
     eventLog.shift();
   });
   renderPlayers();
-  
-  // LIVE BROADCASTING
-  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
-    broadcastEvent('assist', player);
-  }
 }
 
 function recordYellow(player) {
@@ -3429,11 +3413,6 @@ function recordYellow(player) {
     eventLog.shift();
   });
   updateStats(); renderPlayers(); flashRow(player.id, 'var(--yellow)');
-  
-  // LIVE BROADCASTING
-  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
-    broadcastEvent('yellow', player);
-  }
 }
 
 function recordSuspension(player) {
@@ -3454,11 +3433,6 @@ function recordSuspension(player) {
   const row = document.querySelector(`[data-player-id="${player.id}"]`);
   if (row) row.classList.add('suspended');
   updateStats(); renderPlayers();
-  
-  // LIVE BROADCASTING
-  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
-    broadcastEvent('suspension', player, '2-minute suspension');
-  }
 }
 
 function recordRed(player) {
@@ -3471,11 +3445,6 @@ function recordRed(player) {
   const row = document.querySelector(`[data-player-id="${player.id}"]`);
   if (row) row.classList.add('red-carded');
   renderPlayers(); flashRow(player.id, 'var(--red)');
-  
-  // LIVE BROADCASTING
-  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
-    broadcastEvent('red', player);
-  }
 }
 
 function flashRow(playerId, color) {
