@@ -632,10 +632,19 @@ function subscribeToEvents() {
         filter: `live_match_id=eq.${matchId}`
       },
       (payload) => {
+        console.log('📥 Received event:', payload.new);
+        
         // Check if event already exists (prevent duplicates)
-        const isDuplicate = events.some(e => e.id === payload.new.id);
+        const isDuplicate = events.some(e => {
+          const matches = e.id === payload.new.id;
+          if (matches) {
+            console.log('⏭️ Skipping duplicate event ID:', e.id);
+          }
+          return matches;
+        });
         
         if (!isDuplicate) {
+          console.log('✅ Adding new event');
           events.unshift(payload.new);
           renderEvents();
           
