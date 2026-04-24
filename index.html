@@ -2467,6 +2467,12 @@ function launchMatch() {
   // Store roster data globally for cross-device sync
   window.currentRoster = rosterData;
   
+  // Initialize UI after match setup
+  if (typeof window.renderPlayers === 'function') window.renderPlayers();
+  if (typeof window.updateStats === 'function') window.updateStats();
+  if (typeof window.updateTimerDisplay === 'function') window.updateTimerDisplay();
+  if (typeof window.initMobileLayout === 'function') window.initMobileLayout();
+  
   // Start auto-save for cross-device sync
   if (typeof startAutoSave === 'function') {
     startAutoSave();
@@ -3834,16 +3840,6 @@ function exportToExcel() {
   const filename = `handball_match_${dateStr.replace(/\//g,'-')}.xlsx`;
   XLSX.writeFile(wb, filename);
 }
-
-// ─── INITIALIZATION ─────────────────────────────────────
-// These run once when initMatch is called
-// Use setTimeout to ensure DOM is fully ready
-setTimeout(() => {
-  renderPlayers();
-  updateStats();
-  updateTimerDisplay();
-  initMobileLayout();
-}, 0);
 
 // Expose initMatch globally for cross-device sync
 window.initMatch = initMatch;
