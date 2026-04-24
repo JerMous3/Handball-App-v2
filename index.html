@@ -2817,11 +2817,13 @@ let currentHalf = 1;
 let timerStartTime = null; // Store when timer was started
 let timerPausedAt = 0; // Store accumulated seconds when paused
 
-// Expose timer variables to window for cross-device sync
+// Expose ALL timer variables to window for cross-device sync
 window.matchSeconds = matchSeconds;
 window.timerRunning = timerRunning;
 window.currentHalf = currentHalf;
 window.timerInterval = timerInterval;
+window.timerStartTime = timerStartTime;
+window.timerPausedAt = timerPausedAt;
 
 // Load timer state from localStorage on init
 function loadTimerState() {
@@ -2890,18 +2892,19 @@ function pad(n) { return String(n).padStart(2,'0'); }
 
 function updateTimerDisplay() {
   // Calculate current time based on start time if running
-  if (timerRunning && timerStartTime) {
+  if (window.timerRunning && window.timerStartTime) {
     const now = Date.now();
-    const elapsed = Math.floor((now - timerStartTime) / 1000);
-    matchSeconds = timerPausedAt + elapsed;
-    window.matchSeconds = matchSeconds; // Sync to window
+    const elapsed = Math.floor((now - window.timerStartTime) / 1000);
+    window.matchSeconds = (window.timerPausedAt || 0) + elapsed;
   }
   
-  const m = Math.floor(matchSeconds/60);
-  const s = matchSeconds % 60;
+  const m = Math.floor((window.matchSeconds || 0) / 60);
+  const s = (window.matchSeconds || 0) % 60;
   const el = document.getElementById('matchTimer');
-  el.textContent = `${pad(m)}:${pad(s)}`;
-  el.className = 'timer-display' + (timerRunning ? ' running' : '') + (currentHalf===2 ? ' second-half' : '');
+  if (el) {
+    el.textContent = `${pad(m)}:${pad(s)}`;
+    el.className = 'timer-display' + (window.timerRunning ? ' running' : '') + ((window.currentHalf || 1) === 2 ? ' second-half' : '');
+  }
 }
 
 function startTimerInterval() {
@@ -2919,15 +2922,14 @@ window.startTimerInterval = startTimerInterval;
 window.updateTimerDisplay = updateTimerDisplay;
 
 function toggleTimer() {
-  timerRunning = !timerRunning;
-  window.timerRunning = timerRunning; // Sync to window
+  window.timerRunning = !window.timerRunning;
   const btn = document.getElementById('startStopBtn');
   
-  if (timerRunning) {
+  if (window.timerRunning) {
     // Starting timer
     btn.textContent = '⏸ Pause';
     btn.classList.add('active');
-    timerStartTime = Date.now();
+    window.timerStartTime = Date.now();
     startTimerInterval();
   } else {
     // Pausing timer
@@ -2935,15 +2937,14 @@ function toggleTimer() {
     btn.classList.remove('active');
     
     // Calculate final elapsed time and store it
-    if (timerStartTime) {
+    if (window.timerStartTime) {
       const now = Date.now();
-      const elapsed = Math.floor((now - timerStartTime) / 1000);
-      timerPausedAt += elapsed;
-      matchSeconds = timerPausedAt;
-      window.matchSeconds = matchSeconds; // Sync to window
+      const elapsed = Math.floor((now - window.timerStartTime) / 1000);
+      window.timerPausedAt = (window.timerPausedAt || 0) + elapsed;
+      window.matchSeconds = window.timerPausedAt;
     }
     
-    timerStartTime = null;
+    window.timerStartTime = null;
     if (window.timerInterval) {
       clearInterval(window.timerInterval);
       window.timerInterval = null;
