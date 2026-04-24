@@ -2580,44 +2580,21 @@ function initMobileLayout() {
 
 // ─── RESTORE MATCH STATE (for cross-device sync) ────────
 window.restoreMatchState = function(data) {
-  console.log('🔄 Restoring match state from cloud...');
+  console.log('🔄 Match data found in cloud');
+  console.log('  Team:', data.team_name, 'vs', data.opponent);
+  console.log('  Time:', Math.floor(data.timer_seconds / 60) + ':' + (data.timer_seconds % 60).toString().padStart(2, '0'));
+  console.log('  Score:', data.score_home, '-', data.score_away);
   
-  // Update team names
-  const homeTeam = data.team_name || 'Team';
-  const awayTeam = data.opponent || 'Opponent';
+  // For now, we can't fully restore because we don't save roster data
+  // Just pre-fill the team names in setup screen
+  const teamNameInput = document.getElementById('setupTeamName');
+  const opponentInput = document.getElementById('setupOpponent');
   
-  const homeTeamEls = document.querySelectorAll('#homeTeamName, #mobileHomeTeam');
-  const awayTeamEls = document.querySelectorAll('#awayTeamName, #mobileAwayTeam');
+  if (teamNameInput) teamNameInput.value = data.team_name || '';
+  if (opponentInput) opponentInput.value = data.opponent || '';
   
-  homeTeamEls.forEach(el => el.textContent = homeTeam);
-  awayTeamEls.forEach(el => el.textContent = awayTeam);
-  document.getElementById('topbarBrand').textContent = `⬡ ${homeTeam} vs ${awayTeam}`;
-  
-  // Update timer
-  window.matchSeconds = data.timer_seconds;
-  window.timerRunning = data.is_timer_running;
-  window.currentHalf = data.current_half;
-  
-  if (typeof updateTimerDisplay === 'function') {
-    updateTimerDisplay();
-  }
-  
-  // Update score
-  if (window.stats) {
-    window.stats.goals = data.score_home;
-    window.stats.goalsAgainst = data.score_away;
-  }
-  
-  if (typeof updateScoreboard === 'function') {
-    updateScoreboard();
-  }
-  
-  // Show UI
-  document.getElementById('setupScreen').classList.add('hidden');
-  document.getElementById('appTopbar').style.display = '';
-  document.getElementById('appMain').style.display = '';
-  
-  console.log('✅ Match restored from cloud');
+  console.log('ℹ️ Team names pre-filled in setup screen');
+  console.log('ℹ️ Note: Full match restore requires saving roster data (future feature)');
 };
 
 // ─── MATCH INIT (called after setup) ────────────────────
