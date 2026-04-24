@@ -64,6 +64,12 @@
       promise: 'Promise rejection'
     });
   });
+  
+  // Declare functions globally so onclick handlers work
+  // These will be properly implemented later in the main script
+  window.handleAuth = function() { console.log('handleAuth not ready yet'); };
+  window.recordAttack = function() { console.log('recordAttack not ready yet'); };
+  window.deleteEvent = function() { console.log('deleteEvent not ready yet'); };
 </script>
 <style>
   :root {
