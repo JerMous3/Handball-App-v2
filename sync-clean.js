@@ -7,6 +7,19 @@ console.log('📱 Cross-device sync: Loading...');
 
 let syncInterval = null;
 let lastSyncTime = 0;
+let deviceId = null;
+
+// Generate unique device ID
+function getDeviceId() {
+  if (!deviceId) {
+    deviceId = localStorage.getItem('handball_device_id');
+    if (!deviceId) {
+      deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('handball_device_id', deviceId);
+    }
+  }
+  return deviceId;
+}
 
 // ============================================================
 // SAVE TO CLOUD
@@ -26,7 +39,9 @@ async function saveMatchToCloud() {
       current_half: window.currentHalf || 'first',
       score_home: window.stats?.goals || 0,
       score_away: window.stats?.goalsAgainst || 0,
-      last_updated: new Date().toISOString()
+      last_updated: new Date().toISOString(),
+      // Save roster data so we can restore on another device
+      roster_data: window.currentRoster ? JSON.stringify(window.currentRoster) : null
     };
     
     // Skip if empty match
@@ -83,12 +98,47 @@ async function loadMatchFromCloud() {
       return false;
     }
     
-    // Pre-fill team names in setup screen (silent restore)
+    // Ask user if they want to continue the match
+    const matchDesc = `${data.team_name || 'Team'} vs ${data.opponent || 'Opponent'}`;
+    const mins = Math.floor(data.timer_seconds / 60);
+    const secs = data.timer_seconds % 60;
+    const timeDesc = `${mins}:${secs.toString().padStart(2, '0')}`;
+    
+    const doContinue = confirm(
+      `Continue your match from another device?\n\n` +
+      `${matchDesc}\n` +
+      `Time: ${timeDesc}\n` +
+      `Score: ${data.score_home}-${data.score_away}\n\n` +
+      `Click OK to continue, or Cancel to start a new match.`
+    );
+    
+    if (!doContinue) {
+      // User wants to start fresh
+      await clearMatchFromCloud();
+      return false;
+    }
+    
+    // Restore the match with saved roster data
+    if (data.roster_data) {
+      try {
+        const rosterData = JSON.parse(data.roster_data);
+        
+        // Call restoreMatchState which will launch the match
+        if (window.restoreMatchState) {
+          window.restoreMatchState(data, rosterData);
+          return true;
+        }
+      } catch (err) {
+        console.error('Failed to parse roster data:', err);
+      }
+    }
+    
+    // No roster data - just pre-fill team names
     if (window.restoreMatchState) {
       window.restoreMatchState(data);
     }
     
-    return false; // Don't skip setup screen - let user start fresh
+    return false;
     
   } catch (error) {
     console.error('Load error:', error);
@@ -157,6 +207,13 @@ function startRealtimeSync() {
       table: 'current_match',
       filter: `coach_user_id=eq.${window.currentUser.id}`
     }, (payload) => {
+      // Ignore if this update came from our own save (within 2 seconds)
+      const timeSinceOurSave = Date.now() - lastSyncTime;
+      if (timeSinceOurSave < 2000) {
+        console.log('⏭️ Ignoring - this was our own update (' + timeSinceOurSave + 'ms ago)');
+        return;
+      }
+      
       console.log('📱 UPDATE FROM OTHER DEVICE!');
       console.log('   Score:', payload.new.score_home, '-', payload.new.score_away);
       console.log('   Timer:', payload.new.timer_seconds, 'seconds');
