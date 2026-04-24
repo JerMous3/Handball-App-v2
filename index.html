@@ -2663,6 +2663,7 @@ window.selectZone = selectZone;
 window.confirmShot = confirmShot;
 window.closeModal = closeModal;
 window.undoLastAction = undoLastAction;
+window.pushUndo = pushUndo;
 window.openHistoryModal = openHistoryModal;
 window.closeHistoryModal = closeHistoryModal;
 window.deleteHistoryEntry = deleteHistoryEntry;
@@ -2690,6 +2691,7 @@ function pushUndo(fn) {
   if (undoBtn) undoBtn.disabled = false;
   if (mobileUndoBtn) mobileUndoBtn.disabled = false;
 }
+window.pushUndo = pushUndo; // Expose immediately
 
 function undoLastAction() {
   if (!undoStack.length) return;
