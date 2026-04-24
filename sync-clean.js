@@ -83,23 +83,12 @@ async function loadMatchFromCloud() {
       return false;
     }
     
-    // Ask user if they want to continue
-    const matchDesc = `${data.team_name || 'Team'} vs ${data.opponent || 'Opponent'}`;
-    const mins = Math.floor(data.timer_seconds / 60);
-    const secs = data.timer_seconds % 60;
-    const timeDesc = `${mins}:${secs.toString().padStart(2, '0')}`;
-    
-    if (!confirm(`Continue your match?\n\n${matchDesc}\nTime: ${timeDesc}\nScore: ${data.score_home}-${data.score_away}`)) {
-      return false;
-    }
-    
-    // Restore match state
+    // Pre-fill team names in setup screen (silent restore)
     if (window.restoreMatchState) {
       window.restoreMatchState(data);
-      return true;
     }
     
-    return false;
+    return false; // Don't skip setup screen - let user start fresh
     
   } catch (error) {
     console.error('Load error:', error);
