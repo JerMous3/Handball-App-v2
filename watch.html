@@ -632,11 +632,16 @@ function subscribeToEvents() {
         filter: `live_match_id=eq.${matchId}`
       },
       (payload) => {
-        events.unshift(payload.new);
-        renderEvents();
+        // Check if event already exists (prevent duplicates)
+        const isDuplicate = events.some(e => e.id === payload.new.id);
         
-        if (payload.new.event_type === 'goal' || payload.new.event_type === 'goal_against') {
-          animateScore();
+        if (!isDuplicate) {
+          events.unshift(payload.new);
+          renderEvents();
+          
+          if (payload.new.event_type === 'goal' || payload.new.event_type === 'goal_against') {
+            animateScore();
+          }
         }
       }
     )
