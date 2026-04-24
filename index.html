@@ -2525,6 +2525,54 @@ document.getElementById('importModalOverlay').addEventListener('click', function
   if (e.target === this) closeImportModal();
 });
 
+// ─── MOBILE TAB NAVIGATION ───────────────────────────────
+function switchMobileTab(tab) {
+  // Only applies on mobile
+  if (window.innerWidth > 768) return;
+
+  // Update tab button states
+  ['players','stats','events','more'].forEach(t => {
+    const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+
+  // Show/hide panels
+  const playersArea = document.querySelector('.players-area');
+  const sidebar     = document.querySelector('.sidebar');
+  const rightPanel  = document.querySelector('.right-panel');
+  const moreSection = document.getElementById('mobileMoreSection');
+
+  playersArea.classList.remove('mobile-active');
+  sidebar.classList.remove('mobile-active');
+  rightPanel.classList.remove('mobile-active');
+  if (moreSection) moreSection.classList.remove('mobile-active');
+
+  if (tab === 'players') {
+    playersArea.classList.add('mobile-active');
+    document.getElementById('mobileSignout').style.display = 'none';
+    document.getElementById('mobileTeamNames').style.display = 'none';
+  } else if (tab === 'stats') {
+    sidebar.classList.add('mobile-active');
+  } else if (tab === 'events') {
+    rightPanel.classList.add('mobile-active');
+  } else if (tab === 'more') {
+    // Show More tab - custom section with action buttons
+    const moreSection = document.getElementById('mobileMoreSection');
+    if (moreSection) {
+      moreSection.classList.add('mobile-active');
+    }
+    document.getElementById('mobileSignout').style.display = 'none';
+    document.getElementById('mobileTeamNames').style.display = 'block';
+  }
+}
+
+// On mobile, initialise with players tab active
+function initMobileLayout() {
+  if (window.innerWidth <= 768) {
+    switchMobileTab('players');
+  }
+}
+
 // ─── MATCH INIT (called after setup) ────────────────────
 function initMatch(rosterData) {
 
@@ -3643,54 +3691,6 @@ window.saveRosterToCloud = saveRosterToCloud;
 window.loadSavedRoster = loadSavedRoster;
 window.switchAuthTab = switchAuthTab;
 window.deleteCloudEntry = deleteCloudEntry;
-
-// ─── MOBILE TAB NAVIGATION ───────────────────────────────
-function switchMobileTab(tab) {
-  // Only applies on mobile
-  if (window.innerWidth > 768) return;
-
-  // Update tab button states
-  ['players','stats','events','more'].forEach(t => {
-    const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
-    if (btn) btn.classList.toggle('active', t === tab);
-  });
-
-  // Show/hide panels
-  const playersArea = document.querySelector('.players-area');
-  const sidebar     = document.querySelector('.sidebar');
-  const rightPanel  = document.querySelector('.right-panel');
-  const moreSection = document.getElementById('mobileMoreSection');
-
-  playersArea.classList.remove('mobile-active');
-  sidebar.classList.remove('mobile-active');
-  rightPanel.classList.remove('mobile-active');
-  if (moreSection) moreSection.classList.remove('mobile-active');
-
-  if (tab === 'players') {
-    playersArea.classList.add('mobile-active');
-    document.getElementById('mobileSignout').style.display = 'none';
-    document.getElementById('mobileTeamNames').style.display = 'none';
-  } else if (tab === 'stats') {
-    sidebar.classList.add('mobile-active');
-  } else if (tab === 'events') {
-    rightPanel.classList.add('mobile-active');
-  } else if (tab === 'more') {
-    // Show More tab - custom section with action buttons
-    const moreSection = document.getElementById('mobileMoreSection');
-    if (moreSection) {
-      moreSection.classList.add('mobile-active');
-    }
-    document.getElementById('mobileSignout').style.display = 'none';
-    document.getElementById('mobileTeamNames').style.display = 'block';
-  }
-}
-
-// On mobile, initialise with players tab active
-function initMobileLayout() {
-  if (window.innerWidth <= 768) {
-    switchMobileTab('players');
-  }
-}
 
 // ─── MATCH HISTORY (localStorage) ───────────────────────
 const HISTORY_KEY = 'handballtrack_history';
