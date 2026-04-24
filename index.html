@@ -2809,9 +2809,9 @@ function updateTimerDisplay() {
 
 function startTimerInterval() {
   // Clear any existing interval
-  if (timerInterval) clearInterval(timerInterval);
+  if (window.timerInterval) clearInterval(window.timerInterval);
   
-  timerInterval = setInterval(() => {
+  window.timerInterval = setInterval(() => {
     updateTimerDisplay();
     tickSuspensions();
   }, 1000);
@@ -2847,8 +2847,10 @@ function toggleTimer() {
     }
     
     timerStartTime = null;
-    clearInterval(timerInterval);
-    timerInterval = null;
+    if (window.timerInterval) {
+      clearInterval(window.timerInterval);
+      window.timerInterval = null;
+    }
   }
   
   updateTimerDisplay();
@@ -2872,10 +2874,14 @@ async function resetTimer() {
   if (!confirmed) return;
   
   // Reset timer
-  clearInterval(timerInterval);
-  timerInterval = null;
+  if (window.timerInterval) {
+    clearInterval(window.timerInterval);
+    window.timerInterval = null;
+  }
   timerRunning = false;
+  window.timerRunning = false;
   matchSeconds = 0;
+  window.matchSeconds = 0;
   timerStartTime = null;
   timerPausedAt = 0;
   
@@ -2987,6 +2993,9 @@ function getCurrentTime() {
   }
   return `${pad(Math.floor(matchSeconds/60))}:${pad(matchSeconds%60)}`;
 }
+
+// Expose to window
+window.getCurrentTime = getCurrentTime;
 
 // ─── SUSPENSION TIMERS ────────────────────────────────────
 function addSuspension(player) {
@@ -3347,6 +3356,14 @@ function flashRow(playerId, color) {
   row.style.boxShadow = `0 0 12px ${color}`;
   setTimeout(() => { row.style.boxShadow = ''; }, 600);
 }
+
+// Expose record functions to window for live-broadcast-module
+window.recordGoal = recordGoal;
+window.recordShot = recordShot;
+window.recordAssist = recordAssist;
+window.recordYellow = recordYellow;
+window.recordSuspension = recordSuspension;
+window.recordRed = recordRed;
 
 // ─── MODAL ───────────────────────────────────────────────
 let currentGkPlayer = null;
