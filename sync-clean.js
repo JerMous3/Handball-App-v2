@@ -125,6 +125,9 @@ function startAutoSave() {
   }, 5000); // Every 5 seconds
   
   console.log('✅ Auto-save enabled (every 5s)');
+  
+  // Also start realtime sync
+  startRealtimeSync();
 }
 
 function stopAutoSave() {
@@ -139,7 +142,12 @@ function stopAutoSave() {
 // ============================================================
 
 function startRealtimeSync() {
-  if (!window.currentUser) return;
+  if (!window.currentUser) {
+    console.log('⚠️ Cannot start realtime - no user');
+    return;
+  }
+  
+  console.log('📡 Starting realtime sync for user:', window.currentUser.id);
   
   const channel = _supabase
     .channel('match_sync')
@@ -149,16 +157,41 @@ function startRealtimeSync() {
       table: 'current_match',
       filter: `coach_user_id=eq.${window.currentUser.id}`
     }, (payload) => {
-      // Only sync if update is from another device
-      const timeSinceOurSave = Date.now() - lastSyncTime;
-      if (timeSinceOurSave > 2000) {
-        console.log('📱 Update from another device');
-        if (window.restoreMatchState) {
-          window.restoreMatchState(payload.new);
-        }
+      console.log('📱 UPDATE FROM OTHER DEVICE!');
+      console.log('   Score:', payload.new.score_home, '-', payload.new.score_away);
+      console.log('   Timer:', payload.new.timer_seconds, 'seconds');
+      
+      // Update score
+      if (window.stats) {
+        window.stats.goals = payload.new.score_home;
+        window.stats.goalsAgainst = payload.new.score_away;
       }
+      
+      // Update timer
+      window.matchSeconds = payload.new.timer_seconds;
+      window.timerRunning = payload.new.is_timer_running;
+      window.currentHalf = payload.new.current_half;
+      
+      // Update UI
+      if (typeof window.updateScoreboard === 'function') {
+        window.updateScoreboard();
+      }
+      if (typeof window.updateTimerDisplay === 'function') {
+        window.updateTimerDisplay();
+      }
+      
+      console.log('✅ UI updated from other device');
     })
-    .subscribe();
+    .subscribe((status) => {
+      console.log('📡 Realtime subscription status:', status);
+      if (status === 'SUBSCRIBED') {
+        console.log('✅ REALTIME SYNC ACTIVE - Changes will sync between devices!');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('❌ Realtime subscription FAILED!');
+      }
+    });
+  
+  return channel;
 }
 
 // ============================================================
