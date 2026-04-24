@@ -2615,10 +2615,14 @@ window.restoreMatchState = function(data, rosterData = null) {
     window.currentRoster = rosterData;
     console.log('   ✅ initMatch complete');
     
-    // Restore match state
+    // Restore match state - set both local and window variables
     window.matchSeconds = data.timer_seconds || 0;
     window.timerRunning = data.is_timer_running || false;
+    window.timerPausedAt = data.timer_seconds || 0;
+    window.timerStartTime = null;
     window.currentHalf = data.current_half || 'first';
+    
+    console.log('   Timer restored:', window.matchSeconds, 'seconds, running:', window.timerRunning);
     
     if (window.stats) {
       window.stats.goals = data.score_home || 0;
@@ -2626,13 +2630,53 @@ window.restoreMatchState = function(data, rosterData = null) {
       console.log('   Score restored:', window.stats.goals, '-', window.stats.goalsAgainst);
     }
     
-    // Update UI
-    if (typeof window.updateTimerDisplay === 'function') {
-      window.updateTimerDisplay();
+    // Restore event log
+    if (data.event_log) {
+      try {
+        window.eventLog = JSON.parse(data.event_log);
+        console.log('   Event log restored:', window.eventLog.length, 'events');
+      } catch (err) {
+        console.error('   Failed to parse event log:', err);
+      }
     }
+    
+    // Restore player stats
+    if (data.player_stats) {
+      try {
+        window.playerStats = JSON.parse(data.player_stats);
+        console.log('   Player stats restored');
+      } catch (err) {
+        console.error('   Failed to parse player stats:', err);
+      }
+    }
+    
+    // Force timer display update
+    const m = Math.floor(window.matchSeconds / 60);
+    const s = window.matchSeconds % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    const timerEl = document.getElementById('matchTimer');
+    if (timerEl) {
+      timerEl.textContent = `${pad(m)}:${pad(s)}`;
+      console.log('   ✅ Timer display forced to:', timerEl.textContent);
+    }
+    
+    // Update scoreboard
     if (typeof window.updateScoreboard === 'function') {
       window.updateScoreboard();
     }
+    
+    // Call renderPlayers to show the player list
+    if (typeof window.renderPlayers === 'function') {
+      window.renderPlayers();
+      console.log('   ✅ Players rendered');
+    }
+    
+    // Call renderEventLog to show the events
+    if (typeof window.renderEventLog === 'function') {
+      window.renderEventLog();
+      console.log('   ✅ Event log rendered');
+    }
+    
     console.log('   UI updated');
     
     // Show the app
@@ -3602,6 +3646,7 @@ function renderPlayers() {
 
 // Expose to window for cross-device sync
 window.renderPlayers = renderPlayers;
+window.renderEventLog = renderEventLog;
 
 // ─── DRAG AND DROP ───────────────────────────────────────
 let draggedPlayerId = null;
@@ -3775,6 +3820,13 @@ function exportToExcel() {
   const filename = `handball_match_${dateStr.replace(/\//g,'-')}.xlsx`;
   XLSX.writeFile(wb, filename);
 }
+
+// ─── INITIALIZATION ─────────────────────────────────────
+// These run once when initMatch is called
+renderPlayers();
+updateStats();
+updateTimerDisplay();
+initMobileLayout();
 
 // end initMatch
 
