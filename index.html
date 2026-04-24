@@ -3416,10 +3416,13 @@ function recordYellow(player) {
 }
 
 function recordSuspension(player) {
+  console.log('🔍 recordSuspension called for:', player);
   stats.suspensions++;
   playerStats[player.id].suspensions++;
   addEvent('suspension', player);
+  console.log('🔍 Calling addSuspension...');
   addSuspension(player);
+  console.log('🔍 Active suspensions:', activeSuspensions);
   pushUndo(() => {
     stats.suspensions--;
     playerStats[player.id].suspensions--;
@@ -3431,8 +3434,13 @@ function recordSuspension(player) {
     if (row) row.classList.remove('suspended');
   });
   const row = document.querySelector(`[data-player-id="${player.id}"]`);
-  if (row) row.classList.add('suspended');
+  console.log('🔍 Found row:', row);
+  if (row) {
+    row.classList.add('suspended');
+    console.log('✅ Added suspended class to row');
+  }
   updateStats(); renderPlayers();
+  console.log('✅ recordSuspension complete');
 }
 
 function recordRed(player) {
@@ -3540,16 +3548,6 @@ function confirmShot() {
   renderPlayers();
   closeModal();
   flashRow(gkPlayer.id, shotType === 'save' ? 'var(--gk-accent)' : 'var(--red)');
-  
-  // LIVE BROADCASTING
-  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
-    if (shotType === 'save') {
-      broadcastEvent('save', gkPlayer, detail);
-    } else {
-      broadcastEvent('goal_against', gkPlayer, detail);
-      updateLiveScore();
-    }
-  }
 }
 
 document.getElementById('modalOverlay').addEventListener('click', function(e) {
