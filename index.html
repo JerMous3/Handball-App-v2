@@ -3212,7 +3212,18 @@ function renderEventLog() {
 
 function addEvent(type, player, extra) {
   const ev = { type, name: player.name, time: getCurrentTime(), extra, playerId: player.id };
-  eventLog.unshift(ev);
+  
+  // Prevent duplicates - check if same event already exists in last 3 events
+  const isDuplicate = eventLog.slice(0, 3).some(e => 
+    e.type === ev.type && 
+    e.name === ev.name && 
+    e.time === ev.time
+  );
+  
+  if (!isDuplicate) {
+    eventLog.unshift(ev);
+  }
+  
   renderEventLog();
 }
 
