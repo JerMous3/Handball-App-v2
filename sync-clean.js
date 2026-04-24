@@ -1,294 +1,3928 @@
-// ============================================================
-// CROSS-DEVICE SYNC MODULE - CLEAN VERSION
-// Simple, reliable cross-device synchronization
-// ============================================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Handball Tracker</title>
 
-console.log('📱 Cross-device sync: Loading...');
+<!-- Eruda mobile console for debugging -->
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>
+  // Only enable Eruda on mobile devices or when ?debug=1 is in URL
+  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.location.search.includes('debug=1')) {
+    eruda.init();
+    console.log('📱 Eruda mobile console enabled');
+  }
+</script>
 
-let syncInterval = null;
-let lastSyncTime = 0;
-let deviceId = null;
-let realtimeChannel = null; // Track active subscription
-
-// Generate unique device ID
-function getDeviceId() {
-  if (!deviceId) {
-    deviceId = localStorage.getItem('handball_device_id');
-    if (!deviceId) {
-      deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('handball_device_id', deviceId);
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="polish-theme.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://qgqryeanopdxrwrfczcx.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_I67bdwmAkdodIk5bAQf1Zw_86KroW5R';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  
+  // Error logging to Supabase
+  async function logError(errorType, error, context = {}) {
+    try {
+      const errorData = {
+        user_id: null, // Will be set properly later when currentUser is available
+        error_type: errorType,
+        error_message: error.message || String(error),
+        error_stack: error.stack || null,
+        context: context,
+        user_agent: navigator.userAgent,
+        url: window.location.href,
+      };
+      
+      // Try to get current user if available
+      const { data: { user } } = await _supabase.auth.getUser();
+      if (user) errorData.user_id = user.id;
+      
+      await _supabase.from('error_logs').insert(errorData);
+      console.log('Error logged to Supabase:', errorType);
+    } catch (logError) {
+      // If logging fails, just log to console
+      console.error('Failed to log error to Supabase:', logError);
     }
   }
-  return deviceId;
+  
+  // Global error handler
+  window.addEventListener('error', (event) => {
+    logError('uncaught_error', event.error, {
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno
+    });
+  });
+  
+  // Promise rejection handler
+  window.addEventListener('unhandledrejection', (event) => {
+    logError('unhandled_promise_rejection', event.reason, {
+      promise: 'Promise rejection'
+    });
+  });
+  
+  // Declare functions globally so onclick handlers work
+  // These will be properly implemented later in the main script
+  window.handleAuth = function() { console.log('handleAuth not ready yet'); };
+  window.recordAttack = function() { console.log('recordAttack not ready yet'); };
+  window.deleteEvent = function() { console.log('deleteEvent not ready yet'); };
+</script>
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #12151c;
+    --surface2: #1a1f2a;
+    --border: #252b38;
+    --accent: #e8ff00;
+    --accent2: #00d4ff;
+    --red: #ff3b3b;
+    --yellow: #ffc700;
+    --green: #00e87a;
+    --text: #f0f2f6;
+    --muted: #6b7585;
+    --gk-accent: #7b5cfa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .topbar-brand {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: var(--accent);
+  }
+
+  .topbar-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  /* TIMER */
+  .timer-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px 20px;
+  }
+
+  .timer-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+
+  .timer-display {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 32px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .timer-display.running { color: var(--green); }
+  .timer-display.second-half { color: var(--accent2); }
+
+  /* LIVE SCORE */
+  .scoreboard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 6px 18px;
+    box-shadow: 0 0 18px rgba(232,255,0,0.08);
+  }
+
+  .scoreboard-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+
+  .scoreboard-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .scoreboard-score {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 34px;
+    line-height: 1;
+    color: var(--accent);
+    min-width: 28px;
+    text-align: center;
+    transition: transform 0.2s, color 0.2s;
+  }
+
+  .scoreboard-score.bump {
+    transform: scale(1.35);
+    color: #fff;
+  }
+
+  .scoreboard-sep {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 24px;
+    color: var(--muted);
+    line-height: 1;
+  }
+
+  .scoreboard-teams {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 1px;
+    width: 100%;
+  }
+
+  .timer-btn-group {
+    display: flex;
+    gap: 6px;
+  }
+
+  .btn-sm {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 500;
+  }
+
+  .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  .btn-sm.danger { border-color: var(--red); color: var(--red); }
+  .btn-sm.danger:hover { background: var(--red); color: #fff; }
+
+  .half-badge {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+  }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: grid;
+    grid-template-columns: 280px 1fr 260px;
+    gap: 0;
+    height: calc(100vh - 65px);
+  }
+
+  /* SIDEBAR STATS */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sidebar-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 16px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .stat-value {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 28px;
+    letter-spacing: 1px;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-value span { font-size: 14px; color: var(--muted); margin-left: 4px; }
+
+  .stat-bar-bg {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+
+  .stat-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  /* SUSPENSION TIMERS */
+  .suspension-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .suspension-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+    border: 1px solid var(--yellow);
+    border-radius: 8px;
+    padding: 8px 12px;
+    animation: pulse-yellow 2s infinite;
+  }
+
+  @keyframes pulse-yellow {
+    0%, 100% { border-color: var(--yellow); }
+    50% { border-color: #ff9800; }
+  }
+
+  .suspension-name {
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .suspension-timer {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 22px;
+    color: var(--yellow);
+  }
+
+  .suspension-timer.urgent { color: var(--red); }
+
+  .no-suspensions {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    padding: 12px;
+  }
+
+  /* EVENT LOG */
+  .event-log {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .event-log::-webkit-scrollbar { width: 3px; }
+  .event-log::-webkit-scrollbar-track { background: transparent; }
+  .event-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .attack-counter-container {
+    margin-top: 12px;
+    padding: 10px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .event-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--bg);
+    border-radius: 6px;
+    font-size: 12px;
+    border-left: 3px solid transparent;
+  }
+
+  .event-time {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 13px;
+    color: var(--muted);
+    min-width: 28px;
+  }
+
+  .event-icon { font-size: 14px; }
+  .event-name { font-weight: 500; }
+  .event-type { color: var(--muted); font-size: 11px; }
+
+  /* CENTER PLAYERS */
+  .players-area {
+    padding: 16px 20px;
+    overflow-y: auto;
+    background: var(--bg);
+  }
+
+  .players-area::-webkit-scrollbar { width: 4px; }
+  .players-area::-webkit-scrollbar-track { background: transparent; }
+  .players-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .section-header {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    margin-top: 4px;
+  }
+
+  .player-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .player-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .player-row::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--border);
+    border-radius: 3px 0 0 3px;
+  }
+
+  .player-row.gk::before { background: var(--gk-accent); }
+  .player-row.suspended::before { background: var(--yellow); }
+  .player-row.suspended { opacity: 0.6; }
+  .player-row.red-carded { opacity: 0.35; pointer-events: none; }
+  .player-row.red-carded::before { background: var(--red); }
+
+  .player-row:hover { border-color: var(--accent); }
+  .player-row.gk:hover { border-color: var(--gk-accent); }
+
+  .player-num {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 22px;
+    color: var(--muted);
+    min-width: 28px;
+    text-align: center;
+    line-height: 1;
+  }
+
+  .player-row.gk .player-num { color: var(--gk-accent); }
+
+  .player-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .player-name {
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .player-meta {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .player-stats {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .pstat {
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--surface2);
+    border-radius: 4px;
+    padding: 2px 6px;
+    white-space: nowrap;
+  }
+
+  .pstat.goals { color: var(--accent); }
+  .pstat.saves { color: var(--gk-accent); }
+  .pstat.cards { color: var(--yellow); }
+
+  .action-btns {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 300px;
+  }
+
+  .action-btn {
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+
+  .action-btn:hover { transform: translateY(-1px); filter: brightness(1.15); }
+  .action-btn:active { transform: translateY(0); }
+
+  .btn-goal { background: var(--accent); color: #000; }
+  .btn-shot { background: #1e2d1f; color: var(--green); border: 1px solid var(--green); }
+  .btn-assist { background: #1a2535; color: var(--accent2); border: 1px solid var(--accent2); }
+  .btn-yellow { background: #2a2210; color: var(--yellow); border: 1px solid var(--yellow); }
+  .btn-suspend { background: #2a1c0a; color: #ff9800; border: 1px solid #ff9800; }
+  .btn-red { background: #2a0e0e; color: var(--red); border: 1px solid var(--red); }
+  .btn-save { background: #1e1530; color: var(--gk-accent); border: 1px solid var(--gk-accent); }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* GOAL GRID MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 500px;
+    max-width: 95vw;
+    box-shadow: 0 0 60px rgba(0,0,0,0.6);
+  }
+
+  .modal-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 20px;
+    letter-spacing: 3px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .modal-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .modal-sub span { color: var(--gk-accent); font-weight: 600; }
+
+  .goal-svg-container {
+    position: relative;
+    width: 100%;
+  }
+
+  .goal-svg {
+    width: 100%;
+    border-radius: 8px;
+    cursor: crosshair;
+    display: block;
+  }
+
+  .goal-grid-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    cursor: crosshair;
+  }
+
+  .goal-cell {
+    border: 1px solid rgba(255,255,255,0.12);
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .goal-cell:hover { background: rgba(232,255,0,0.18); }
+  .goal-cell.selected { background: rgba(232,255,0,0.35); }
+
+  .goal-cell-label {
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 1px;
+    pointer-events: none;
+  }
+
+  .modal-btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    justify-content: flex-end;
+  }
+
+  .modal-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 9px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .modal-btn.cancel { background: var(--surface2); color: var(--muted); }
+  .modal-btn.cancel:hover { color: var(--text); }
+  .modal-btn.confirm { background: var(--gk-accent); color: #fff; }
+  .modal-btn.confirm:hover { background: #9b7fff; }
+  .modal-btn.confirm-goal { background: var(--accent); color: #000; }
+  .modal-btn.confirm-goal:hover { background: #fff700; }
+
+  .shot-type-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .shot-type-btn {
+    flex: 1;
+    padding: 7px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .shot-type-btn.active {
+    border-color: var(--gk-accent);
+    color: var(--gk-accent);
+    background: rgba(123,92,250,0.1);
+  }
+
+  .shot-type-btn.goal-active {
+    border-color: var(--accent);
+    color: #000;
+    background: var(--accent);
+  }
+
+  /* Scrollbar styling */
+  .sidebar::-webkit-scrollbar, .right-panel::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-track, .right-panel::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb, .right-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Goal heat map */
+  .heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 3px;
+    aspect-ratio: 3/1.4;
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+  }
+
+  .heatmap-cell {
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 16px;
+    color: rgba(255,255,255,0.7);
+    background: rgba(0,0,0,0.3);
+    transition: background 0.4s;
+  }
+
+  .zone-labels {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    font-size: 9px;
+    color: var(--muted);
+    text-align: center;
+    gap: 3px;
+    margin-top: 3px;
+  }
+
+  .btn-sm.export { border-color: var(--green); color: var(--green); }
+  .btn-sm.export:hover { background: var(--green); color: #000; }
+  .btn-sm.undo { border-color: var(--accent2); color: var(--accent2); }
+  .btn-sm.undo:hover { background: var(--accent2); color: #000; }
+  .btn-sm.undo:disabled { opacity: 0.3; cursor: not-allowed; border-color: var(--border); color: var(--muted); }
+  .btn-sm.history { border-color: var(--muted); color: var(--muted); }
+  .btn-sm.history:hover { border-color: var(--text); color: var(--text); }
+
+  /* History modal */
+  .history-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .history-modal-overlay.open { opacity: 1; pointer-events: all; }
+  .history-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 580px;
+    max-width: 96vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 60px rgba(0,0,0,0.6);
+  }
+  .history-list {
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .history-list::-webkit-scrollbar { width: 3px; }
+  .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .history-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .history-card:hover { border-color: var(--accent); }
+  .history-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .history-card-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 16px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+  .history-card-date { font-size: 11px; color: var(--muted); }
+  .history-card-score {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 28px;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .history-card-stats { font-size: 11px; color: var(--muted); }
+  .history-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 32px; }
+  .history-card-del {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--muted);
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .history-card-del:hover { border-color: var(--red); color: var(--red); }
+
+  /* DRAG AND DROP */
+  .player-row[draggable="true"] { cursor: grab; }
+  .player-row[draggable="true"]:active { cursor: grabbing; }
+
+  .drag-handle {
+    color: var(--muted);
+    font-size: 14px;
+    cursor: grab;
+    padding: 0 4px 0 0;
+    opacity: 0.4;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+  }
+  .player-row:hover .drag-handle { opacity: 1; }
+
+  .player-row.dragging {
+    opacity: 0.35;
+    border-style: dashed;
+  }
+
+  .drop-zone {
+    min-height: 54px;
+    border-radius: 10px;
+    border: 2px dashed transparent;
+    transition: border-color 0.15s, background 0.15s;
+    margin-bottom: 16px;
+  }
+
+  .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(232,255,0,0.04);
+  }
+
+  .drop-zone.drag-over-gk {
+    border-color: var(--gk-accent);
+    background: rgba(123,92,250,0.06);
+  }
+
+  .drop-zone.drag-over-sub {
+    border-color: var(--muted);
+    background: rgba(107,117,133,0.06);
+  }
+
+  .drop-zone-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 54px;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    border-radius: 10px;
+    border: 2px dashed var(--border);
+  }
+
+  .section-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    margin-top: 4px;
+  }
+
+  .section-count {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* Substitution row styling — muted, no action buttons shown */
+  .player-row.sub-bench { opacity: 0.65; }
+  .player-row.sub-bench::before { background: var(--muted); }
+  .player-row.sub-bench:hover { border-color: var(--muted); opacity: 1; }
+
+  /* Hide mobile-only elements on desktop (must be before media query) */
+  .mobile-actions-bar {
+    display: none;
+  }
+  .mobile-tab-bar {
+    display: none;
+  }
+
+  /* Responsive */
+  /* ═══════════════════════════════════════════
+     MOBILE LAYOUT  (max-width: 768px)
+     Bottom tab navigation, large touch targets,
+     full-screen panels. Desktop untouched.
+  ═══════════════════════════════════════════ */
+  @media (max-width: 768px) {
+
+    /* ── Topbar ── */
+    .topbar {
+      padding: 8px 12px;
+      flex-wrap: nowrap;
+      gap: 8px;
+      height: 56px;
+    }
+    .topbar-brand { font-size: 16px; letter-spacing: 2px; }
+    
+    /* Hide left section on mobile (Reset button - available in More tab) */
+    .topbar-left { display: none; }
+    
+    /* Center section takes more space */
+    .topbar-center { flex: 1; }
+    
+    /* Simplify right section - only show essential buttons */
+    .topbar-right { gap: 4px; }
+    
+    .topbar-controls { gap: 6px; flex-wrap: nowrap; overflow-x: auto; }
+    .half-badge { display: none; }
+    .timer-block { padding: 4px 10px; }
+    .timer-display { font-size: 22px; }
+    .timer-label { display: none; }
+    .scoreboard { padding: 4px 10px; }
+    .scoreboard-score { font-size: 24px; }
+    .scoreboard-label { display: none; }
+    .scoreboard-teams { display: none; }
+    .timer-btn-group { gap: 4px; }
+    .btn-sm { padding: 5px 9px; font-size: 11px; }
+    
+    /* Hide buttons on mobile - accessible via More tab */
+    .btn-sm.history, 
+    .btn-sm.export, 
+    .btn-sm.signout,
+    .topbar-right a[href="watch.html"],
+    .topbar-right a[href="stats.html"] { 
+      display: none !important; 
+    }
+    
+    .user-badge { display: none; }
+
+    /* ── Main grid → single column, fill viewport ── */
+    .main {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr;
+      height: calc(100dvh - 56px - 60px); /* topbar + tab bar */
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── All panels hidden by default, shown by tab ── */
+    .sidebar, .players-area, .right-panel {
+      display: none;
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      padding: 12px;
+      background: var(--bg);
+    }
+    .sidebar.mobile-active,
+    .players-area.mobile-active,
+    .right-panel.mobile-active { display: block; }
+
+    /* ── Bottom tab bar ── */
+    .mobile-tab-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 60px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 200;
+    }
+    .mobile-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: color 0.15s;
+      padding: 6px 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mobile-tab .tab-icon { font-size: 20px; line-height: 1; }
+    .mobile-tab.active { color: var(--accent); }
+    .mobile-tab.active .tab-icon { filter: drop-shadow(0 0 4px rgba(232,255,0,0.5)); }
+
+    /* ── Player rows — bigger touch targets ── */
+    .player-row {
+      padding: 10px 10px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .player-num { font-size: 20px; min-width: 26px; }
+    .player-name { font-size: 13px; }
+    .player-meta { font-size: 10px; }
+
+    /* Action buttons — larger, wrap to 2 rows */
+    .action-btns {
+      width: 100%;
+      max-width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      margin-top: 6px;
+    }
+    .action-btn {
+      padding: 9px 4px;
+      font-size: 11px;
+      text-align: center;
+      border-radius: 7px;
+    }
+    /* GK buttons — 2 columns */
+    .player-row.gk .action-btns {
+      grid-template-columns: 1fr 1fr;
+    }
+    /* Sub bench label */
+    .player-row.sub-bench .action-btns {
+      grid-template-columns: 1fr;
+    }
+
+    /* Section headers */
+    .section-header-row { margin-bottom: 8px; }
+    .section-header { font-size: 13px; }
+    .drop-zone { margin-bottom: 12px; }
+    .drop-zone-empty { height: 44px; font-size: 11px; }
+
+    /* ── Stats sidebar — horizontal scroll cards on mobile ── */
+    .sidebar {
+      padding-bottom: 16px;
+    }
+    .stat-card {
+      padding: 10px 12px;
+      margin-bottom: 8px;
+    }
+    .stat-value { font-size: 24px; }
+    .heatmap-grid { aspect-ratio: 3/1.6; }
+    .heatmap-cell { font-size: 14px; }
+
+    /* ── Right panel ── */
+    .right-panel { gap: 10px; }
+    .suspension-item { padding: 8px 10px; }
+    .suspension-timer { font-size: 20px; }
+    .event-log { max-height: none; }
+
+    /* ── GK modal — full screen on mobile ── */
+    .modal-overlay {
+      align-items: flex-end;
+      padding: 0;
+    }
+    .modal {
+      width: 100%;
+      max-width: 100%;
+      border-radius: 16px 16px 0 0;
+      padding: 20px 16px 32px;
+      max-height: 90dvh;
+      overflow-y: auto;
+    }
+    .goal-svg-container { margin: 0 -4px; }
+    .shooter-row { margin-top: 10px; }
+    .modal-btns { margin-top: 14px; }
+    .modal-btn { padding: 12px 20px; font-size: 14px; }
+
+    /* ── Setup screen on mobile ── */
+    .setup-card { padding-bottom: 80px; }
+    .setup-team-row { grid-template-columns: 1fr; }
+    .setup-row { grid-template-columns: 52px 1fr 1fr auto; gap: 5px; }
+    .setup-input { padding: 8px 8px; font-size: 13px; }
+    .setup-launch-btn { font-size: 18px; padding: 14px; }
+
+    /* ── Auth screen on mobile ── */
+    .auth-card { padding: 28px 20px; }
+
+    /* ── Import modal ── */
+    .import-modal { border-radius: 16px 16px 0 0; }
+
+    /* ── History modal ── */
+    .history-modal {
+      width: 100%;
+      max-width: 100%;
+      border-radius: 16px 16px 0 0;
+      max-height: 90dvh;
+    }
+    .history-modal-overlay { align-items: flex-end; }
+
+    /* Show mobile-actions-bar on mobile */
+    .mobile-actions-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .mobile-actions-bar .btn-sm {
+      flex: 1;
+      text-align: center;
+      padding: 10px;
+      font-size: 12px;
+    }
+    .mobile-actions-bar .btn-sm.history { display: flex !important; justify-content: center; }
+    .mobile-actions-bar .btn-sm.export  { display: flex !important; justify-content: center; }
+
+    /* Show tab bar on mobile */
+    .mobile-tab-bar { display: flex; }
+  }
+
+  /* ── TEAM SETUP SCREEN ── */
+  .setup-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 2000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 32px 16px 48px;
+    overflow-y: auto;
+  }
+  .setup-screen.hidden { display: none; }
+  .setup-card { width: 100%; max-width: 720px; }
+  .setup-logo {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 28px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .setup-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+  .setup-section { margin-bottom: 24px; }
+  .setup-section-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 15px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .setup-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .setup-rows { display: flex; flex-direction: column; gap: 6px; }
+  .setup-row {
+    display: grid;
+    grid-template-columns: 64px 1fr 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .setup-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    width: 100%;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  .setup-input:focus { border-color: var(--accent); }
+  .setup-input.gk-input:focus { border-color: var(--gk-accent); }
+  .setup-input::placeholder { color: var(--muted); }
+  .setup-remove-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .setup-remove-btn:hover { border-color: var(--red); color: var(--red); }
+  .setup-add-btn {
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    padding: 8px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+    margin-top: 6px;
+    letter-spacing: 0.5px;
+  }
+  .setup-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .setup-add-btn.gk:hover { border-color: var(--gk-accent); color: var(--gk-accent); }
+  .setup-col-labels {
+    display: grid;
+    grid-template-columns: 64px 1fr 1fr auto;
+    gap: 8px;
+    margin-bottom: 4px;
+    padding: 0 2px;
+  }
+  .setup-col-label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .setup-launch-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 20px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 8px;
+  }
+  .setup-launch-btn:hover { background: #fff700; transform: translateY(-1px); }
+  .setup-team-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  /* Import button on setup page */
+  .setup-import-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .setup-import-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    padding: 8px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .setup-import-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+  .setup-import-hint { font-size: 11px; color: var(--muted); }
+
+  /* Import modal */
+  .import-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .import-modal-overlay.open { opacity: 1; pointer-events: all; }
+  .import-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 520px;
+    max-width: 95vw;
+    box-shadow: 0 0 60px rgba(0,0,0,0.6);
+  }
+  .import-textarea {
+    width: 100%;
+    min-height: 180px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    color: var(--text);
+    resize: vertical;
+    outline: none;
+    margin: 12px 0;
+    line-height: 1.6;
+  }
+  .import-textarea:focus { border-color: var(--accent2); }
+  .import-format-hint {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 2px;
+    line-height: 1.8;
+  }
+  .import-format-hint code {
+    color: var(--accent2);
+    background: rgba(0,212,255,0.08);
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 11px;
+  }
+
+  /* Shooter number in GK modal */
+  .shooter-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .shooter-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .shooter-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    width: 72px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .shooter-input:focus { border-color: var(--red); }
+  .shooter-hint { font-size: 11px; color: var(--muted); }
+  /* ── AUTH SCREEN ── */
+  .auth-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 4000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .auth-screen.hidden { display: none; }
+  .auth-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 0 60px rgba(0,0,0,0.5);
+  }
+  .auth-logo {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 26px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .auth-tagline { font-size: 12px; color: var(--muted); margin-bottom: 28px; }
+  .auth-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .auth-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+  }
+  .auth-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .auth-field { margin-bottom: 14px; }
+  .auth-field label { display: block; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+  .auth-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .auth-input:focus { border-color: var(--accent); }
+  .auth-submit {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Bebas Neue', cursive;
+    font-size: 18px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 6px;
+  }
+  .auth-submit:hover { background: #fff700; }
+  .auth-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .auth-error {
+    font-size: 12px;
+    color: var(--red);
+    background: rgba(255,59,59,0.08);
+    border: 1px solid rgba(255,59,59,0.2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .auth-error.show { display: block; }
+  .auth-success {
+    font-size: 12px;
+    color: var(--green);
+    background: rgba(0,232,122,0.08);
+    border: 1px solid rgba(0,232,122,0.2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .auth-success.show { display: block; }
+
+  /* User badge in topbar */
+  .user-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .user-badge span { color: var(--text); font-weight: 500; }
+  .btn-sm.signout { border-color: var(--muted); color: var(--muted); font-size: 11px; padding: 4px 10px; }
+  .btn-sm.signout:hover { border-color: var(--red); color: var(--red); }
+
+  /* Cloud status indicator */
+  .cloud-status {
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .cloud-status.saving { color: var(--yellow); }
+  .cloud-status.saved  { color: var(--green); }
+  .cloud-status.error  { color: var(--red); }
+
+  /* Roster load button on setup screen */
+  .setup-roster-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .setup-roster-info { font-size: 12px; color: var(--muted); flex: 1; }
+  .setup-roster-info strong { color: var(--text); }
+</style>
+<body>
+
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">⬡ Handball-Tracker</div>
+    <div class="auth-tagline">Sign in to save your roster and match history</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Create Account</button>
+    </div>
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-success" id="authSuccess"></div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input class="auth-input" id="authEmail" type="email" placeholder="coach@example.com" />
+    </div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input class="auth-input" id="authPassword" type="password" placeholder="••••••••" />
+    </div>
+    <div class="auth-field" id="teamNameField" style="display:none">
+      <label>Team Name</label>
+      <input class="auth-input" id="authTeamName" placeholder="e.g. HV Helius" />
+    </div>
+    <button class="auth-submit" id="authSubmit" onclick="handleAuth()">Sign In</button>
+  </div>
+</div>
+
+<!-- TEAM SETUP SCREEN -->
+<div class="setup-screen hidden" id="setupScreen">
+  <div class="setup-card">
+    <div class="setup-logo">⬡ Handball-Tracker</div>
+    <div class="setup-subtitle">Fill in your squad before the match — all fields are optional except at least one player per section.</div>
+
+    <div class="setup-roster-bar" id="rosterBar" style="display:none">
+      <div class="setup-roster-info" id="rosterBarInfo">Loading saved roster...</div>
+      <button class="setup-import-btn" onclick="loadSavedRoster()">↓ Load Saved Roster</button>
+      <button class="setup-import-btn" onclick="saveRosterToCloud()" style="border-color:var(--green);color:var(--green)">↑ Save Roster</button>
+    </div>
+
+    <div class="setup-import-bar">
+      <button class="setup-import-btn" onclick="openImportModal()">⬆ Import Player List</button>
+      <span class="setup-import-hint">Paste a list to auto-fill the squad</span>
+    </div>
+
+    <div class="setup-team-row">
+      <div>
+        <div class="setup-col-label" style="margin-bottom:6px">Team Name</div>
+        <input class="setup-input" id="setupTeamName" placeholder="HV Helius" />
+      </div>
+      <div>
+        <div class="setup-col-label" style="margin-bottom:6px">Opponent</div>
+        <input class="setup-input" id="setupOpponent" placeholder="Tegenstander" />
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-title">Goalkeeper</div>
+      <div class="setup-col-labels">
+        <span class="setup-col-label">#</span>
+        <span class="setup-col-label">Name</span>
+        <span class="setup-col-label">Position</span>
+        <span></span>
+      </div>
+      <div class="setup-rows" id="setupGkRows"></div>
+      <button class="setup-add-btn gk" onclick="addSetupRow('gk')">+ Add Goalkeeper</button>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-title">Field Players</div>
+      <div class="setup-col-labels">
+        <span class="setup-col-label">#</span>
+        <span class="setup-col-label">Name</span>
+        <span class="setup-col-label">Position</span>
+        <span></span>
+      </div>
+      <div class="setup-rows" id="setupFieldRows"></div>
+      <button class="setup-add-btn" onclick="addSetupRow('field')">+ Add Field Player</button>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-section-title">Substitutes (Bench)</div>
+      <div class="setup-col-labels">
+        <span class="setup-col-label">#</span>
+        <span class="setup-col-label">Name</span>
+        <span class="setup-col-label">Position</span>
+        <span></span>
+      </div>
+      <div class="setup-rows" id="setupSubRows"></div>
+      <button class="setup-add-btn" onclick="addSetupRow('sub')">+ Add Substitute</button>
+    </div>
+
+    <button class="setup-launch-btn" onclick="launchMatch()">▶ Start Match</button>
+  </div>
+</div>
+<!-- IMPORT MODAL -->
+<div class="import-modal-overlay" id="importModalOverlay">
+  <div class="import-modal">
+    <div class="modal-title">Import Player List</div>
+    <div class="modal-sub">Paste your squad — one player per line.</div>
+    <div class="import-format-hint">
+      Use <code>GK:</code> / <code>Field:</code> / <code>Sub:</code> as section headers.<br>
+      Each line: <code>69 Patrick Wijnands Goalkeeper</code> &nbsp;(number · name · position)<br>
+      Number and position are optional — name alone also works.
+    </div>
+    <textarea class="import-textarea" id="importTextarea" placeholder="GK:&#10;1 Name Goalkeeper&#10;&#10;Field:&#10;2 Name Position&#10;3 Name Position&#10;4 Name Position&#10;&#10;Sub:&#10;5 Name Position&#10;6 Name Position"></textarea>
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeImportModal()">Cancel</button>
+      <button class="modal-btn confirm" onclick="applyImport()">Import Squad</button>
+    </div>
+  </div>
+</div>
+
+<div class="topbar" id="appTopbar" style="display:none">
+  <!-- Left Section: Logo + Reset -->
+  <div class="topbar-left">
+    <div class="topbar-brand">⬡</div>
+    <button class="btn-sm danger" onclick="resetTimer()">🔄 Reset Match</button>
+  </div>
+  
+  <!-- Center Section: Timer, Score, Half Badge -->
+  <div class="topbar-center">
+    <div class="timer-block">
+      <div class="timer-label" id="timerLabel">1st Half</div>
+      <div class="timer-display" id="matchTimer">00:00</div>
+    </div>
+    <div class="scoreboard">
+      <div class="scoreboard-label">Score</div>
+      <div class="scoreboard-row">
+        <div class="scoreboard-score" id="sbHome">0</div>
+        <div class="scoreboard-sep">–</div>
+        <div class="scoreboard-score" id="sbAway">0</div>
+      </div>
+      <div class="scoreboard-teams">
+        <span>Home</span>
+        <span class="team-dash">–</span>
+        <span>Away</span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Right Section: Actions -->
+  <div class="topbar-right">
+    <button class="btn-sm" id="startStopBtn" onclick="toggleTimer()">▶ Start</button>
+    <button class="btn-sm" onclick="switchHalf()">½ Half</button>
+    <button class="btn-sm undo" id="undoBtn" onclick="undoLastAction()" disabled>↩ Undo</button>
+    <a href="watch.html" target="_blank" class="btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">📺 Live</a>
+    <a href="stats.html" target="_blank" class="btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">📊 Stats</a>
+    <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
+    <button class="btn-sm export" onclick="exportToExcel()">⬇ Export</button>
+    <button class="btn-sm signout" onclick="signOut()">Sign Out</button>
+  </div>
+</div>
+
+<!-- HISTORY MODAL -->
+<div class="history-modal-overlay" id="historyModalOverlay">
+  <div class="history-modal">
+    <div class="modal-title">Match History</div>
+    <div class="modal-sub" id="historyModalSub">Saved to your account — up to 20 matches.</div>
+    <div class="history-list" id="historyList"></div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="modal-btn cancel" onclick="closeHistoryModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="appMain" style="display:none">
+
+  <!-- LEFT: STATS -->
+  <div class="sidebar">
+    <div class="sidebar-title">Statistics</div>
+
+    <div class="stat-card">
+      <div class="stat-label">Shot Efficiency</div>
+      <div class="stat-value" id="shotPct">0%<span id="shotFrac">0/0</span></div>
+      <div class="stat-bar-bg">
+        <div class="stat-bar-fill" id="shotBar" style="width:0%;background:var(--accent)"></div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">GK Save Rate</div>
+      <div class="stat-value" id="savePct">0%<span id="saveFrac">0/0</span></div>
+      <div class="stat-bar-bg">
+        <div class="stat-bar-fill" id="saveBar" style="width:0%;background:var(--gk-accent)"></div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Shots on Goal</div>
+      <div class="stat-value" id="shotsOnGoal">0<span>shots</span></div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">Yellow Cards</div>
+      <div class="stat-value" id="yellowCount">0<span>cards</span></div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-label">2-Min Suspensions</div>
+      <div class="stat-value" id="suspCount">0<span>total</span></div>
+    </div>
+
+    <div class="sidebar-title" style="margin-top:4px">GK Shot Zones</div>
+    <div class="heatmap-grid" id="heatmapGrid">
+      <div class="heatmap-cell" id="hm0">0</div>
+      <div class="heatmap-cell" id="hm1">0</div>
+      <div class="heatmap-cell" id="hm2">0</div>
+      <div class="heatmap-cell" id="hm3">0</div>
+      <div class="heatmap-cell" id="hm4">0</div>
+      <div class="heatmap-cell" id="hm5">0</div>
+    </div>
+    <div class="zone-labels">
+      <span>Top L</span><span>Top C</span><span>Top R</span>
+      <span>Bot L</span><span>Bot C</span><span>Bot R</span>
+    </div>
+  </div>
+
+  <!-- CENTER: PLAYERS -->
+  <div class="players-area mobile-active">
+    <!-- Team Names Header (Desktop) -->
+    <div class="team-names-header" id="teamNamesHeader" style="display: none;">
+      <div style="font-family: 'Bebas Neue', cursive; font-size: 24px; letter-spacing: 3px; color: var(--accent); text-align: center; padding: 16px 20px; border-bottom: 2px solid var(--border);">
+        <span id="homeTeamName">Home Team</span>
+        <span style="color: var(--muted); margin: 0 12px;">VS</span>
+        <span id="awayTeamName">Away Team</span>
+      </div>
+    </div>
+    
+    <!-- Mobile-only quick action bar -->
+    <div class="mobile-actions-bar">
+      <!-- Mobile Team Names (shown in More tab) -->
+      <div class="mobile-team-names" id="mobileTeamNames" style="display: none;">
+        <div class="team-vs">
+          <span id="mobileHomeTeam">Home Team</span>
+          <span style="color: var(--muted); margin: 0 8px;">VS</span>
+          <span id="mobileAwayTeam">Away Team</span>
+        </div>
+      </div>
+      
+      <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
+      <button class="btn-sm export" onclick="exportToExcel()">⬇ Export</button>
+      <button class="btn-sm signout" onclick="signOut()" style="display:none" id="mobileSignout">Sign Out</button>
+    </div>
+    <div class="section-header-row">
+      <div class="section-header" style="margin:0">Goalkeeper</div>
+      <div class="section-count" id="gkCount">1 on field</div>
+    </div>
+    <div class="drop-zone" id="gkList" data-zone="gk"></div>
+
+    <div class="section-header-row">
+      <div class="section-header" style="margin:0">Field Players</div>
+      <div class="section-count" id="fieldCount">11 on field</div>
+    </div>
+    <div class="drop-zone" id="playerList" data-zone="field"></div>
+
+    <div class="section-header-row">
+      <div class="section-header" style="margin:0">Substitutions</div>
+      <div class="section-count" id="subCount">0 on bench</div>
+    </div>
+    <div class="drop-zone" id="subList" data-zone="sub"></div>
+  </div>
+
+  <!-- RIGHT: SUSPENSIONS + LOG -->
+  <div class="right-panel">
+    <div class="sidebar-title">Active Suspensions</div>
+    <div class="suspension-list" id="suspensionList">
+      <div class="no-suspensions">No active suspensions</div>
+    </div>
+
+    <div class="sidebar-title" style="margin-top:8px">Event Log</div>
+    <div class="event-log" id="eventLog">
+      <div style="font-size:12px;color:var(--muted);text-align:center;padding:10px">No events yet</div>
+    </div>
+    
+    <!-- Attack Counter -->
+    <div class="attack-counter-container">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+        <div>
+          <div style="font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">Attacks</div>
+          <div style="font-size: 20px; font-weight: 600; color: var(--accent); transition: all 0.15s ease; line-height: 1;" id="attackCounter">0</div>
+        </div>
+        <button onclick="recordAttack()" style="background: var(--accent); color: var(--bg); border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; white-space: nowrap;">
+          +1 Attack
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE MORE SECTION (only visible on mobile in More tab) -->
+<div id="mobileMoreSection" class="mobile-panel" style="display: none;">
+  <style>
+    .mobile-panel {
+      display: none;
+      position: fixed;
+      top: 60px;
+      left: 0;
+      right: 0;
+      bottom: 60px;
+      background: var(--bg);
+      overflow-y: auto;
+      padding: 16px;
+      z-index: 50;
+    }
+    
+    @media (max-width: 768px) {
+      .mobile-panel.mobile-active {
+        display: block !important;
+      }
+    }
+    
+    .more-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .more-section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .more-button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .more-button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    
+    .more-button:active {
+      transform: scale(0.98);
+    }
+    
+    .more-button.danger {
+      background: rgba(255, 59, 59, 0.1);
+      border-color: var(--red);
+      color: var(--red);
+    }
+    
+    .more-button.live {
+      background: rgba(255, 59, 59, 0.15);
+      border-color: var(--red);
+      color: var(--red);
+      font-weight: 700;
+    }
+    
+    .more-button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+    
+    .more-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+  
+  <!-- Team Names -->
+  <div class="more-section">
+    <div style="
+      text-align: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      padding: 8px 0;
+    ">
+      <span id="mobileHomeTeam2">Home Team</span>
+      <span style="color: var(--muted); margin: 0 8px;">vs</span>
+      <span id="mobileAwayTeam2">Away Team</span>
+    </div>
+  </div>
+  
+  <!-- Match Actions -->
+  <div class="more-section">
+    <div class="more-section-title">Match Actions</div>
+    <div class="more-button-group">
+      <button class="more-button danger" onclick="resetTimer()">
+        🔄 Reset Match
+      </button>
+      
+      <button class="more-button" id="mobileUndoBtn" onclick="undoLastAction()" disabled>
+        ↩ Undo Last Action
+      </button>
+      
+      <button class="more-button live" id="mobileLiveBtn" onclick="typeof startLiveMatch === 'function' ? startLiveMatch() : alert('Live broadcasting not available')">
+        🔴 Go Live
+      </button>
+    </div>
+  </div>
+  
+  <!-- Other Actions -->
+  <div class="more-section">
+    <div class="more-section-title">Other Actions</div>
+    <div class="more-button-group">
+      <a href="watch.html" target="_blank" class="more-button" style="text-decoration: none;">
+        📺 Live Matches
+      </a>
+      
+      <a href="stats.html" target="_blank" class="more-button" style="text-decoration: none;">
+        📊 Season Stats
+      </a>
+      
+      <button class="more-button" onclick="openHistoryModal()">
+        📋 Match History
+      </button>
+      
+      <button class="more-button" onclick="exportToExcel()">
+        ⬇ Export to Excel
+      </button>
+      
+      <button class="more-button" onclick="signOut()">
+        🚪 Sign Out
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MOBILE BOTTOM TAB BAR -->
+<div class="mobile-tab-bar" id="mobileTabBar">
+  <button class="mobile-tab active" id="tabPlayers" onclick="switchMobileTab('players')">
+    <span class="tab-icon">👕</span>Players
+  </button>
+  <button class="mobile-tab" id="tabStats" onclick="switchMobileTab('stats')">
+    <span class="tab-icon">📊</span>Stats
+  </button>
+  <button class="mobile-tab" id="tabEvents" onclick="switchMobileTab('events')">
+    <span class="tab-icon">📋</span>Events
+  </button>
+  <button class="mobile-tab" id="tabMore" onclick="switchMobileTab('more')">
+    <span class="tab-icon">⚙️</span>More
+  </button>
+</div>
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title">Shot Placement</div>
+    <div class="modal-sub">Goalkeeper: <span id="gkModalName">—</span></div>
+
+    <div class="shot-type-toggle">
+      <div class="shot-type-btn active" id="btnSave" onclick="setShotType('save')">🧤 Save / Stop</div>
+      <div class="shot-type-btn active" id="btnGoalModal" onclick="setShotType('goal')">🥅 Goal Conceded</div>
+    </div>
+
+    <div class="goal-svg-container">
+      <svg class="goal-svg" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background / pitch -->
+        <rect width="400" height="200" fill="#0d1a0d"/>
+        <!-- Net lines -->
+        <defs>
+          <pattern id="net" width="16" height="16" patternUnits="userSpaceOnUse">
+            <path d="M0,0 L16,16 M16,0 L0,16 M0,8 L16,8 M8,0 L8,16" stroke="rgba(255,255,255,0.07)" stroke-width="0.5" fill="none"/>
+          </pattern>
+        </defs>
+        <!-- Goal frame -->
+        <rect x="20" y="20" width="360" height="160" fill="url(#net)" rx="2"/>
+        <!-- Posts -->
+        <rect x="18" y="18" width="6" height="166" fill="#c8c8c8" rx="2"/>
+        <rect x="376" y="18" width="6" height="166" fill="#c8c8c8" rx="2"/>
+        <rect x="18" y="18" width="364" height="6" fill="#c8c8c8" rx="2"/>
+        <!-- Ground line -->
+        <rect x="18" y="178" width="364" height="6" fill="#4a7c59" rx="1"/>
+        <!-- Zone dividers (visual only) -->
+        <line x1="140" y1="20" x2="140" y2="182" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
+        <line x1="260" y1="20" x2="260" y2="182" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
+        <line x1="20" y1="101" x2="380" y2="101" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
+      </svg>
+      <div class="goal-grid-overlay" id="goalGrid">
+        <div class="goal-cell" data-zone="0" onclick="selectZone(0)"><span class="goal-cell-label">TL</span></div>
+        <div class="goal-cell" data-zone="1" onclick="selectZone(1)"><span class="goal-cell-label">TC</span></div>
+        <div class="goal-cell" data-zone="2" onclick="selectZone(2)"><span class="goal-cell-label">TR</span></div>
+        <div class="goal-cell" data-zone="3" onclick="selectZone(3)"><span class="goal-cell-label">BL</span></div>
+        <div class="goal-cell" data-zone="4" onclick="selectZone(4)"><span class="goal-cell-label">BC</span></div>
+        <div class="goal-cell" data-zone="5" onclick="selectZone(5)"><span class="goal-cell-label">BR</span></div>
+      </div>
+    </div>
+
+    <div class="shooter-row">
+      <span class="shooter-label">👕 Opponent shooter #</span>
+      <input class="shooter-input" id="shooterNumber" type="number" min="1" max="99" placeholder="—" />
+      <span class="shooter-hint">Jersey number (optional)</span>
+    </div>
+
+    <div class="modal-btns">
+      <button class="modal-btn cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn confirm" id="confirmBtn" onclick="confirmShot()">Confirm Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── AUTH & SUPABASE ─────────────────────────────────────
+let currentUser = null;
+let currentAuthTab = 'login';
+
+function switchAuthTab(tab) {
+  currentAuthTab = tab;
+  document.getElementById('tabLogin').className  = 'auth-tab' + (tab==='login'  ? ' active' : '');
+  document.getElementById('tabSignup').className = 'auth-tab' + (tab==='signup' ? ' active' : '');
+  document.getElementById('authSubmit').textContent = tab === 'login' ? 'Sign In' : 'Create Account';
+  document.getElementById('teamNameField').style.display = tab === 'signup' ? 'block' : 'none';
+  clearAuthMessages();
 }
 
-// ============================================================
-// SAVE TO CLOUD
-// ============================================================
+function showAuthError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('authSuccess').classList.remove('show');
+}
+function showAuthSuccess(msg) {
+  const el = document.getElementById('authSuccess');
+  el.textContent = msg; el.classList.add('show');
+  document.getElementById('authError').classList.remove('show');
+}
+function clearAuthMessages() {
+  document.getElementById('authError').classList.remove('show');
+  document.getElementById('authSuccess').classList.remove('show');
+}
 
-async function saveMatchToCloud() {
-  if (!window.currentUser) return;
-  
-  try {
-    // Gather current match state
-    const matchState = {
-      coach_user_id: window.currentUser.id,
-      team_name: document.getElementById('homeTeamName')?.textContent || '',
-      opponent: document.getElementById('awayTeamName')?.textContent || '',
-      timer_seconds: window.matchSeconds || 0,
-      is_timer_running: window.timerRunning || false,
-      current_half: window.currentHalf || 'first',
-      score_home: window.stats?.goals || 0,
-      score_away: window.stats?.goalsAgainst || 0,
-      last_updated: new Date().toISOString(),
-      // Save roster data so we can restore on another device
-      roster_data: window.currentRoster ? JSON.stringify(window.currentRoster) : null,
-      // Save event log
-      event_log: window.eventLog ? JSON.stringify(window.eventLog) : null,
-      // Save player stats
-      player_stats: window.playerStats ? JSON.stringify(window.playerStats) : null
-    };
+async function handleAuth() {
+  const email    = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const teamName = document.getElementById('authTeamName').value.trim();
+  const btn      = document.getElementById('authSubmit');
+
+  if (!email || !password) { showAuthError('Please enter your email and password.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Please wait...';
+  clearAuthMessages();
+
+  if (currentAuthTab === 'login') {
+    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+    if (error) { showAuthError(error.message); btn.disabled = false; btn.textContent = 'Sign In'; return; }
+    onSignedIn(data.user);
+  } else {
+    // CHECK EMAIL WHITELIST BEFORE SIGNUP
+    const { data: approvedData, error: approvedError } = await _supabase
+      .from('approved_emails')
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .eq('is_active', true)
+      .single();
     
-    // Skip if empty match
-    if (!matchState.team_name && !matchState.opponent) {
+    if (approvedError || !approvedData) {
+      showAuthError('Dit emailadres is niet geregistreerd. Ga naar handball-tracker.com om je aan te melden.');
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
       return;
     }
     
-    // Check if row exists
-    const { data: existing } = await _supabase
-      .from('current_match')
-      .select('id')
-      .eq('coach_user_id', window.currentUser.id)
-      .maybeSingle();
-    
-    if (existing) {
-      // Update existing
-      await _supabase
-        .from('current_match')
-        .update(matchState)
-        .eq('coach_user_id', window.currentUser.id);
-    } else {
-      // Insert new
-      await _supabase
-        .from('current_match')
-        .insert(matchState);
-    }
-    
-    lastSyncTime = Date.now();
-    
-  } catch (error) {
-    console.error('Sync error:', error);
-  }
-}
-
-// ============================================================
-// LOAD FROM CLOUD
-// ============================================================
-
-async function loadMatchFromCloud() {
-  // Guard: Don't run if no user
-  if (!window.currentUser) {
-    console.log('⚠️ loadMatchFromCloud called but no user - skipping');
-    return false;
-  }
-  
-  console.log('🔍 Loading match for user:', window.currentUser.id);
-  
-  try {
-    const { data, error } = await _supabase
-      .from('current_match')
-      .select('*')
-      .eq('coach_user_id', window.currentUser.id)
-      .maybeSingle();
-    
-    if (error) throw error;
-    if (!data) {
-      console.log('ℹ️ No active match found in cloud');
-      return false;
-    }
-    
-    // Check if empty match
-    if (!data.team_name && !data.opponent) {
-      return false;
-    }
-    
-    // Ask user if they want to continue the match
-    const matchDesc = `${data.team_name || 'Team'} vs ${data.opponent || 'Opponent'}`;
-    const mins = Math.floor(data.timer_seconds / 60);
-    const secs = data.timer_seconds % 60;
-    const timeDesc = `${mins}:${secs.toString().padStart(2, '0')}`;
-    
-    const doContinue = confirm(
-      `Continue your match from another device?\n\n` +
-      `${matchDesc}\n` +
-      `Time: ${timeDesc}\n` +
-      `Score: ${data.score_home}-${data.score_away}\n\n` +
-      `Click OK to continue, or Cancel to start a new match.`
-    );
-    
-    if (!doContinue) {
-      // User wants to start fresh
-      await clearMatchFromCloud();
-      return false;
-    }
-    
-    // Restore the match with saved roster data
-    if (data.roster_data) {
-      try {
-        const rosterData = JSON.parse(data.roster_data);
-        
-        // Call restoreMatchState which will launch the match
-        if (window.restoreMatchState) {
-          window.restoreMatchState(data, rosterData);
-          return true;
-        }
-      } catch (err) {
-        console.error('Failed to parse roster data:', err);
+    const { data, error } = await _supabase.auth.signUp({
+      email, password,
+      options: {
+        emailRedirectTo: 'https://jermous3.github.io/Handball-App-v2/'
       }
+    });
+    if (error) { showAuthError(error.message); btn.disabled = false; btn.textContent = 'Create Account'; return; }
+    // Save team name to profile (use club_name from whitelist if no team name provided)
+    const finalTeamName = teamName || approvedData.club_name;
+    if (finalTeamName && data.user) {
+      await _supabase.from('profiles').update({ team_name: finalTeamName }).eq('id', data.user.id);
     }
-    
-    // No roster data - just pre-fill team names
-    if (window.restoreMatchState) {
-      window.restoreMatchState(data);
+    // If session exists immediately, email confirmation is off — log straight in
+    if (data.session) {
+      onSignedIn(data.user);
+    } else {
+      // Confirmation email sent — switch to login tab and show message
+      switchAuthTab('login');
+      document.getElementById('authEmail').value = email;
+      showAuthSuccess('✓ Account created! Check your email to confirm, then sign in here.');
+      btn.disabled = false; btn.textContent = 'Create Account';
     }
-    
-    return false;
-    
-  } catch (error) {
-    console.error('Load error:', error);
-    return false;
   }
 }
 
-// ============================================================
-// CLEAR CLOUD MATCH
-// ============================================================
+// Expose to window for onclick handlers (replaces early stub)
+window.handleAuth = handleAuth;
+console.log('✅ Real handleAuth function loaded and assigned to window');
 
-async function clearMatchFromCloud() {
-  if (!window.currentUser) return;
-  
-  try {
-    await _supabase
-      .from('current_match')
-      .delete()
-      .eq('coach_user_id', window.currentUser.id);
-  } catch (error) {
-    console.error('Clear error:', error);
+// Allow Enter key to submit auth form
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !document.getElementById('authScreen').classList.contains('hidden')) {
+    handleAuth();
   }
-}
+});
 
-// ============================================================
-// AUTO-SAVE
-// ============================================================
-
-function startAutoSave() {
-  stopAutoSave();
+async function onSignedIn(user) {
+  // CHECK EMAIL WHITELIST - Verify user still has access
+  const { data: approvedData, error: approvedError } = await _supabase
+    .from('approved_emails')
+    .select('*')
+    .eq('email', user.email.toLowerCase())
+    .eq('is_active', true)
+    .single();
   
-  syncInterval = setInterval(() => {
-    saveMatchToCloud();
-  }, 5000); // Every 5 seconds
-  
-  console.log('✅ Auto-save enabled (every 5s)');
-  
-  // Also start realtime sync
-  startRealtimeSync();
-}
-
-function stopAutoSave() {
-  if (syncInterval) {
-    clearInterval(syncInterval);
-    syncInterval = null;
-  }
-  
-  if (realtimeChannel) {
-    realtimeChannel.unsubscribe();
-    realtimeChannel = null;
-    console.log('📡 Realtime sync stopped');
-  }
-}
-
-// ============================================================
-// REALTIME SYNC (Optional - can be added later)
-// ============================================================
-
-function startRealtimeSync() {
-  if (!window.currentUser) {
-    console.log('⚠️ Cannot start realtime - no user');
+  if (approvedError || !approvedData) {
+    // User's access has been revoked
+    await _supabase.auth.signOut();
+    showAuthError('Je toegang is verlopen of ingetrokken. Neem contact op met handball-tracker.com');
     return;
   }
   
-  // Don't subscribe twice
-  if (realtimeChannel) {
-    console.log('ℹ️ Realtime already active');
-    return realtimeChannel;
+  currentUser = user;
+  window.currentUser = user; // Expose for external modules like live-broadcast-module.js
+  
+  // Hide auth screen first
+  document.getElementById('authScreen').classList.add('hidden');
+  
+  // Try to load active match from cloud
+  console.log('🔐 Checking for active match...');
+  const matchRestored = await loadMatchFromCloud();
+  
+  if (matchRestored) {
+    console.log('✅ Match restored from cloud');
+    return; // Match was restored, don't show setup screen
   }
   
-  console.log('📡 Starting realtime sync for user:', window.currentUser.id);
-  
-  const channel = _supabase
-    .channel('match_sync')
-    .on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'current_match',
-      filter: `coach_user_id=eq.${window.currentUser.id}`
-    }, (payload) => {
-      // Ignore if this update came from our own save (within 2 seconds)
-      const timeSinceOurSave = Date.now() - lastSyncTime;
-      if (timeSinceOurSave < 2000) {
-        console.log('⏭️ Ignoring - this was our own update (' + timeSinceOurSave + 'ms ago)');
-        return;
-      }
-      
-      console.log('📱 UPDATE FROM OTHER DEVICE!');
-      console.log('   Score:', payload.new.score_home, '-', payload.new.score_away);
-      console.log('   Timer:', payload.new.timer_seconds, 'seconds');
-      
-      // Update score
-      if (window.stats) {
-        window.stats.goals = payload.new.score_home;
-        window.stats.goalsAgainst = payload.new.score_away;
-      }
-      
-      // Update timer
-      window.matchSeconds = payload.new.timer_seconds;
-      window.timerRunning = payload.new.is_timer_running;
-      window.timerPausedAt = payload.new.timer_seconds; // Important for when timer starts
-      window.timerStartTime = null; // Reset start time
-      window.currentHalf = payload.new.current_half;
-      
-      // Update UI
-      if (typeof window.updateScoreboard === 'function') {
-        window.updateScoreboard();
-      }
-      if (typeof window.updateTimerDisplay === 'function') {
-        window.updateTimerDisplay();
-      }
-      
-      console.log('✅ UI updated from other device');
-    })
-    .subscribe((status) => {
-      console.log('📡 Realtime subscription status:', status);
-      if (status === 'SUBSCRIBED') {
-        console.log('✅ REALTIME SYNC ACTIVE - Changes will sync between devices!');
-      } else if (status === 'CHANNEL_ERROR') {
-        console.error('❌ Realtime subscription FAILED!');
-      }
-    });
-  
-  realtimeChannel = channel;
-  return channel;
+  // Only show setup screen if no active match was restored
+  if (!matchRestored) {
+    console.log('ℹ️ Showing setup screen (matchRestored = false)');
+    document.getElementById('setupScreen').classList.remove('hidden');
+
+    // Check for saved roster
+    const { data } = await _supabase.from('rosters').select('*').eq('user_id', user.id).maybeSingle();
+    const rosterBar = document.getElementById('rosterBar');
+    const rosterInfo = document.getElementById('rosterBarInfo');
+    rosterBar.style.display = 'flex';
+    if (data) {
+      const players = data.players || [];
+      const updated = new Date(data.updated_at).toLocaleDateString('en-GB');
+      rosterInfo.innerHTML = `<strong>${data.name}</strong> — ${players.length} players saved &nbsp;·&nbsp; Last updated ${updated}`;
+    } else {
+      rosterInfo.innerHTML = 'No saved roster yet — fill in your squad and click <strong>↑ Save Roster</strong>';
+      document.getElementById('rosterBar').querySelector('button:first-child').style.display = 'none';
+    }
+  } // end if (!matchRestored)
 }
 
-// ============================================================
-// EXPOSE TO WINDOW
-// ============================================================
+async function signOut() {
+  // Stop auto-saving
+  if (typeof stopAutoSave === 'function') {
+    stopAutoSave();
+  }
+  
+  await _supabase.auth.signOut();
+  currentUser = null;
+  window.currentUser = null; // Clear for external modules
+  document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('appTopbar').style.display = 'none';
+  document.getElementById('appMain').style.display = 'none';
+}
 
-window.saveMatchToCloud = saveMatchToCloud;
-window.loadMatchFromCloud = loadMatchFromCloud;
-window.clearMatchFromCloud = clearMatchFromCloud;
-window.startAutoSave = startAutoSave;
-window.stopAutoSave = stopAutoSave;
-window.startRealtimeSync = startRealtimeSync;
+// ─── ROSTER CLOUD SAVE / LOAD ────────────────────────────
+function collectCurrentRoster() {
+  return {
+    gk:      readSetupRows('setupGkRows'),
+    players: readSetupRows('setupFieldRows'),
+    subs:    readSetupRows('setupSubRows'),
+  };
+}
 
-console.log('✅ Cross-device sync ready');
+async function saveRosterToCloud() {
+  if (!currentUser) return;
+  const roster = collectCurrentRoster();
+  // Tag each player with their section so loading is always exact
+  const allPlayers = [
+    ...roster.gk.map(p      => ({ ...p, _zone: 'gk' })),
+    ...roster.players.map(p => ({ ...p, _zone: 'field' })),
+    ...roster.subs.map(p    => ({ ...p, _zone: 'sub' })),
+  ];
+  const teamName = document.getElementById('setupTeamName').value.trim() || 'My Team';
+  const rosterInfo = document.getElementById('rosterBarInfo');
+  rosterInfo.innerHTML = '💾 Saving...';
+
+  const { data: existing } = await _supabase.from('rosters').select('id').eq('user_id', currentUser.id).maybeSingle();
+  let error;
+  if (existing) {
+    ({ error } = await _supabase.from('rosters').update({
+      name: teamName, players: allPlayers, updated_at: new Date().toISOString()
+    }).eq('user_id', currentUser.id));
+  } else {
+    ({ error } = await _supabase.from('rosters').insert({
+      user_id: currentUser.id, name: teamName, players: allPlayers
+    }));
+  }
+
+  if (error) {
+    rosterInfo.innerHTML = '❌ Save failed — ' + error.message;
+  } else {
+    rosterInfo.innerHTML = `<strong>${teamName}</strong> — ${allPlayers.length} players saved &nbsp;·&nbsp; Just now`;
+    document.getElementById('rosterBar').querySelector('button:first-child').style.display = '';
+  }
+}
+
+async function loadSavedRoster() {
+  if (!currentUser) return;
+  const { data, error } = await _supabase.from('rosters').select('*').eq('user_id', currentUser.id).maybeSingle();
+  if (error || !data) { alert('Could not load roster.'); return; }
+
+  document.getElementById('setupGkRows').innerHTML = '';
+  document.getElementById('setupFieldRows').innerHTML = '';
+  document.getElementById('setupSubRows').innerHTML = '';
+
+  const players = data.players || [];
+  players.forEach(p => {
+    // Use saved _zone tag first, fall back to position keyword for old saves
+    let zone = p._zone;
+    if (!zone) {
+      const posLower = (p.pos || '').toLowerCase();
+      if (posLower.includes('goal') || posLower === 'gk') zone = 'gk';
+      else if (posLower.includes('sub') || posLower.includes('bench') || posLower.includes('wissel')) zone = 'sub';
+      else zone = 'field';
+    }
+    addSetupRow(zone, p.num, p.name, p.pos);
+  });
+
+  if (data.name && data.name !== 'My Team') {
+    document.getElementById('setupTeamName').value = data.name;
+  }
+}
+
+// ─── MATCH CLOUD SAVE ────────────────────────────────────
+async function saveMatchToSupabase(matchData) {
+  if (!currentUser) return;
+  setCloudStatus('saving', '☁ Saving...');
+  const { error } = await _supabase.from('matches').insert({
+    user_id:       currentUser.id,
+    team_name:     matchData.teamName,
+    opponent:      matchData.opponent,
+    goals_for:     matchData.goalsFor,
+    goals_against: matchData.goalsAgainst,
+    shots:         matchData.shots,
+    shot_pct:      matchData.shotPct,
+    saves:         matchData.saves,
+    save_pct:      matchData.savePct,
+    yellows:       matchData.yellows,
+    suspensions:   matchData.suspensions || 0,
+    attacks:       matchData.attacks || 0,
+    event_log:     matchData.eventLog || [],
+    player_stats:  matchData.playerStats || {},
+  });
+  if (error) {
+    setCloudStatus('error', '❌ Save failed');
+    console.error('Match save error:', error);
+    
+    // Log error to Supabase
+    logError('match_save_failed', error, {
+      matchData: {
+        teamName: matchData.teamName,
+        opponent: matchData.opponent,
+        goalsFor: matchData.goalsFor,
+        goalsAgainst: matchData.goalsAgainst,
+        attacks: matchData.attacks,
+      },
+      userId: currentUser?.id,
+      timestamp: new Date().toISOString()
+    });
+  } else {
+    setCloudStatus('saved', '✓ Saved');
+    setTimeout(() => setCloudStatus('', ''), 3000);
+  }
+}
+
+function setCloudStatus(state, msg) {
+  const el = document.getElementById('cloudStatus');
+  el.textContent = msg;
+  el.className = 'cloud-status' + (state ? ' ' + state : '');
+}
+
+// ─── CLOUD MATCH HISTORY ─────────────────────────────────
+async function loadCloudHistory() {
+  if (!currentUser) return loadHistory(); // fall back to localStorage
+  const { data, error } = await _supabase
+    .from('matches')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('played_at', { ascending: false })
+    .limit(20);
+  if (error || !data) return loadHistory();
+  return data.map(m => ({
+    id: m.id,
+    date: new Date(m.played_at).toLocaleDateString('en-GB'),
+    teamName: m.team_name,
+    opponent: m.opponent,
+    goalsFor: m.goals_for,
+    goalsAgainst: m.goals_against,
+    shots: m.shots,
+    shotPct: m.shot_pct,
+    saves: m.saves,
+    savePct: m.save_pct,
+    yellows: m.yellows,
+  }));
+}
+
+async function deleteCloudEntry(id) {
+  if (!currentUser) { deleteHistoryEntry(id); return; }
+  await _supabase.from('matches').delete().eq('id', id).eq('user_id', currentUser.id);
+  renderHistoryList();
+}
+
+// ─── SESSION RESTORE + EMAIL CONFIRMATION HANDLER ────────
+// Supabase puts tokens in the URL hash after email confirmation.
+// We detect and exchange them here before checking for a session.
+(async function checkSession() {
+  // Parse hash fragment — Supabase uses both #access_token (implicit)
+  // and ?code= (PKCE) flows depending on version
+  const hash   = window.location.hash;
+  const search = window.location.search;
+
+  // Handle implicit flow: #access_token=...&type=signup (or recovery)
+  if (hash && hash.includes('access_token')) {
+    try {
+      const { data, error } = await _supabase.auth.getSession();
+      // Clean the URL so tokens don't stay in the address bar
+      window.history.replaceState(null, '', window.location.pathname);
+      if (data?.session?.user) {
+        onSignedIn(data.session.user);
+        return;
+      }
+    } catch(e) {}
+  }
+
+  // Handle PKCE flow: ?code=...
+  if (search && search.includes('code=')) {
+    try {
+      const { data, error } = await _supabase.auth.exchangeCodeForSession(
+        new URLSearchParams(search).get('code')
+      );
+      window.history.replaceState(null, '', window.location.pathname);
+      if (data?.session?.user) {
+        onSignedIn(data.session.user);
+        return;
+      }
+    } catch(e) {}
+  }
+
+  // Normal session check (already logged in)
+  const { data: { session } } = await _supabase.auth.getSession();
+  if (session?.user) {
+    onSignedIn(session.user);
+  }
+})();
+
+// ─── TEAM SETUP ──────────────────────────────────────────
+let setupIdCounter = 100;
+
+const defaultRoster = { gk: [], players: [], subs: [] };
+
+function makeSetupRow(section, num='', name='', pos='') {
+  const id = ++setupIdCounter;
+  const isGk = section === 'gk';
+  const div = document.createElement('div');
+  div.className = 'setup-row';
+  div.dataset.rowId = id;
+  div.innerHTML = `
+    <input class="setup-input${isGk?' gk-input':''}" placeholder="#" value="${num}" data-field="num" style="text-align:center" />
+    <input class="setup-input${isGk?' gk-input':''}" placeholder="Full name" value="${name}" data-field="name" />
+    <input class="setup-input${isGk?' gk-input':''}" placeholder="Position" value="${pos}" data-field="pos" />
+    <button class="setup-remove-btn" onclick="removeSetupRow('${section}',${id})">×</button>
+  `;
+  return div;
+}
+
+function addSetupRow(section, num='', name='', pos='') {
+  const containerId = section === 'gk' ? 'setupGkRows' : section === 'field' ? 'setupFieldRows' : 'setupSubRows';
+  document.getElementById(containerId).appendChild(makeSetupRow(section, num, name, pos));
+}
+
+function removeSetupRow(section, rowId) {
+  const containerId = section === 'gk' ? 'setupGkRows' : section === 'field' ? 'setupFieldRows' : 'setupSubRows';
+  const row = document.querySelector(`#${containerId} [data-row-id="${rowId}"]`);
+  if (row) row.remove();
+}
+
+function readSetupRows(containerId) {
+  const rows = document.querySelectorAll(`#${containerId} .setup-row`);
+  const result = [];
+  rows.forEach(row => {
+    const num  = row.querySelector('[data-field="num"]').value.trim();
+    const name = row.querySelector('[data-field="name"]').value.trim();
+    const pos  = row.querySelector('[data-field="pos"]').value.trim();
+    if (name || num) result.push({ num: parseInt(num)||0, name: name||'Player', pos: pos||'—' });
+  });
+  return result;
+}
+
+function launchMatch() {
+  const gkList    = readSetupRows('setupGkRows');
+  const fieldList = readSetupRows('setupFieldRows');
+  const subList   = readSetupRows('setupSubRows');
+
+  if (gkList.length === 0 && fieldList.length === 0) {
+    alert('Please add at least one player before starting.');
+    return;
+  }
+
+  // Assign sequential IDs
+  let idSeq = 1;
+  const rosterData = {
+    gk:      gkList.map(p    => ({ ...p, id: idSeq++ })),
+    players: fieldList.map(p => ({ ...p, id: idSeq++ })),
+    subs:    subList.map(p   => ({ ...p, id: idSeq++ })),
+  };
+
+  // Update team name in topbar if provided
+  const teamName = document.getElementById('setupTeamName').value.trim();
+  const opponent = document.getElementById('setupOpponent').value.trim();
+  
+  // Expose team names globally for cross-device sync
+  window.teamName = teamName;
+  window.opponent = opponent;
+  
+  // Update team names header above player list (desktop)
+  const homeNameEl = document.getElementById('homeTeamName');
+  const awayNameEl = document.getElementById('awayTeamName');
+  const teamHeaderEl = document.getElementById('teamNamesHeader');
+  
+  if (homeNameEl) homeNameEl.textContent = teamName || 'Home Team';
+  if (awayNameEl) awayNameEl.textContent = opponent || 'Away Team';
+  if (teamHeaderEl) teamHeaderEl.style.display = 'block';
+  
+  // Update mobile team names
+  const mobileHomeEl = document.getElementById('mobileHomeTeam');
+  const mobileAwayEl = document.getElementById('mobileAwayTeam');
+  const mobileHomeEl2 = document.getElementById('mobileHomeTeam2');
+  const mobileAwayEl2 = document.getElementById('mobileAwayTeam2');
+  if (mobileHomeEl) mobileHomeEl.textContent = teamName || 'Home Team';
+  if (mobileAwayEl) mobileAwayEl.textContent = opponent || 'Away Team';
+  if (mobileHomeEl2) mobileHomeEl2.textContent = teamName || 'Home Team';
+  if (mobileAwayEl2) mobileAwayEl2.textContent = opponent || 'Away Team';
+  
+  // Update scoreboard labels (now has 3 spans: team1, dash, team2)
+  const labels = document.querySelectorAll('.scoreboard-teams span');
+  if (labels.length >= 2) {
+    labels[0].textContent = teamName || 'Home';
+    labels[2].textContent = opponent || 'Away'; // Index 2 because index 1 is the dash
+  }
+
+  initMatch(rosterData);
+  
+  // Store roster data globally for cross-device sync
+  window.currentRoster = rosterData;
+  
+  // Start auto-save for cross-device sync
+  if (typeof startAutoSave === 'function') {
+    startAutoSave();
+  }
+  
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('appTopbar').style.display = '';
+  document.getElementById('appMain').style.display = '';
+}
+
+// Pre-populate setup screen with default roster
+(function populateSetup() {
+  addSetupRow('gk');
+  addSetupRow('field');
+  addSetupRow('field');
+  addSetupRow('sub');
+})();
+
+// ─── IMPORT MODAL ────────────────────────────────────────
+function openImportModal() {
+  document.getElementById('importTextarea').value = '';
+  document.getElementById('importModalOverlay').classList.add('open');
+}
+
+function closeImportModal() {
+  document.getElementById('importModalOverlay').classList.remove('open');
+}
+
+function applyImport() {
+  const raw = document.getElementById('importTextarea').value;
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Clear all existing rows
+  document.getElementById('setupGkRows').innerHTML = '';
+  document.getElementById('setupFieldRows').innerHTML = '';
+  document.getElementById('setupSubRows').innerHTML = '';
+
+  let currentSection = 'field';
+
+  lines.forEach(line => {
+    const lower = line.toLowerCase().replace(/:$/, '');
+    if (['gk','goalkeeper','goalkeepers'].includes(lower)) { currentSection = 'gk'; return; }
+    if (['field','players','veld'].includes(lower))        { currentSection = 'field'; return; }
+    if (['sub','subs','bench','wissel','wissels'].includes(lower)) { currentSection = 'sub'; return; }
+
+    // Parse: optional leading number, name words, optional trailing position word
+    const parts = line.split(/\s+/);
+    let num = '', name = '', pos = '';
+    if (/^\d+$/.test(parts[0])) {
+      num = parts[0];
+      const rest = parts.slice(1);
+      if (rest.length >= 2) { pos = rest[rest.length - 1]; name = rest.slice(0, -1).join(' '); }
+      else { name = rest.join(' '); }
+    } else {
+      if (parts.length >= 2) { pos = parts[parts.length - 1]; name = parts.slice(0, -1).join(' '); }
+      else { name = parts[0]; }
+    }
+    if (name) addSetupRow(currentSection, num, name, pos);
+  });
+
+  closeImportModal();
+}
+
+document.getElementById('importModalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeImportModal();
+});
+
+// ─── MOBILE TAB NAVIGATION ───────────────────────────────
+function switchMobileTab(tab) {
+  // Only applies on mobile
+  if (window.innerWidth > 768) return;
+
+  // Update tab button states
+  ['players','stats','events','more'].forEach(t => {
+    const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+
+  // Show/hide panels
+  const playersArea = document.querySelector('.players-area');
+  const sidebar     = document.querySelector('.sidebar');
+  const rightPanel  = document.querySelector('.right-panel');
+  const moreSection = document.getElementById('mobileMoreSection');
+
+  playersArea.classList.remove('mobile-active');
+  sidebar.classList.remove('mobile-active');
+  rightPanel.classList.remove('mobile-active');
+  if (moreSection) moreSection.classList.remove('mobile-active');
+
+  if (tab === 'players') {
+    playersArea.classList.add('mobile-active');
+    document.getElementById('mobileSignout').style.display = 'none';
+    document.getElementById('mobileTeamNames').style.display = 'none';
+  } else if (tab === 'stats') {
+    sidebar.classList.add('mobile-active');
+  } else if (tab === 'events') {
+    rightPanel.classList.add('mobile-active');
+  } else if (tab === 'more') {
+    // Show More tab - custom section with action buttons
+    const moreSection = document.getElementById('mobileMoreSection');
+    if (moreSection) {
+      moreSection.classList.add('mobile-active');
+    }
+    document.getElementById('mobileSignout').style.display = 'none';
+    document.getElementById('mobileTeamNames').style.display = 'block';
+  }
+}
+
+// On mobile, initialise with players tab active
+function initMobileLayout() {
+  if (window.innerWidth <= 768) {
+    switchMobileTab('players');
+  }
+}
+
+// ─── RESTORE MATCH STATE (for cross-device sync) ────────
+window.restoreMatchState = function(data, rosterData = null) {
+  console.log('🔄 Restoring match from cloud...');
+  console.log('   Has roster data:', !!rosterData);
+  
+  if (rosterData) {
+    // Full restore with roster - actually launch the match
+    console.log('   ✅ Roster data found - launching match');
+    
+    // Set team names
+    window.teamName = data.team_name || 'Team';
+    window.opponent = data.opponent || 'Opponent';
+    console.log('   Team names:', window.teamName, 'vs', window.opponent);
+    
+    // Update all team name elements
+    const homeEls = document.querySelectorAll('#homeTeamName, #mobileHomeTeam, #mobileHomeTeam2');
+    const awayEls = document.querySelectorAll('#awayTeamName, #mobileAwayTeam, #mobileAwayTeam2');
+    homeEls.forEach(el => el.textContent = window.teamName);
+    awayEls.forEach(el => el.textContent = window.opponent);
+    
+    // Update scoreboard labels
+    const labels = document.querySelectorAll('.scoreboard-teams span');
+    if (labels.length >= 2) {
+      labels[0].textContent = window.teamName;
+      labels[2].textContent = window.opponent;
+    }
+    
+    console.log('   Calling initMatch with roster...');
+    // Launch the match with saved roster
+    initMatch(rosterData);
+    window.currentRoster = rosterData;
+    console.log('   ✅ initMatch complete');
+    
+    // Restore match state - set both local and window variables
+    window.matchSeconds = data.timer_seconds || 0;
+    window.timerRunning = data.is_timer_running || false;
+    window.timerPausedAt = data.timer_seconds || 0;
+    window.timerStartTime = null;
+    window.currentHalf = data.current_half || 'first';
+    
+    console.log('   Timer restored:', window.matchSeconds, 'seconds, running:', window.timerRunning);
+    
+    if (window.stats) {
+      window.stats.goals = data.score_home || 0;
+      window.stats.goalsAgainst = data.score_away || 0;
+      console.log('   Score restored:', window.stats.goals, '-', window.stats.goalsAgainst);
+    }
+    
+    // Restore event log
+    if (data.event_log) {
+      try {
+        window.eventLog = JSON.parse(data.event_log);
+        console.log('   Event log restored:', window.eventLog.length, 'events');
+      } catch (err) {
+        console.error('   Failed to parse event log:', err);
+      }
+    }
+    
+    // Restore player stats
+    if (data.player_stats) {
+      try {
+        window.playerStats = JSON.parse(data.player_stats);
+        console.log('   Player stats restored');
+      } catch (err) {
+        console.error('   Failed to parse player stats:', err);
+      }
+    }
+    
+    // Force timer display update
+    const m = Math.floor(window.matchSeconds / 60);
+    const s = window.matchSeconds % 60;
+    const pad = (n) => String(n).padStart(2, '0');
+    const timerEl = document.getElementById('matchTimer');
+    if (timerEl) {
+      timerEl.textContent = `${pad(m)}:${pad(s)}`;
+      console.log('   ✅ Timer display forced to:', timerEl.textContent);
+    }
+    
+    // Update scoreboard
+    if (typeof window.updateScoreboard === 'function') {
+      window.updateScoreboard();
+    }
+    
+    // Call renderPlayers to show the player list
+    if (typeof window.renderPlayers === 'function') {
+      window.renderPlayers();
+      console.log('   ✅ Players rendered');
+    }
+    
+    // Call renderEventLog to show the events
+    if (typeof window.renderEventLog === 'function') {
+      window.renderEventLog();
+      console.log('   ✅ Event log rendered');
+    }
+    
+    console.log('   UI updated');
+    
+    // Show the app
+    console.log('   Showing app screen...');
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('setupScreen').classList.add('hidden');
+    document.getElementById('appTopbar').style.display = '';
+    document.getElementById('appMain').style.display = '';
+    console.log('   ✅ App screen visible');
+    
+    // Start auto-save
+    if (typeof startAutoSave === 'function') {
+      startAutoSave();
+      console.log('   ✅ Auto-save started');
+    }
+    
+    console.log('✅ Match fully restored!');
+    
+  } else {
+    // Partial restore - just pre-fill setup screen
+    console.log('   ⚠️ No roster data - pre-filling setup screen');
+    
+    const teamNameInput = document.getElementById('setupTeamName');
+    const opponentInput = document.getElementById('setupOpponent');
+    
+    if (teamNameInput) teamNameInput.value = data.team_name || '';
+    if (opponentInput) opponentInput.value = data.opponent || '';
+    
+    console.log('ℹ️ Team names pre-filled. User can load their roster and continue.');
+  }
+};
+
+// ─── MATCH INIT (called after setup) ────────────────────
+function initMatch(rosterData) {
+
+const stats = {
+  goals: 0, shots: 0, assists: 0,
+  yellows: 0, suspensions: 0, redCards: 0,
+  saves: 0, goalsAgainst: 0,
+  zones: [0,0,0,0,0,0],
+  attacks: 0, // New: track number of attacks
+};
+
+const playerStats = {};
+[...rosterData.gk, ...rosterData.players, ...rosterData.subs].forEach(p => {
+  playerStats[p.id] = { goals:0, shots:0, assists:0, yellows:0, suspensions:0, redCard:false, saves:0 };
+});
+
+// ─── ZONE TRACKING ──────────────────────────────────────
+const playerZone = {};
+rosterData.gk.forEach(p      => playerZone[p.id] = 'gk');
+rosterData.players.forEach(p => playerZone[p.id] = 'field');
+rosterData.subs.forEach(p    => playerZone[p.id] = 'sub');
+
+const allPlayersById = {};
+window.allPlayersById = allPlayersById;
+
+function getPlayerById(id){ return window.allPlayersById[id]; }
+function recordGoalById(id){ recordGoal(getPlayerById(id)); }
+function recordShotById(id){ recordShot(getPlayerById(id)); }
+function recordAssistById(id){ recordAssist(getPlayerById(id)); }
+function recordYellowById(id){ recordYellow(getPlayerById(id)); }
+function recordSuspensionById(id){ recordSuspension(getPlayerById(id)); }
+function recordRedById(id){ recordRed(getPlayerById(id)); }
+function openGkModalById(id){ openGkModal(getPlayerById(id)); }
+
+window.toggleTimer = toggleTimer;
+window.resetTimer = resetTimer;
+window.switchHalf = switchHalf;
+window.recordGoalById = recordGoalById;
+window.recordShotById = recordShotById;
+window.recordAssistById = recordAssistById;
+window.recordYellowById = recordYellowById;
+window.recordSuspensionById = recordSuspensionById;
+window.recordRedById = recordRedById;
+window.openGkModalById = openGkModalById;
+window.setShotType = setShotType;
+window.selectZone = selectZone;
+window.confirmShot = confirmShot;
+window.closeModal = closeModal;
+window.undoLastAction = undoLastAction;
+window.pushUndo = pushUndo;
+window.openHistoryModal = openHistoryModal;
+window.closeHistoryModal = closeHistoryModal;
+window.deleteHistoryEntry = deleteHistoryEntry;
+
+[...rosterData.gk, ...rosterData.players, ...rosterData.subs].forEach(p => allPlayersById[p.id] = p);
+
+const activeSuspensions = [];
+const eventLog = [];
+const undoStack = []; // each entry: { applyUndo: fn }
+
+// Expose variables globally for cross-device sync
+window.currentPlayers = [...rosterData.gk, ...rosterData.players, ...rosterData.subs];
+window.stats = stats;
+window.playerStats = playerStats;
+window.playerZone = playerZone;
+window.undoStack = undoStack;
+window.eventLog = eventLog;
+window.activeSuspensions = activeSuspensions;
+
+function pushUndo(fn) {
+  undoStack.push({ applyUndo: fn });
+  if (undoStack.length > 30) undoStack.shift();
+  const undoBtn = document.getElementById('undoBtn');
+  const mobileUndoBtn = document.getElementById('mobileUndoBtn');
+  if (undoBtn) undoBtn.disabled = false;
+  if (mobileUndoBtn) mobileUndoBtn.disabled = false;
+}
+window.pushUndo = pushUndo; // Expose immediately
+
+function undoLastAction() {
+  if (!undoStack.length) return;
+  const entry = undoStack.pop();
+  entry.applyUndo();
+  if (!undoStack.length) {
+    const undoBtn = document.getElementById('undoBtn');
+    const mobileUndoBtn = document.getElementById('mobileUndoBtn');
+    if (undoBtn) undoBtn.disabled = true;
+    if (mobileUndoBtn) mobileUndoBtn.disabled = true;
+  }
+  updateStats();
+  updateScoreboard();
+  renderPlayers();
+  renderEventLog();
+  
+  // LIVE BROADCASTING - Sync score after undo
+  if (typeof updateLiveScore === 'function' && isLiveBroadcasting) {
+    updateLiveScore();
+  }
+}
+
+// ─── TIMER ───────────────────────────────────────────────
+let matchSeconds = 0;
+let timerRunning = false;
+let timerInterval = null;
+let currentHalf = 1;
+let timerStartTime = null; // Store when timer was started
+let timerPausedAt = 0; // Store accumulated seconds when paused
+
+// Expose ALL timer variables to window for cross-device sync
+window.matchSeconds = matchSeconds;
+window.timerRunning = timerRunning;
+window.currentHalf = currentHalf;
+window.timerInterval = timerInterval;
+window.timerStartTime = timerStartTime;
+window.timerPausedAt = timerPausedAt;
+
+// Load timer state from localStorage on init
+function loadTimerState() {
+  try {
+    const saved = localStorage.getItem('handballtrack_timer');
+    if (saved) {
+      const state = JSON.parse(saved);
+      timerRunning = state.running || false;
+      timerStartTime = state.startTime || null;
+      timerPausedAt = state.pausedAt || 0;
+      currentHalf = state.half || 1;
+      
+      // If timer was running, calculate elapsed time
+      if (timerRunning && timerStartTime) {
+        const now = Date.now();
+        const elapsed = Math.floor((now - timerStartTime) / 1000);
+        matchSeconds = timerPausedAt + elapsed;
+      } else {
+        matchSeconds = timerPausedAt;
+      }
+      
+      updateTimerDisplay();
+      
+      // Update timer label to show current half
+      const timerLabel = document.getElementById('timerLabel');
+      if (timerLabel) {
+        timerLabel.textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+      }
+      
+      // Restart interval if it was running
+      if (timerRunning) {
+        const btn = document.getElementById('startStopBtn');
+        btn.textContent = '⏸ Pause';
+        btn.classList.add('active');
+        startTimerInterval();
+      }
+    }
+  } catch(e) {
+    console.error('Error loading timer state:', e);
+  }
+}
+
+// Save timer state to localStorage
+function saveTimerState() {
+  try {
+    const state = {
+      running: timerRunning,
+      startTime: timerStartTime,
+      pausedAt: timerPausedAt,
+      half: currentHalf
+    };
+    localStorage.setItem('handballtrack_timer', JSON.stringify(state));
+  } catch(e) {
+    console.error('Error saving timer state:', e);
+  }
+}
+
+// Clear timer state from localStorage
+function clearTimerState() {
+  try {
+    localStorage.removeItem('handballtrack_timer');
+  } catch(e) {}
+}
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function updateTimerDisplay() {
+  // Calculate current time based on start time if running
+  if (window.timerRunning && window.timerStartTime) {
+    const now = Date.now();
+    const elapsed = Math.floor((now - window.timerStartTime) / 1000);
+    window.matchSeconds = (window.timerPausedAt || 0) + elapsed;
+  }
+  
+  const m = Math.floor((window.matchSeconds || 0) / 60);
+  const s = (window.matchSeconds || 0) % 60;
+  const el = document.getElementById('matchTimer');
+  if (el) {
+    el.textContent = `${pad(m)}:${pad(s)}`;
+    el.className = 'timer-display' + (window.timerRunning ? ' running' : '') + ((window.currentHalf || 1) === 2 ? ' second-half' : '');
+  }
+}
+
+function startTimerInterval() {
+  // Clear any existing interval
+  if (window.timerInterval) clearInterval(window.timerInterval);
+  
+  window.timerInterval = setInterval(() => {
+    updateTimerDisplay();
+    tickSuspensions();
+  }, 1000);
+}
+
+// Expose to window for cross-device sync
+window.startTimerInterval = startTimerInterval;
+window.updateTimerDisplay = updateTimerDisplay;
+
+function toggleTimer() {
+  window.timerRunning = !window.timerRunning;
+  const btn = document.getElementById('startStopBtn');
+  
+  if (window.timerRunning) {
+    // Starting timer
+    btn.textContent = '⏸ Pause';
+    btn.classList.add('active');
+    window.timerStartTime = Date.now();
+    startTimerInterval();
+  } else {
+    // Pausing timer
+    btn.textContent = '▶ Start';
+    btn.classList.remove('active');
+    
+    // Calculate final elapsed time and store it
+    if (window.timerStartTime) {
+      const now = Date.now();
+      const elapsed = Math.floor((now - window.timerStartTime) / 1000);
+      window.timerPausedAt = (window.timerPausedAt || 0) + elapsed;
+      window.matchSeconds = window.timerPausedAt;
+    }
+    
+    window.timerStartTime = null;
+    if (window.timerInterval) {
+      clearInterval(window.timerInterval);
+      window.timerInterval = null;
+    }
+  }
+  
+  updateTimerDisplay();
+  saveTimerState();
+}
+
+async function resetTimer() {
+  // Confirmation dialog to prevent accidental resets
+  const confirmed = confirm(
+    '⚠️ Reset entire match?\n\n' +
+    'This will reset:\n' +
+    '• Timer\n' +
+    '• Score (both teams)\n' +
+    '• All player stats\n' +
+    '• Event log\n' +
+    '• Attacks counter\n' +
+    '• Active suspensions\n\n' +
+    'This cannot be undone!'
+  );
+  
+  if (!confirmed) return;
+  
+  // Reset timer
+  if (window.timerInterval) {
+    clearInterval(window.timerInterval);
+    window.timerInterval = null;
+  }
+  timerRunning = false;
+  window.timerRunning = false;
+  matchSeconds = 0;
+  window.matchSeconds = 0;
+  timerStartTime = null;
+  timerPausedAt = 0;
+  
+  // Reset half
+  currentHalf = 1;
+  const timerLabel = document.getElementById('timerLabel');
+  if (timerLabel) {
+    timerLabel.textContent = '1st Half';
+  }
+  
+  // Reset scores and stats
+  stats.goals = 0;
+  stats.goalsAgainst = 0;
+  stats.shots = 0;
+  stats.assists = 0;
+  stats.yellows = 0;
+  stats.suspensions = 0;
+  stats.redCards = 0;
+  stats.saves = 0;
+  stats.zones = [0, 0, 0, 0, 0, 0];
+  stats.attacks = 0;
+  
+  // Reset player stats
+  Object.keys(playerStats).forEach(playerId => {
+    playerStats[playerId] = {
+      goals: 0,
+      shots: 0,
+      assists: 0,
+      yellows: 0,
+      suspensions: 0,
+      redCard: false,
+      saves: 0
+    };
+  });
+  
+  // Clear event log
+  eventLog.length = 0;
+  
+  // Clear active suspensions
+  activeSuspensions.length = 0;
+  
+  // Clear undo stack
+  undoStack.length = 0;
+  document.getElementById('undoBtn').disabled = true;
+  
+  // Update all UI
+  document.getElementById('startStopBtn').textContent = '▶ Start';
+  document.getElementById('startStopBtn').classList.remove('active');
+  document.getElementById('attackCounter').textContent = '0';
+  updateTimerDisplay();
+  updateScoreboard();
+  updateStats();
+  renderEventLog();
+  renderPlayers();
+  renderSuspensions();
+  saveTimerState();
+  
+  // Clear current match from cloud
+  if (typeof clearMatchFromCloud === 'function') {
+    await clearMatchFromCloud();
+    console.log('✅ Match cleared from cloud');
+  }
+  
+  console.log('Match reset complete');
+}
+
+function switchHalf() {
+  const wasFirst = currentHalf === 1;
+  currentHalf = currentHalf === 1 ? 2 : 1;
+  
+  // Update timer label to show current half
+  document.getElementById('timerLabel').textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+  
+  // Offer timer reset when switching to 2nd half
+  if (wasFirst) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    timerRunning = false;
+    timerStartTime = null;
+    timerPausedAt = 0;
+    
+    document.getElementById('startStopBtn').textContent = '▶ Start';
+    document.getElementById('startStopBtn').classList.remove('active');
+    matchSeconds = 0;
+    
+    // Clear any expired suspensions
+    activeSuspensions.length = 0;
+    renderSuspensions();
+    addEventNoPlayer('halftime', '— Halftime — Timer reset');
+  }
+  
+  updateTimerDisplay();
+  saveTimerState();
+}
+
+function addEventNoPlayer(type, label) {
+  const ev = { type, name: label, time: getCurrentTime(), extra: '' };
+  eventLog.unshift(ev);
+  renderEventLog();
+}
+
+function getCurrentTime() {
+  // Use current matchSeconds for event timestamps
+  if (timerRunning && timerStartTime) {
+    const now = Date.now();
+    const elapsed = Math.floor((now - timerStartTime) / 1000);
+    const currentSecs = timerPausedAt + elapsed;
+    return `${pad(Math.floor(currentSecs/60))}:${pad(currentSecs%60)}`;
+  }
+  return `${pad(Math.floor(matchSeconds/60))}:${pad(matchSeconds%60)}`;
+}
+
+// Expose to window
+window.getCurrentTime = getCurrentTime;
+
+// ─── SUSPENSION TIMERS ────────────────────────────────────
+function addSuspension(player) {
+  const susp = { playerId: player.id, name: player.name, remaining: 120 };
+  activeSuspensions.push(susp);
+  renderSuspensions();
+}
+
+function tickSuspensions() {
+  for (let i = activeSuspensions.length - 1; i >= 0; i--) {
+    activeSuspensions[i].remaining--;
+    if (activeSuspensions[i].remaining <= 0) {
+      const pid = activeSuspensions[i].playerId;
+      activeSuspensions.splice(i, 1);
+      // un-suspend player
+      playerStats[pid].suspensions = Math.max(0, playerStats[pid].suspensions - 0); // keep count
+      const row = document.querySelector(`[data-player-id="${pid}"]`);
+      if (row) row.classList.remove('suspended');
+    }
+  }
+  renderSuspensions();
+}
+
+function renderSuspensions() {
+  const el = document.getElementById('suspensionList');
+  if (activeSuspensions.length === 0) {
+    el.innerHTML = '<div class="no-suspensions">No active suspensions</div>';
+    return;
+  }
+  el.innerHTML = activeSuspensions.map(s => {
+    const m = Math.floor(s.remaining/60), sec = s.remaining%60;
+    const urgent = s.remaining <= 30;
+    return `<div class="suspension-item">
+      <div>
+        <div class="suspension-name">🟡 ${s.name}</div>
+        <div style="font-size:10px;color:var(--muted)">2-min suspension</div>
+      </div>
+      <div class="suspension-timer${urgent?' urgent':''}">${pad(m)}:${pad(sec)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── STATS ───────────────────────────────────────────────
+function updateStats() {
+  const pct = stats.shots > 0 ? Math.round(stats.goals/stats.shots*100) : 0;
+  document.getElementById('shotPct').innerHTML = `${pct}%<span id="shotFrac">${stats.goals}/${stats.shots}</span>`;
+  document.getElementById('shotBar').style.width = pct + '%';
+
+  const total = stats.saves + stats.goalsAgainst;
+  const svPct = total > 0 ? Math.round(stats.saves/total*100) : 0;
+  document.getElementById('savePct').innerHTML = `${svPct}%<span id="saveFrac">${stats.saves}/${total}</span>`;
+  document.getElementById('saveBar').style.width = svPct + '%';
+
+  document.getElementById('shotsOnGoal').innerHTML = `${stats.shots}<span>shots</span>`;
+  document.getElementById('yellowCount').innerHTML = `${stats.yellows}<span>cards</span>`;
+  document.getElementById('suspCount').innerHTML = `${stats.suspensions}<span>total</span>`;
+}
+
+// Expose to window for cross-device sync
+window.updateStats = updateStats;
+
+  // heatmap
+  const maxZone = Math.max(...stats.zones, 1);
+  stats.zones.forEach((z, i) => {
+    const el = document.getElementById('hm'+i);
+    el.textContent = z;
+    const intensity = z/maxZone;
+    el.style.background = `rgba(123,92,250,${intensity * 0.7 + 0.05})`;
+  });
+}
+
+// ─── EVENT LOG ───────────────────────────────────────────
+const eventIcons = {
+  goal:'⚽', shot:'🎯', assist:'🤝', yellow:'🟡',
+  suspension:'⏱️', red:'🟥', save:'🧤', goal_against:'🥅', substitution:'🔄', halftime:'🔔'
+};
+const eventColors = {
+  goal:'var(--accent)', shot:'var(--green)', assist:'var(--accent2)',
+  yellow:'var(--yellow)', suspension:'#ff9800', red:'var(--red)',
+  save:'var(--gk-accent)', goal_against:'var(--red)', substitution:'var(--muted)', halftime:'var(--muted)'
+};
+
+function renderEventLog() {
+  const el = document.getElementById('eventLog');
+  const html = eventLog.slice(0,40).map((e, idx) => `
+    <div class="event-item" style="border-left-color:${eventColors[e.type]||'var(--border)'}; position: relative;">
+      <div class="event-time">${e.time}</div>
+      <div class="event-icon">${eventIcons[e.type]||'•'}</div>
+      <div style="flex:1;min-width:0">
+        <div class="event-name">${e.name}</div>
+        <div class="event-type">${e.type.replace('_',' ')}${e.extra?' · '+e.extra:''}</div>
+      </div>
+      <button onclick="deleteEvent(${idx})" style="background:var(--red);color:white;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;margin-left:8px;" title="Delete event">×</button>
+    </div>`).join('');
+  el.innerHTML = html || '<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px">No events yet</div>';
+}
+
+function addEvent(type, player, extra) {
+  const ev = { type, name: player.name, time: getCurrentTime(), extra, playerId: player.id };
+  eventLog.unshift(ev);
+  renderEventLog();
+}
+
+window.deleteEvent = function deleteEvent(idx) {
+  if (!confirm('Delete this event? Stats will be adjusted.')) return;
+  
+  const event = eventLog[idx];
+  
+  // Find player in the active roster
+  const allPlayers = [...document.querySelectorAll('.player-row')];
+  const playerRow = allPlayers.find(row => {
+    const nameEl = row.querySelector('.player-name');
+    return nameEl && nameEl.textContent.trim() === event.name;
+  });
+  
+  if (!playerRow) {
+    // Event exists but player not found, just remove from log
+    eventLog.splice(idx, 1);
+    renderEventLog();
+    return;
+  }
+  
+  // Get player ID from row
+  const playerId = playerRow.dataset.playerId;
+  
+  // Reverse the stats based on event type
+  switch(event.type) {
+    case 'goal':
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].goals = Math.max(0, playerStats[playerId].goals - 1);
+      }
+      stats.goals = Math.max(0, stats.goals - 1);
+      stats.shots = Math.max(0, stats.shots - 1);
+      break;
+    case 'assist':
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].assists = Math.max(0, playerStats[playerId].assists - 1);
+      }
+      break;
+    case 'shot':
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].shots = Math.max(0, playerStats[playerId].shots - 1);
+      }
+      stats.shots = Math.max(0, stats.shots - 1);
+      break;
+    case 'gk_save':
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].saves = Math.max(0, playerStats[playerId].saves - 1);
+      }
+      stats.saves = Math.max(0, stats.saves - 1);
+      stats.goalsAgainst = Math.max(0, stats.goalsAgainst - 1);
+      break;
+    case 'gk_goal':
+      stats.goalsAgainst = Math.max(0, stats.goalsAgainst - 1);
+      break;
+    case 'yellow':
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].yellows = Math.max(0, playerStats[playerId].yellows - 1);
+      }
+      stats.yellows = Math.max(0, stats.yellows - 1);
+      break;
+    case 'suspension':
+    case '2min':
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].suspensions = Math.max(0, playerStats[playerId].suspensions - 1);
+      }
+      stats.suspensions = Math.max(0, stats.suspensions - 1);
+      
+      // Remove from active suspensions if present
+      // Suspension objects have structure: { playerId, name, remaining }
+      const susIdx = activeSuspensions.findIndex(s => {
+        // Match by either playerId or name for reliability
+        return s.playerId === playerId || s.name === event.name;
+      });
+      
+      if (susIdx >= 0) {
+        activeSuspensions.splice(susIdx, 1);
+        renderSuspensions();
+        
+        // Also remove suspended class from player row
+        if (playerRow) {
+          playerRow.classList.remove('suspended');
+        }
+      }
+      break;
+    case 'red':
+      if (playerId && playerStats[playerId]) {
+        playerStats[playerId].redCard = false;
+      }
+      break;
+  }
+  
+  // Remove event from log
+  eventLog.splice(idx, 1);
+  
+  // Update UI
+  renderEventLog();
+  renderPlayers();
+  updateScoreboard();
+  updateStats();
+  
+  // LIVE BROADCASTING - Sync score after delete
+  if (typeof updateLiveScore === 'function' && isLiveBroadcasting) {
+    updateLiveScore();
+  }
+}
+
+// ─── PLAYER ACTIONS ──────────────────────────────────────
+function bumpScore(elId) {
+  const el = document.getElementById(elId);
+  el.classList.add('bump');
+  setTimeout(() => el.classList.remove('bump'), 300);
+}
+
+function updateScoreboard() {
+  document.getElementById('sbHome').textContent = stats.goals;
+  document.getElementById('sbAway').textContent = stats.goalsAgainst;
+}
+
+// Expose to window for cross-device sync
+window.updateScoreboard = updateScoreboard;
+
+window.recordAttack = function recordAttack() {
+  stats.attacks++;
+  console.log('Attack recorded! Total attacks:', stats.attacks);
+  
+  const counterEl = document.getElementById('attackCounter');
+  if (!counterEl) {
+    console.error('attackCounter element not found!');
+    return;
+  }
+  
+  counterEl.textContent = stats.attacks;
+  
+  // Add a visual bump effect
+  counterEl.style.transform = 'scale(1.2)';
+  counterEl.style.color = 'var(--green)';
+  setTimeout(() => {
+    counterEl.style.transform = 'scale(1)';
+    counterEl.style.color = 'var(--accent)';
+  }, 150);
+}
+
+function recordGoal(player) {
+  stats.goals++; stats.shots++;
+  playerStats[player.id].goals++;
+  playerStats[player.id].shots++;
+  addEvent('goal', player);
+  pushUndo(() => {
+    stats.goals--; stats.shots--;
+    playerStats[player.id].goals--;
+    playerStats[player.id].shots--;
+    eventLog.shift();
+  });
+  updateStats(); updateScoreboard(); bumpScore('sbHome'); renderPlayers(); flashRow(player.id, 'var(--accent)');
+  
+  // LIVE BROADCASTING
+  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
+    broadcastEvent('goal', player);
+    updateLiveScore();
+  }
+}
+
+function recordShot(player) {
+  stats.shots++;
+  playerStats[player.id].shots++;
+  addEvent('shot', player);
+  pushUndo(() => {
+    stats.shots--;
+    playerStats[player.id].shots--;
+    eventLog.shift();
+  });
+  updateStats(); renderPlayers();
+  
+  // LIVE BROADCASTING
+  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
+    broadcastEvent('shot', player);
+  }
+}
+
+function recordAssist(player) {
+  playerStats[player.id].assists++;
+  addEvent('assist', player);
+  pushUndo(() => {
+    playerStats[player.id].assists--;
+    eventLog.shift();
+  });
+  renderPlayers();
+  
+  // LIVE BROADCASTING
+  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
+    broadcastEvent('assist', player);
+  }
+}
+
+function recordYellow(player) {
+  stats.yellows++;
+  playerStats[player.id].yellows++;
+  addEvent('yellow', player);
+  pushUndo(() => {
+    stats.yellows--;
+    playerStats[player.id].yellows--;
+    eventLog.shift();
+  });
+  updateStats(); renderPlayers(); flashRow(player.id, 'var(--yellow)');
+  
+  // LIVE BROADCASTING
+  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
+    broadcastEvent('yellow', player);
+  }
+}
+
+function recordSuspension(player) {
+  stats.suspensions++;
+  playerStats[player.id].suspensions++;
+  addEvent('suspension', player);
+  addSuspension(player);
+  pushUndo(() => {
+    stats.suspensions--;
+    playerStats[player.id].suspensions--;
+    eventLog.shift();
+    const idx = activeSuspensions.findIndex(s => s.playerId === player.id);
+    if (idx !== -1) activeSuspensions.splice(idx, 1);
+    renderSuspensions();
+    const row = document.querySelector(`[data-player-id="${player.id}"]`);
+    if (row) row.classList.remove('suspended');
+  });
+  const row = document.querySelector(`[data-player-id="${player.id}"]`);
+  if (row) row.classList.add('suspended');
+  updateStats(); renderPlayers();
+  
+  // LIVE BROADCASTING
+  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
+    broadcastEvent('suspension', player, '2-minute suspension');
+  }
+}
+
+function recordRed(player) {
+  playerStats[player.id].redCard = true;
+  addEvent('red', player);
+  pushUndo(() => {
+    playerStats[player.id].redCard = false;
+    eventLog.shift();
+  });
+  const row = document.querySelector(`[data-player-id="${player.id}"]`);
+  if (row) row.classList.add('red-carded');
+  renderPlayers(); flashRow(player.id, 'var(--red)');
+  
+  // LIVE BROADCASTING
+  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
+    broadcastEvent('red', player);
+  }
+}
+
+function flashRow(playerId, color) {
+  const row = document.querySelector(`[data-player-id="${playerId}"]`);
+  if (!row) return;
+  row.style.boxShadow = `0 0 12px ${color}`;
+  setTimeout(() => { row.style.boxShadow = ''; }, 600);
+}
+
+// Expose record functions to window for live-broadcast-module
+window.recordGoal = recordGoal;
+window.recordShot = recordShot;
+window.recordAssist = recordAssist;
+window.recordYellow = recordYellow;
+window.recordSuspension = recordSuspension;
+window.recordRed = recordRed;
+
+// ─── MODAL ───────────────────────────────────────────────
+let currentGkPlayer = null;
+let selectedZone = null;
+let currentShotType = 'save';
+
+function openGkModal(player) {
+  currentGkPlayer = player;
+  selectedZone = null;
+  currentShotType = 'save';
+  document.getElementById('gkModalName').textContent = player.name;
+  document.getElementById('shooterNumber').value = '';
+  setShotType('save');
+  document.querySelectorAll('.goal-cell').forEach(c => c.classList.remove('selected'));
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  currentGkPlayer = null;
+  selectedZone = null;
+}
+
+function setShotType(type) {
+  currentShotType = type;
+  document.getElementById('btnSave').className = 'shot-type-btn' + (type==='save' ? ' active' : '');
+  document.getElementById('btnGoalModal').className = 'shot-type-btn' + (type==='goal' ? ' goal-active' : '');
+  const btn = document.getElementById('confirmBtn');
+  btn.textContent = type==='save' ? 'Confirm Save' : 'Confirm Goal Conceded';
+  btn.className = 'modal-btn ' + (type==='save' ? 'confirm' : 'confirm-goal');
+}
+
+function selectZone(zone) {
+  selectedZone = zone;
+  document.querySelectorAll('.goal-cell').forEach((c,i) => {
+    c.classList.toggle('selected', i===zone);
+  });
+}
+
+function confirmShot() {
+  if (!currentGkPlayer) return;
+  const zoneNames = ['Top Left','Top Center','Top Right','Bot Left','Bot Center','Bot Right'];
+  const zoneName = selectedZone !== null ? zoneNames[selectedZone] : 'Unknown zone';
+  const shooterNum = document.getElementById('shooterNumber').value.trim();
+  const detail = shooterNum ? `${zoneName} · Shooter: #${shooterNum}` : zoneName;
+  const zoneIdx = selectedZone;
+  const gkPlayer = currentGkPlayer;
+  const shotType = currentShotType;
+
+  if (shotType === 'save') {
+    stats.saves++;
+    playerStats[gkPlayer.id].saves++;
+    if (zoneIdx !== null) stats.zones[zoneIdx]++;
+    addEvent('save', gkPlayer, detail);
+    pushUndo(() => {
+      stats.saves--;
+      playerStats[gkPlayer.id].saves--;
+      if (zoneIdx !== null) stats.zones[zoneIdx]--;
+      eventLog.shift();
+    });
+  } else {
+    stats.goalsAgainst++;
+    stats.attacks++; // Auto-increment attacks when opponent scores
+    if (zoneIdx !== null) stats.zones[zoneIdx]++;
+    addEvent('goal_against', gkPlayer, detail);
+    pushUndo(() => {
+      stats.goalsAgainst--;
+      stats.attacks = Math.max(0, stats.attacks - 1); // Decrement attacks on undo
+      if (zoneIdx !== null) stats.zones[zoneIdx]--;
+      eventLog.shift();
+    });
+  }
+
+  updateStats(); updateScoreboard();
+  document.getElementById('attackCounter').textContent = stats.attacks; // Update attack counter display
+  if (shotType === 'goal') bumpScore('sbAway');
+  renderPlayers();
+  closeModal();
+  flashRow(gkPlayer.id, shotType === 'save' ? 'var(--gk-accent)' : 'var(--red)');
+  
+  // LIVE BROADCASTING
+  if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
+    if (shotType === 'save') {
+      broadcastEvent('save', gkPlayer, detail);
+    } else {
+      broadcastEvent('goal_against', gkPlayer, detail);
+      updateLiveScore();
+    }
+  }
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ─── RENDER ──────────────────────────────────────────────
+function buildPlayerRow(player, zone) {
+  const isGk = zone === 'gk';
+  const isSub = zone === 'sub';
+  const ps = playerStats[player.id];
+  const isSuspended = activeSuspensions.some(s => s.playerId === player.id);
+  const classes = [
+    'player-row',
+    isGk ? 'gk' : '',
+    isSub ? 'sub-bench' : '',
+    isSuspended ? 'suspended' : '',
+    ps.redCard ? 'red-carded' : ''
+  ].filter(Boolean).join(' ');
+
+  let statsHtml = '';
+  if (isGk) {
+    statsHtml = `
+      <div class="pstat saves">🧤 ${ps.saves} saves</div>
+      ${stats.goalsAgainst > 0 ? `<div class="pstat" style="color:var(--red)">🥅 ${stats.goalsAgainst}</div>` : ''}
+    `;
+  } else if (!isSub) {
+    if (ps.goals > 0) statsHtml += `<div class="pstat goals">⚽ ${ps.goals}</div>`;
+    if (ps.assists > 0) statsHtml += `<div class="pstat" style="color:var(--accent2)">🤝 ${ps.assists}</div>`;
+    if (ps.shots > 0) statsHtml += `<div class="pstat">🎯 ${ps.shots}</div>`;
+    if (ps.yellows > 0) statsHtml += `<div class="pstat cards">🟡 ${ps.yellows}</div>`;
+    if (ps.suspensions > 0) statsHtml += `<div class="pstat" style="color:#ff9800">⏱ ${ps.suspensions}</div>`;
+    if (ps.redCard) statsHtml += `<div class="pstat" style="color:var(--red)">🟥</div>`;
+  }
+
+  let btnsHtml = '';
+  if (isSub) {
+    btnsHtml = `<span style="font-size:11px;color:var(--muted);padding:4px 8px;">On bench</span>`;
+  } else if (isGk) {
+    btnsHtml = `
+      <button class="action-btn btn-save" onclick="openGkModalById(${player.id})">🧤 Save/Stop</button>
+      <button class="action-btn btn-goal" onclick="openGkModalById(${player.id}); setShotType('goal')">🥅 Goal</button>
+    `;
+  } else if (!ps.redCard) {
+    btnsHtml = `
+      <button class="action-btn btn-goal"    onclick="recordGoalById(${player.id})">⚽ Goal</button>
+      <button class="action-btn btn-shot"    onclick="recordShotById(${player.id})">🎯 Shot</button>
+      <button class="action-btn btn-assist"  onclick="recordAssistById(${player.id})">🤝 Assist</button>
+      <button class="action-btn btn-yellow"  onclick="recordYellowById(${player.id})">🟡 Yellow</button>
+      <button class="action-btn btn-suspend" onclick="recordSuspensionById(${player.id})">⏱ 2-Min</button>
+      <button class="action-btn btn-red"     onclick="recordRedById(${player.id})">🟥 Red</button>
+    `;
+  } else {
+    btnsHtml = `<span style="font-size:11px;color:var(--red)">Red Card — Excluded</span>`;
+  }
+
+  return `
+    <div class="${classes}" data-player-id="${player.id}" data-zone="${zone}"
+         draggable="true">
+      <span class="drag-handle">⠿</span>
+      <div class="player-num">${player.num}</div>
+      <div class="player-info">
+        <div class="player-name">${player.name}</div>
+        <div class="player-meta">${player.pos}</div>
+        <div class="player-stats" style="margin-top:4px;flex-wrap:wrap;gap:4px">${statsHtml}</div>
+      </div>
+      <div class="action-btns">${btnsHtml}</div>
+    </div>
+  `;
+}
+
+function renderPlayers() {
+  const gkIds    = Object.keys(playerZone).filter(id => playerZone[id] === 'gk').map(Number);
+  const fieldIds = Object.keys(playerZone).filter(id => playerZone[id] === 'field').map(Number);
+  const subIds   = Object.keys(playerZone).filter(id => playerZone[id] === 'sub').map(Number);
+
+  const gkEl    = document.getElementById('gkList');
+  const fieldEl = document.getElementById('playerList');
+  const subEl   = document.getElementById('subList');
+
+  gkEl.innerHTML    = gkIds.length    ? gkIds.map(id    => buildPlayerRow(allPlayersById[id], 'gk')).join('')
+                                      : '<div class="drop-zone-empty">Drop goalkeeper here</div>';
+  fieldEl.innerHTML = fieldIds.length ? fieldIds.map(id => buildPlayerRow(allPlayersById[id], 'field')).join('')
+                                      : '<div class="drop-zone-empty">Drop field players here</div>';
+  subEl.innerHTML   = subIds.length   ? subIds.map(id   => buildPlayerRow(allPlayersById[id], 'sub')).join('')
+                                      : '<div class="drop-zone-empty">No players on bench</div>';
+
+  document.getElementById('gkCount').textContent    = `${gkIds.length} on field`;
+  document.getElementById('fieldCount').textContent = `${fieldIds.length} on field`;
+  document.getElementById('subCount').textContent   = `${subIds.length} on bench`;
+
+  initDragAndDrop();
+}
+
+// Expose to window for cross-device sync
+window.renderPlayers = renderPlayers;
+window.renderEventLog = renderEventLog;
+
+// ─── DRAG AND DROP ───────────────────────────────────────
+let draggedPlayerId = null;
+
+function initDragAndDrop() {
+  // Attach events to all player rows
+  document.querySelectorAll('.player-row[draggable="true"]').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      draggedPlayerId = parseInt(row.dataset.playerId);
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', draggedPlayerId);
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-over','drag-over-gk','drag-over-sub'));
+    });
+  });
+
+  // Attach events to drop zones
+  document.querySelectorAll('.drop-zone').forEach(zone => {
+    zone.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const zoneType = zone.dataset.zone;
+      zone.classList.remove('drag-over','drag-over-gk','drag-over-sub');
+      if (zoneType === 'gk')    zone.classList.add('drag-over-gk');
+      else if (zoneType === 'sub') zone.classList.add('drag-over-sub');
+      else                         zone.classList.add('drag-over');
+    });
+    zone.addEventListener('dragleave', e => {
+      if (!zone.contains(e.relatedTarget)) {
+        zone.classList.remove('drag-over','drag-over-gk','drag-over-sub');
+      }
+    });
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('drag-over','drag-over-gk','drag-over-sub');
+      if (draggedPlayerId === null) return;
+      const targetZone = zone.dataset.zone;
+      const previousZone = playerZone[draggedPlayerId];
+      if (targetZone === previousZone) return;
+
+      // Log the substitution event
+      const player = allPlayersById[draggedPlayerId];
+      let substitutionDetail = '';
+      
+      if (previousZone === 'sub' && targetZone !== 'sub') {
+        substitutionDetail = `→ ${targetZone === 'gk' ? 'Goalkeeper' : 'Field'}`;
+        addEvent('substitution', player, substitutionDetail);
+      } else if (previousZone !== 'sub' && targetZone === 'sub') {
+        substitutionDetail = '→ Bench';
+        addEvent('substitution', player, substitutionDetail);
+      } else {
+        substitutionDetail = `${previousZone} → ${targetZone}`;
+        addEvent('substitution', player, substitutionDetail);
+      }
+
+      // LIVE BROADCASTING - Broadcast substitution
+      if (typeof broadcastEvent === 'function' && isLiveBroadcasting) {
+        broadcastEvent('substitution', player, substitutionDetail);
+      }
+
+      playerZone[draggedPlayerId] = targetZone;
+      draggedPlayerId = null;
+      renderPlayers();
+    });
+  });
+}
+
+// ─── EXPORT TO EXCEL ─────────────────────────────────────
+function exportToExcel() {
+  const wb = XLSX.utils.book_new();
+  const matchTime = document.getElementById('matchTimer').textContent;
+  const dateStr = new Date().toLocaleDateString('en-GB');
+
+  // ── Save to history ──
+  const teamName = document.getElementById('topbarBrand').textContent.replace('⬡ ','').split(' vs ')[0].trim();
+  const opponent = document.getElementById('topbarBrand').textContent.includes(' vs ') 
+    ? document.getElementById('topbarBrand').textContent.split(' vs ')[1].trim() : 'Away';
+  const shotPct  = stats.shots > 0 ? Math.round(stats.goals / stats.shots * 100) : 0;
+  const totalFaced = stats.saves + stats.goalsAgainst;
+  const savePct  = totalFaced > 0 ? Math.round(stats.saves / totalFaced * 100) : 0;
+  const matchData = {
+    id: Date.now().toString(),
+    date: dateStr,
+    teamName, opponent,
+    goalsFor: stats.goals,
+    goalsAgainst: stats.goalsAgainst,
+    shots: stats.shots, shotPct,
+    saves: stats.saves, savePct,
+    yellows: stats.yellows,
+    suspensions: stats.suspensions,
+    attacks: stats.attacks,
+    eventLog: eventLog.slice(0, 100),
+    playerStats,
+  };
+  saveMatchToHistory(matchData);       // localStorage fallback
+  saveMatchToSupabase(matchData);      // Supabase cloud save
+
+  // ── Sheet 1: Match Summary ──
+  const summaryData = [
+    ['HANDBALL MATCH REPORT'],
+    ['Date', dateStr],
+    ['Final Time', matchTime],
+    ['Half', currentHalf === 1 ? '1st Half' : '2nd Half'],
+    [],
+    ['FINAL SCORE'],
+    ['Home', 'Away'],
+    [stats.goals, stats.goalsAgainst],
+    [],
+    ['TEAM STATISTICS'],
+    ['Metric', 'Value'],
+    ['Goals Scored', stats.goals],
+    ['Goals Conceded', stats.goalsAgainst],
+    ['Total Shots', stats.shots],
+    ['Shot Efficiency (%)', stats.shots > 0 ? Math.round(stats.goals / stats.shots * 100) : 0],
+    ['Total Attacks', stats.attacks],
+    ['Attack Efficiency (%)', stats.attacks > 0 ? Math.round(stats.goals / stats.attacks * 100) : 0],
+    ['GK Saves', stats.saves],
+    ['GK Save Rate (%)', (stats.saves + stats.goalsAgainst) > 0 ? Math.round(stats.saves / (stats.saves + stats.goalsAgainst) * 100) : 0],
+    ['Yellow Cards', stats.yellows],
+    ['2-Min Suspensions', stats.suspensions],
+    [],
+    ['GK SHOT ZONES (shots faced)'],
+    ['Top Left', 'Top Center', 'Top Right'],
+    [stats.zones[0], stats.zones[1], stats.zones[2]],
+    ['Bottom Left', 'Bottom Center', 'Bottom Right'],
+    [stats.zones[3], stats.zones[4], stats.zones[5]],
+  ];
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+  wsSummary['!cols'] = [{ wch: 28 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Match Summary');
+
+  // ── Sheet 2: Player Stats ──
+  const allPlayers = Object.values(allPlayersById);
+  const playerRows = [
+    ['#', 'Name', 'Position', 'Zone', 'Goals', 'Shots', 'Shot %', 'Assists', 'Saves', 'Yellow Cards', '2-Min Suspensions', 'Red Card'],
+  ];
+  allPlayers.forEach(p => {
+    const ps = playerStats[p.id];
+    const shotPct = ps.shots > 0 ? Math.round(ps.goals / ps.shots * 100) : 0;
+    const zone = playerZone[p.id] === 'gk' ? 'Goalkeeper' : playerZone[p.id] === 'field' ? 'Field' : 'Bench';
+    playerRows.push([
+      p.num, p.name, p.pos, zone,
+      ps.goals, ps.shots, shotPct + '%', ps.assists,
+      ps.saves, ps.yellows, ps.suspensions,
+      ps.redCard ? 'Yes' : 'No',
+    ]);
+  });
+  const wsPlayers = XLSX.utils.aoa_to_sheet(playerRows);
+  wsPlayers['!cols'] = [
+    { wch: 5 }, { wch: 20 }, { wch: 16 }, { wch: 10 }, { wch: 8 }, { wch: 8 },
+    { wch: 9 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 18 }, { wch: 10 },
+  ];
+  XLSX.utils.book_append_sheet(wb, wsPlayers, 'Player Stats');
+
+  // ── Sheet 3: Event Log ──
+  const eventRows = [
+    ['Time', 'Player', 'Event', 'Detail'],
+  ];
+  // eventLog is newest-first, so reverse for chronological order
+  [...eventLog].reverse().forEach(e => {
+    eventRows.push([e.time, e.name, e.type.replace('_', ' '), e.extra || '']);
+  });
+  const wsEvents = XLSX.utils.aoa_to_sheet(eventRows);
+  wsEvents['!cols'] = [{ wch: 8 }, { wch: 22 }, { wch: 18 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, wsEvents, 'Event Log');
+
+  // ── Download ──
+  const filename = `handball_match_${dateStr.replace(/\//g,'-')}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
+
+// ─── INITIALIZATION ─────────────────────────────────────
+// These run once when initMatch is called
+// Use setTimeout to ensure DOM is fully ready
+setTimeout(() => {
+  renderPlayers();
+  updateStats();
+  updateTimerDisplay();
+  initMobileLayout();
+}, 0);
+
+// end initMatch
+
+// Expose initMatch globally for cross-device sync
+window.initMatch = initMatch;
+
+// Expose other functions to window for onclick handlers and external modules
+window.exportToExcel = exportToExcel;
+window.signOut = signOut;
+window.switchMobileTab = switchMobileTab;
+window.saveRosterToCloud = saveRosterToCloud;
+window.loadSavedRoster = loadSavedRoster;
+window.switchAuthTab = switchAuthTab;
+window.deleteCloudEntry = deleteCloudEntry;
+
+// ─── MATCH HISTORY (localStorage) ───────────────────────
+const HISTORY_KEY = 'handballtrack_history';
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+  catch(e) { return []; }
+}
+
+function saveHistory(entries) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(entries)); } catch(e) {}
+}
+
+function saveMatchToHistory(matchData) {
+  const entries = loadHistory();
+  entries.unshift(matchData);
+  if (entries.length > 20) entries.pop();
+  saveHistory(entries);
+  
+  // Clear current match from cloud
+  if (typeof clearMatchFromCloud === 'function') {
+    clearMatchFromCloud();
+  }
+}
+
+function openHistoryModal() {
+  renderHistoryList();
+  document.getElementById('historyModalOverlay').classList.add('open');
+}
+
+function closeHistoryModal() {
+  document.getElementById('historyModalOverlay').classList.remove('open');
+}
+
+function deleteHistoryEntry(id) {
+  const entries = loadHistory().filter(e => e.id !== id);
+  saveHistory(entries);
+  renderHistoryList();
+}
+
+async function renderHistoryList() {
+  const el = document.getElementById('historyList');
+  el.innerHTML = '<div class="history-empty" style="color:var(--muted)">Loading...</div>';
+  const entries = await loadCloudHistory();
+  if (!entries.length) {
+    el.innerHTML = '<div class="history-empty">No matches saved yet.<br>Use ⬇ Export to save a match to history.</div>';
+    return;
+  }
+  el.innerHTML = entries.map(e => `
+    <div class="history-card">
+      <div class="history-card-header">
+        <div class="history-card-title">${e.teamName || 'Home'} vs ${e.opponent || 'Away'}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="history-card-date">${e.date}</div>
+          <button class="history-card-del" onclick="deleteCloudEntry('${e.id}')">✕</button>
+        </div>
+      </div>
+      <div class="history-card-score">${e.goalsFor} – ${e.goalsAgainst}</div>
+      <div class="history-card-stats">
+        🎯 ${e.shots} shots &nbsp;·&nbsp;
+        📊 ${e.shotPct}% efficiency &nbsp;·&nbsp;
+        🧤 ${e.saves} saves &nbsp;·&nbsp;
+        ${e.savePct}% save rate &nbsp;·&nbsp;
+        🟡 ${e.yellows} yellow cards
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('historyModalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeHistoryModal();
+});
+</script>
+
+<!-- Live Broadcasting Module -->
+<script src="live-broadcast-module.js"></script>
+<!-- Cross-Device Session Sync Module -->
+<script src="sync-clean.js"></script>
+
+</body>
+</html>
