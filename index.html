@@ -3824,10 +3824,13 @@ function exportToExcel() {
 
 // ─── INITIALIZATION ─────────────────────────────────────
 // These run once when initMatch is called
-renderPlayers();
-updateStats();
-updateTimerDisplay();
-initMobileLayout();
+// Use setTimeout to ensure DOM is fully ready
+setTimeout(() => {
+  renderPlayers();
+  updateStats();
+  updateTimerDisplay();
+  initMobileLayout();
+}, 0);
 
 // end initMatch
 
