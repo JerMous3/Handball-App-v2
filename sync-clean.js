@@ -42,7 +42,11 @@ async function saveMatchToCloud() {
       score_away: window.stats?.goalsAgainst || 0,
       last_updated: new Date().toISOString(),
       // Save roster data so we can restore on another device
-      roster_data: window.currentRoster ? JSON.stringify(window.currentRoster) : null
+      roster_data: window.currentRoster ? JSON.stringify(window.currentRoster) : null,
+      // Save event log
+      event_log: window.eventLog ? JSON.stringify(window.eventLog) : null,
+      // Save player stats
+      player_stats: window.playerStats ? JSON.stringify(window.playerStats) : null
     };
     
     // Skip if empty match
