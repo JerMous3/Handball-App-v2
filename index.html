@@ -2463,6 +2463,9 @@ function launchMatch() {
 
   initMatch(rosterData);
   
+  // Store roster data globally for cross-device sync
+  window.currentRoster = rosterData;
+  
   // Start auto-save for cross-device sync
   if (typeof startAutoSave === 'function') {
     startAutoSave();
@@ -2579,22 +2582,76 @@ function initMobileLayout() {
 }
 
 // ─── RESTORE MATCH STATE (for cross-device sync) ────────
-window.restoreMatchState = function(data) {
-  console.log('🔄 Match data found in cloud');
-  console.log('  Team:', data.team_name, 'vs', data.opponent);
-  console.log('  Time:', Math.floor(data.timer_seconds / 60) + ':' + (data.timer_seconds % 60).toString().padStart(2, '0'));
-  console.log('  Score:', data.score_home, '-', data.score_away);
+window.restoreMatchState = function(data, rosterData = null) {
+  console.log('🔄 Restoring match from cloud...');
   
-  // For now, we can't fully restore because we don't save roster data
-  // Just pre-fill the team names in setup screen
-  const teamNameInput = document.getElementById('setupTeamName');
-  const opponentInput = document.getElementById('setupOpponent');
-  
-  if (teamNameInput) teamNameInput.value = data.team_name || '';
-  if (opponentInput) opponentInput.value = data.opponent || '';
-  
-  console.log('ℹ️ Team names pre-filled in setup screen');
-  console.log('ℹ️ Note: Full match restore requires saving roster data (future feature)');
+  if (rosterData) {
+    // Full restore with roster - actually launch the match
+    console.log('   Roster data found - launching match');
+    
+    // Set team names
+    window.teamName = data.team_name || 'Team';
+    window.opponent = data.opponent || 'Opponent';
+    
+    // Update all team name elements
+    const homeEls = document.querySelectorAll('#homeTeamName, #mobileHomeTeam, #mobileHomeTeam2');
+    const awayEls = document.querySelectorAll('#awayTeamName, #mobileAwayTeam, #mobileAwayTeam2');
+    homeEls.forEach(el => el.textContent = window.teamName);
+    awayEls.forEach(el => el.textContent = window.opponent);
+    
+    // Update scoreboard labels
+    const labels = document.querySelectorAll('.scoreboard-teams span');
+    if (labels.length >= 2) {
+      labels[0].textContent = window.teamName;
+      labels[2].textContent = window.opponent;
+    }
+    
+    // Launch the match with saved roster
+    initMatch(rosterData);
+    window.currentRoster = rosterData;
+    
+    // Restore match state
+    window.matchSeconds = data.timer_seconds || 0;
+    window.timerRunning = data.is_timer_running || false;
+    window.currentHalf = data.current_half || 'first';
+    
+    if (window.stats) {
+      window.stats.goals = data.score_home || 0;
+      window.stats.goalsAgainst = data.score_away || 0;
+    }
+    
+    // Update UI
+    if (typeof window.updateTimerDisplay === 'function') {
+      window.updateTimerDisplay();
+    }
+    if (typeof window.updateScoreboard === 'function') {
+      window.updateScoreboard();
+    }
+    
+    // Show the app
+    document.getElementById('setupScreen').classList.add('hidden');
+    document.getElementById('appTopbar').style.display = '';
+    document.getElementById('appMain').style.display = '';
+    
+    // Start auto-save
+    if (typeof startAutoSave === 'function') {
+      startAutoSave();
+    }
+    
+    console.log('✅ Match fully restored!');
+    
+  } else {
+    // Partial restore - just pre-fill setup screen
+    console.log('   No roster data - pre-filling setup screen');
+    
+    const teamNameInput = document.getElementById('setupTeamName');
+    const opponentInput = document.getElementById('setupOpponent');
+    
+    if (teamNameInput) teamNameInput.value = data.team_name || '';
+    if (opponentInput) opponentInput.value = data.opponent || '';
+    
+    console.log('ℹ️ Team names pre-filled. User can load their roster and continue.');
+  }
 };
 
 // ─── MATCH INIT (called after setup) ────────────────────
@@ -3799,7 +3856,6 @@ document.getElementById('historyModalOverlay').addEventListener('click', functio
 <script src="live-broadcast-module.js"></script>
 <!-- Cross-Device Session Sync Module -->
 <script src="sync-clean.js"></script>
-<script src="test-sync.js"></script>
 
 </body>
 </html>
