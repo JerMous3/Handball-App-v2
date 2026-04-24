@@ -253,6 +253,8 @@ function startRealtimeSync() {
       // Update timer
       window.matchSeconds = payload.new.timer_seconds;
       window.timerRunning = payload.new.is_timer_running;
+      window.timerPausedAt = payload.new.timer_seconds; // Important for when timer starts
+      window.timerStartTime = null; // Reset start time
       window.currentHalf = payload.new.current_half;
       
       // Update UI
