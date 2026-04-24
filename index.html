@@ -70,7 +70,8 @@
   // ============================================================
   
   // ─── GLOBAL AUTHENTICATION STATE ────────────────────────────
-  let currentUser = null;
+  // Declare on window to make it accessible to all other script sections
+  window.currentUser = null;
   
   // ─── AUTHENTICATION FUNCTIONS ───────────────────────────────
   
@@ -126,10 +127,9 @@
         if (result.error) throw result.error;
         
         if (result.data.user) {
-          currentUser = result.data.user;
-          window.currentUser = currentUser;
+          window.currentUser = result.data.user;
           
-          console.log('✅ User signed in:', currentUser.email);
+          console.log('✅ User signed in:', window.currentUser.email);
           
           // Check for active match and restore if exists
           if (typeof window.onUserSignedIn === 'function') {
@@ -192,7 +192,7 @@
     }
     
     try {
-      console.log('🔐 Signing out user:', currentUser?.email);
+      console.log('🔐 Signing out user:', window.currentUser?.email);
       
       // Save current match before signing out
       if (typeof window.saveCurrentMatch === 'function') {
@@ -209,7 +209,6 @@
       // Sign out from Supabase
       await _supabase.auth.signOut();
       
-      currentUser = null;
       window.currentUser = null;
       
       console.log('✅ User signed out');
@@ -234,7 +233,7 @@
     const authScreen = document.getElementById('authScreen');
     const setupScreen = document.getElementById('setupScreen');
     
-    if (currentUser) {
+    if (window.currentUser) {
       // User is signed in - hide auth screen
       if (authScreen) {
         authScreen.classList.add('hidden');
@@ -313,7 +312,6 @@
       }
       
       if (user) {
-        currentUser = user;
         window.currentUser = user;
         console.log('✅ User already signed in:', user.email);
         
