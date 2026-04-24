@@ -3120,6 +3120,7 @@ function addSuspension(player) {
   activeSuspensions.push(susp);
   renderSuspensions();
 }
+window.addSuspension = addSuspension;
 
 function tickSuspensions() {
   for (let i = activeSuspensions.length - 1; i >= 0; i--) {
@@ -3420,9 +3421,13 @@ function recordSuspension(player) {
   stats.suspensions++;
   playerStats[player.id].suspensions++;
   addEvent('suspension', player);
-  console.log('🔍 Calling addSuspension...');
-  addSuspension(player);
-  console.log('🔍 Active suspensions:', activeSuspensions);
+  console.log('🔍 Calling window.addSuspension...');
+  if (typeof window.addSuspension === 'function') {
+    window.addSuspension(player);
+  } else {
+    console.error('❌ window.addSuspension is not defined!');
+  }
+  console.log('🔍 Active suspensions:', window.activeSuspensions);
   pushUndo(() => {
     stats.suspensions--;
     playerStats[player.id].suspensions--;
