@@ -65,11 +65,6 @@
     });
   });
   
-  // Declare functions globally so onclick handlers work
-  // These will be properly implemented later in the main script
-  window.handleAuth = function() { console.log('handleAuth not ready yet'); };
-  window.recordAttack = function() { console.log('recordAttack not ready yet'); };
-  window.deleteEvent = function() { console.log('deleteEvent not ready yet'); };
 </script>
 <style>
   :root {
@@ -3682,7 +3677,406 @@ if (typeof startAutoSave === 'function') {
 
 // Expose initMatch globally for cross-device sync
 window.initMatch = initMatch;
+// ============================================================
+// AUTHENTICATION IMPLEMENTATION
+// Add this section to index__14_.html in the main <script> section
+// This replaces the placeholder handleAuth function
+// ============================================================
 
+// ─── GLOBAL AUTHENTICATION STATE ────────────────────────────
+let currentUser = null;
+
+// ─── AUTHENTICATION FUNCTIONS ───────────────────────────────
+
+/**
+ * Handle authentication (sign in or sign up)
+ * This is the main function that was missing
+ */
+async function handleAuth() {
+  const emailInput = document.getElementById('authEmail');
+  const passwordInput = document.getElementById('authPassword');
+  const isSignUp = document.querySelector('.auth-tab.active')?.dataset.tab === 'signup';
+  
+  const email = emailInput?.value.trim();
+  const password = passwordInput?.value.trim();
+  
+  if (!email || !password) {
+    alert('Please enter both email and password');
+    return;
+  }
+  
+  if (password.length < 6) {
+    alert('Password must be at least 6 characters');
+    return;
+  }
+  
+  try {
+    let result;
+    
+    if (isSignUp) {
+      // Sign up new user
+      console.log('🔐 Attempting sign up for:', email);
+      result = await _supabase.auth.signUp({
+        email: email,
+        password: password,
+      });
+      
+      if (result.error) throw result.error;
+      
+      if (result.data.user) {
+        console.log('✅ Account created:', result.data.user.email);
+        alert('Account created! Please check your email to verify your account.');
+        
+        // Switch to sign in tab
+        switchAuthTab('signin');
+      }
+    } else {
+      // Sign in existing user
+      console.log('🔐 Attempting sign in for:', email);
+      result = await _supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+      
+      if (result.error) throw result.error;
+      
+      if (result.data.user) {
+        currentUser = result.data.user;
+        window.currentUser = currentUser;
+        
+        console.log('✅ User signed in:', currentUser.email);
+        
+        // Check for active match and restore if exists
+        if (typeof onUserSignedIn === 'function') {
+          console.log('🔄 Checking for active match...');
+          const hasActiveMatch = await onUserSignedIn();
+          
+          // Only show setup screen if no active match was restored
+          if (!hasActiveMatch) {
+            console.log('📋 No active match - showing setup screen');
+            showSetupScreen();
+          } else {
+            console.log('✅ Active match restored');
+          }
+        } else {
+          // Fallback if sync module not loaded
+          console.log('⚠️ Sync module not loaded - showing setup screen');
+          showSetupScreen();
+        }
+        
+        // Update UI
+        updateAuthUI();
+      }
+    }
+    
+    // Clear inputs
+    emailInput.value = '';
+    passwordInput.value = '';
+    
+  } catch (error) {
+    console.error('❌ Auth error:', error);
+    
+    let errorMessage = 'Authentication failed: ';
+    
+    // Provide user-friendly error messages
+    if (error.message.includes('Invalid login credentials')) {
+      errorMessage += 'Invalid email or password';
+    } else if (error.message.includes('Email not confirmed')) {
+      errorMessage += 'Please verify your email address first';
+    } else if (error.message.includes('User already registered')) {
+      errorMessage += 'This email is already registered. Please sign in instead.';
+    } else {
+      errorMessage += error.message;
+    }
+    
+    alert(errorMessage);
+    
+    // Log error to Supabase
+    if (typeof logError === 'function') {
+      logError('auth_error', error, { email: email, isSignUp: isSignUp });
+    }
+  }
+}
+
+/**
+ * Sign out current user
+ */
+async function signOut() {
+  if (!confirm('Sign out? Your current match will be saved to the cloud.')) {
+    return;
+  }
+  
+  try {
+    console.log('🔐 Signing out user:', currentUser?.email);
+    
+    // Save current match before signing out
+    if (typeof saveCurrentMatch === 'function') {
+      console.log('💾 Saving current match before sign out...');
+      await saveCurrentMatch();
+    }
+    
+    // Call sign out hook to clean up
+    if (typeof onUserSignOut === 'function') {
+      console.log('🧹 Cleaning up match data...');
+      await onUserSignOut();
+    }
+    
+    // Sign out from Supabase
+    await _supabase.auth.signOut();
+    
+    currentUser = null;
+    window.currentUser = null;
+    
+    console.log('✅ User signed out');
+    
+    // Reload page to reset state
+    window.location.reload();
+    
+  } catch (error) {
+    console.error('❌ Sign out error:', error);
+    alert('Failed to sign out. Please try again.');
+    
+    if (typeof logError === 'function') {
+      logError('signout_error', error);
+    }
+  }
+}
+
+/**
+ * Update UI based on auth state
+ */
+function updateAuthUI() {
+  const authScreen = document.getElementById('authScreen');
+  const setupScreen = document.getElementById('setupScreen');
+  
+  if (currentUser) {
+    // User is signed in - hide auth screen
+    if (authScreen) {
+      authScreen.classList.add('hidden');
+      console.log('✅ Auth screen hidden');
+    }
+  } else {
+    // User is signed out - show auth screen
+    if (authScreen) {
+      authScreen.classList.remove('hidden');
+      console.log('✅ Auth screen shown');
+    }
+    if (setupScreen) {
+      setupScreen.classList.add('hidden');
+    }
+  }
+}
+
+/**
+ * Show setup screen after authentication
+ */
+function showSetupScreen() {
+  const authScreen = document.getElementById('authScreen');
+  const setupScreen = document.getElementById('setupScreen');
+  const appTopbar = document.getElementById('appTopbar');
+  const appMain = document.getElementById('appMain');
+  
+  console.log('📋 Showing setup screen');
+  
+  if (authScreen) authScreen.classList.add('hidden');
+  if (setupScreen) setupScreen.classList.remove('hidden');
+  
+  // Ensure tracker is hidden until match is started
+  if (appTopbar) appTopbar.style.display = 'none';
+  if (appMain) appMain.style.display = 'none';
+}
+
+/**
+ * Switch between sign in and sign up tabs
+ */
+function switchAuthTab(tab) {
+  const tabs = document.querySelectorAll('.auth-tab');
+  const forms = document.querySelectorAll('.auth-form-content');
+  
+  console.log('🔄 Switching auth tab to:', tab);
+  
+  tabs.forEach(t => {
+    if (t.dataset.tab === tab) {
+      t.classList.add('active');
+    } else {
+      t.classList.remove('active');
+    }
+  });
+  
+  forms.forEach(f => {
+    if (f.dataset.form === tab) {
+      f.classList.add('active');
+    } else {
+      f.classList.remove('active');
+    }
+  });
+}
+
+/**
+ * Check auth state on page load
+ */
+async function checkAuthState() {
+  console.log('🔍 Checking authentication state...');
+  
+  try {
+    const { data: { user }, error } = await _supabase.auth.getUser();
+    
+    if (error) {
+      console.log('⚠️ Error checking auth:', error.message);
+      updateAuthUI();
+      return;
+    }
+    
+    if (user) {
+      currentUser = user;
+      window.currentUser = user;
+      console.log('✅ User already signed in:', user.email);
+      
+      // Check for active match and restore if exists
+      if (typeof onUserSignedIn === 'function') {
+        console.log('🔄 Checking for active match...');
+        const hasActiveMatch = await onUserSignedIn();
+        
+        if (!hasActiveMatch) {
+          console.log('📋 No active match - showing setup screen');
+          updateAuthUI();
+          showSetupScreen();
+        }
+      } else {
+        console.log('⚠️ Sync module not loaded yet');
+        updateAuthUI();
+      }
+    } else {
+      console.log('ℹ️ No user signed in');
+      updateAuthUI();
+    }
+  } catch (error) {
+    console.error('❌ Error checking auth state:', error);
+    updateAuthUI();
+  }
+}
+
+// ─── CLOUD HISTORY FUNCTIONS ───────────────────────────────
+
+/**
+ * Load match history from Supabase
+ */
+async function loadCloudHistory() {
+  if (!window.currentUser) {
+    console.log('ℹ️ Not signed in - loading from localStorage');
+    return loadHistory();
+  }
+  
+  try {
+    const { data, error } = await _supabase
+      .from('match_history')
+      .select('*')
+      .eq('coach_user_id', window.currentUser.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    
+    if (error) {
+      console.error('Error loading cloud history:', error);
+      // Fallback to localStorage
+      return loadHistory();
+    }
+    
+    console.log('✅ Loaded', data?.length || 0, 'matches from cloud');
+    return data || [];
+  } catch (error) {
+    console.error('Error loading cloud history:', error);
+    // Fallback to localStorage
+    return loadHistory();
+  }
+}
+
+/**
+ * Save match to Supabase match history
+ */
+async function saveMatchToSupabase(matchData) {
+  if (!window.currentUser) {
+    console.log('ℹ️ Not signed in - match only saved locally');
+    return;
+  }
+  
+  try {
+    const { error } = await _supabase
+      .from('match_history')
+      .insert({
+        coach_user_id: window.currentUser.id,
+        date: matchData.date,
+        team_name: matchData.teamName,
+        opponent: matchData.opponent,
+        goals_for: matchData.goalsFor,
+        goals_against: matchData.goalsAgainst,
+        shots: matchData.shots,
+        shot_pct: matchData.shotPct,
+        saves: matchData.saves,
+        save_pct: matchData.savePct,
+        yellows: matchData.yellows,
+        suspensions: matchData.suspensions,
+        attacks: matchData.attacks,
+        event_log: matchData.eventLog,
+        player_stats: matchData.playerStats
+      });
+    
+    if (error) throw error;
+    
+    console.log('✅ Match saved to cloud history');
+  } catch (error) {
+    console.error('❌ Error saving match to Supabase:', error);
+    // Continue anyway - local save already happened
+  }
+}
+
+/**
+ * Delete a match from cloud history
+ */
+async function deleteCloudEntry(id) {
+  if (!confirm('Delete this match from history?')) {
+    return;
+  }
+  
+  try {
+    const { error } = await _supabase
+      .from('match_history')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    console.log('✅ Match deleted from cloud');
+    
+    // Refresh history list
+    await renderHistoryList();
+  } catch (error) {
+    console.error('❌ Error deleting match:', error);
+    alert('Failed to delete match. Please try again.');
+  }
+}
+
+// ─── INITIALIZE AUTH ON PAGE LOAD ──────────────────────────
+
+// Check auth state when page loads
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkAuthState);
+} else {
+  checkAuthState();
+}
+
+// ─── EXPOSE FUNCTIONS GLOBALLY ─────────────────────────────
+
+window.handleAuth = handleAuth;
+window.signOut = signOut;
+window.switchAuthTab = switchAuthTab;
+window.updateAuthUI = updateAuthUI;
+window.showSetupScreen = showSetupScreen;
+window.checkAuthState = checkAuthState;
+window.loadCloudHistory = loadCloudHistory;
+window.saveMatchToSupabase = saveMatchToSupabase;
+window.deleteCloudEntry = deleteCloudEntry;
+
+console.log('✅ Authentication module loaded');
 // Expose other functions to window for onclick handlers and external modules
 window.exportToExcel = exportToExcel;
 window.signOut = signOut;
