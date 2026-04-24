@@ -2128,6 +2128,9 @@ async function onSignedIn(user) {
   currentUser = user;
   window.currentUser = user; // Expose for external modules like live-broadcast-module.js
   
+  // Hide auth screen first
+  document.getElementById('authScreen').classList.add('hidden');
+  
   // Try to load active match from cloud
   console.log('🔐 Checking for active match...');
   const matchRestored = await loadMatchFromCloud();
@@ -2136,8 +2139,6 @@ async function onSignedIn(user) {
     console.log('✅ Match restored from cloud');
     return; // Match was restored, don't show setup screen
   }
-  
-  document.getElementById('authScreen').classList.add('hidden');
   
   // Only show setup screen if no active match was restored
   if (!matchRestored) {
@@ -2584,14 +2585,16 @@ function initMobileLayout() {
 // ─── RESTORE MATCH STATE (for cross-device sync) ────────
 window.restoreMatchState = function(data, rosterData = null) {
   console.log('🔄 Restoring match from cloud...');
+  console.log('   Has roster data:', !!rosterData);
   
   if (rosterData) {
     // Full restore with roster - actually launch the match
-    console.log('   Roster data found - launching match');
+    console.log('   ✅ Roster data found - launching match');
     
     // Set team names
     window.teamName = data.team_name || 'Team';
     window.opponent = data.opponent || 'Opponent';
+    console.log('   Team names:', window.teamName, 'vs', window.opponent);
     
     // Update all team name elements
     const homeEls = document.querySelectorAll('#homeTeamName, #mobileHomeTeam, #mobileHomeTeam2');
@@ -2606,9 +2609,11 @@ window.restoreMatchState = function(data, rosterData = null) {
       labels[2].textContent = window.opponent;
     }
     
+    console.log('   Calling initMatch with roster...');
     // Launch the match with saved roster
     initMatch(rosterData);
     window.currentRoster = rosterData;
+    console.log('   ✅ initMatch complete');
     
     // Restore match state
     window.matchSeconds = data.timer_seconds || 0;
@@ -2618,6 +2623,7 @@ window.restoreMatchState = function(data, rosterData = null) {
     if (window.stats) {
       window.stats.goals = data.score_home || 0;
       window.stats.goalsAgainst = data.score_away || 0;
+      console.log('   Score restored:', window.stats.goals, '-', window.stats.goalsAgainst);
     }
     
     // Update UI
@@ -2627,22 +2633,27 @@ window.restoreMatchState = function(data, rosterData = null) {
     if (typeof window.updateScoreboard === 'function') {
       window.updateScoreboard();
     }
+    console.log('   UI updated');
     
     // Show the app
+    console.log('   Showing app screen...');
+    document.getElementById('authScreen').classList.add('hidden');
     document.getElementById('setupScreen').classList.add('hidden');
     document.getElementById('appTopbar').style.display = '';
     document.getElementById('appMain').style.display = '';
+    console.log('   ✅ App screen visible');
     
     // Start auto-save
     if (typeof startAutoSave === 'function') {
       startAutoSave();
+      console.log('   ✅ Auto-save started');
     }
     
     console.log('✅ Match fully restored!');
     
   } else {
     // Partial restore - just pre-fill setup screen
-    console.log('   No roster data - pre-filling setup screen');
+    console.log('   ⚠️ No roster data - pre-filling setup screen');
     
     const teamNameInput = document.getElementById('setupTeamName');
     const opponentInput = document.getElementById('setupOpponent');
