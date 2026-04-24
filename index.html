@@ -2645,6 +2645,19 @@ window.restoreMatchState = function(data, rosterData = null) {
       try {
         window.playerStats = JSON.parse(data.player_stats);
         console.log('   Player stats restored');
+        
+        // Recalculate total shots from player stats
+        window.stats.shots = 0;
+        window.stats.assists = 0;
+        window.stats.yellows = 0;
+        window.stats.suspensions = 0;
+        Object.values(window.playerStats).forEach(ps => {
+          window.stats.shots += ps.shots || 0;
+          window.stats.assists += ps.assists || 0;
+          window.stats.yellows += ps.yellows || 0;
+          window.stats.suspensions += ps.suspensions || 0;
+        });
+        console.log('   Stats recalculated: shots:', window.stats.shots);
       } catch (err) {
         console.error('   Failed to parse player stats:', err);
       }
@@ -3831,8 +3844,6 @@ setTimeout(() => {
   updateTimerDisplay();
   initMobileLayout();
 }, 0);
-
-// end initMatch
 
 // Expose initMatch globally for cross-device sync
 window.initMatch = initMatch;
