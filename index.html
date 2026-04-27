@@ -2957,8 +2957,8 @@ function startTimerInterval() {
   if (window.timerInterval) clearInterval(window.timerInterval);
   
   window.timerInterval = setInterval(() => {
-    updateTimerDisplay();
-    tickSuspensions();
+    if (typeof window.updateTimerDisplay === 'function') window.updateTimerDisplay();
+    if (typeof window.tickSuspensions === 'function') window.tickSuspensions();
   }, 1000);
 }
 
