@@ -2876,18 +2876,18 @@ function loadTimerState() {
     const saved = localStorage.getItem('handballtrack_timer');
     if (saved) {
       const state = JSON.parse(saved);
-      timerRunning = state.running || false;
-      timerStartTime = state.startTime || null;
-      timerPausedAt = state.pausedAt || 0;
-      currentHalf = state.half || 1;
+      window.timerRunning = state.running || false;
+      window.timerStartTime = state.startTime || null;
+      window.timerPausedAt = state.pausedAt || 0;
+      window.currentHalf = state.half || 1;
       
       // If timer was running, calculate elapsed time
-      if (timerRunning && timerStartTime) {
+      if (window.timerRunning && window.timerStartTime) {
         const now = Date.now();
-        const elapsed = Math.floor((now - timerStartTime) / 1000);
-        matchSeconds = timerPausedAt + elapsed;
+        const elapsed = Math.floor((now - window.timerStartTime) / 1000);
+        window.matchSeconds = window.timerPausedAt + elapsed;
       } else {
-        matchSeconds = timerPausedAt;
+        window.matchSeconds = window.timerPausedAt;
       }
       
       updateTimerDisplay();
@@ -2895,7 +2895,7 @@ function loadTimerState() {
       // Update timer label to show current half
       const timerLabel = document.getElementById('timerLabel');
       if (timerLabel) {
-        timerLabel.textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+        timerLabel.textContent = window.currentHalf === 1 ? '1st Half' : '2nd Half';
       }
       
       // Restart interval if it was running
@@ -2915,10 +2915,10 @@ function loadTimerState() {
 function saveTimerState() {
   try {
     const state = {
-      running: timerRunning,
-      startTime: timerStartTime,
-      pausedAt: timerPausedAt,
-      half: currentHalf
+      running: window.timerRunning,
+      startTime: window.timerStartTime,
+      pausedAt: window.timerPausedAt,
+      half: window.currentHalf
     };
     localStorage.setItem('handballtrack_timer', JSON.stringify(state));
   } catch(e) {
@@ -3021,15 +3021,13 @@ async function resetTimer() {
     clearInterval(window.timerInterval);
     window.timerInterval = null;
   }
-  timerRunning = false;
   window.timerRunning = false;
-  matchSeconds = 0;
   window.matchSeconds = 0;
-  timerStartTime = null;
-  timerPausedAt = 0;
+  window.timerStartTime = null;
+  window.timerPausedAt = 0;
   
   // Reset half
-  currentHalf = 1;
+  window.currentHalf = 1;
   const timerLabel = document.getElementById('timerLabel');
   if (timerLabel) {
     timerLabel.textContent = '1st Half';
@@ -3094,23 +3092,23 @@ async function resetTimer() {
 }
 
 function switchHalf() {
-  const wasFirst = currentHalf === 1;
-  currentHalf = currentHalf === 1 ? 2 : 1;
+  const wasFirst = window.currentHalf === 1;
+  window.currentHalf = window.currentHalf === 1 ? 2 : 1;
   
   // Update timer label to show current half
-  document.getElementById('timerLabel').textContent = currentHalf === 1 ? '1st Half' : '2nd Half';
+  document.getElementById('timerLabel').textContent = window.currentHalf === 1 ? '1st Half' : '2nd Half';
   
   // Offer timer reset when switching to 2nd half
   if (wasFirst) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-    timerRunning = false;
-    timerStartTime = null;
-    timerPausedAt = 0;
+    clearInterval(window.timerInterval);
+    window.timerInterval = null;
+    window.timerRunning = false;
+    window.timerStartTime = null;
+    window.timerPausedAt = 0;
     
     document.getElementById('startStopBtn').textContent = '▶ Start';
     document.getElementById('startStopBtn').classList.remove('active');
-    matchSeconds = 0;
+    window.matchSeconds = 0;
     
     // Clear any expired suspensions
     activeSuspensions.length = 0;
@@ -3130,13 +3128,13 @@ function addEventNoPlayer(type, label) {
 
 function getCurrentTime() {
   // Use current matchSeconds for event timestamps
-  if (timerRunning && timerStartTime) {
+  if (window.timerRunning && window.timerStartTime) {
     const now = Date.now();
-    const elapsed = Math.floor((now - timerStartTime) / 1000);
-    const currentSecs = timerPausedAt + elapsed;
+    const elapsed = Math.floor((now - window.timerStartTime) / 1000);
+    const currentSecs = window.timerPausedAt + elapsed;
     return `${pad(Math.floor(currentSecs/60))}:${pad(currentSecs%60)}`;
   }
-  return `${pad(Math.floor(matchSeconds/60))}:${pad(matchSeconds%60)}`;
+  return `${pad(Math.floor((window.matchSeconds || 0)/60))}:${pad((window.matchSeconds || 0)%60)}`;
 }
 
 // Expose to window
@@ -3164,6 +3162,7 @@ function tickSuspensions() {
   }
   renderSuspensions();
 }
+window.tickSuspensions = tickSuspensions;
 
 function renderSuspensions() {
   const el = document.getElementById('suspensionList');
