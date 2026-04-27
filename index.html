@@ -1645,7 +1645,7 @@
     <a href="watch.html" target="_blank" class="btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">📺 Live</a>
     <a href="stats.html" target="_blank" class="btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">📊 Stats</a>
     <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
-    <button class="btn-sm export" onclick="exportToExcel()">⬇ Export</button>
+    <button class="btn-sm export" onclick="exportToExcel()" title="Save match to history and download Excel file">💾 Save</button>
     <button class="btn-sm signout" onclick="signOut()">Sign Out</button>
   </div>
 </div>
@@ -1743,7 +1743,7 @@
       </div>
       
       <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
-      <button class="btn-sm export" onclick="exportToExcel()">⬇ Export</button>
+      <button class="btn-sm export" onclick="exportToExcel()" title="Save match to history and download Excel file">💾 Save</button>
       <button class="btn-sm signout" onclick="signOut()" style="display:none" id="mobileSignout">Sign Out</button>
     </div>
     <div class="section-header-row">
@@ -1936,7 +1936,7 @@
       </button>
       
       <button class="more-button" onclick="exportToExcel()">
-        ⬇ Export to Excel
+        💾 Save Match
       </button>
       
       <button class="more-button" onclick="signOut()">
@@ -3790,13 +3790,28 @@ function initDragAndDrop() {
 // ─── EXPORT TO EXCEL ─────────────────────────────────────
 function exportToExcel() {
   const wb = XLSX.utils.book_new();
-  const matchTime = document.getElementById('matchTimer').textContent;
+  const matchTimer = document.getElementById('matchTimer');
+  const matchTime = matchTimer ? matchTimer.textContent : '00:00';
   const dateStr = new Date().toLocaleDateString('en-GB');
 
   // ── Save to history ──
-  const teamName = document.getElementById('topbarBrand').textContent.replace('⬡ ','').split(' vs ')[0].trim();
-  const opponent = document.getElementById('topbarBrand').textContent.includes(' vs ') 
-    ? document.getElementById('topbarBrand').textContent.split(' vs ')[1].trim() : 'Away';
+  // Use window.teamName and window.opponent if available, otherwise try to parse from topbarBrand
+  let teamName = window.teamName || 'Home';
+  let opponent = window.opponent || 'Away';
+  
+  // If window variables not set, try topbarBrand as fallback
+  if ((teamName === 'Home' || !teamName) && (opponent === 'Away' || !opponent)) {
+    const topbarBrand = document.getElementById('topbarBrand');
+    if (topbarBrand && topbarBrand.textContent) {
+      const brandText = topbarBrand.textContent.replace('⬡ ','').trim();
+      if (brandText.includes(' vs ')) {
+        const parts = brandText.split(' vs ');
+        teamName = parts[0].trim();
+        opponent = parts[1].trim();
+      }
+    }
+  }
+  
   const shotPct  = stats.shots > 0 ? Math.round(stats.goals / stats.shots * 100) : 0;
   const totalFaced = stats.saves + stats.goalsAgainst;
   const savePct  = totalFaced > 0 ? Math.round(stats.saves / totalFaced * 100) : 0;
@@ -3889,6 +3904,21 @@ function exportToExcel() {
   // ── Download ──
   const filename = `handball_match_${dateStr.replace(/\//g,'-')}.xlsx`;
   XLSX.writeFile(wb, filename);
+  
+  // Show success notification
+  console.log('✅ Match saved to history and Excel file downloaded');
+  
+  // Optional: Show a brief visual confirmation
+  const exportButtons = document.querySelectorAll('.export');
+  exportButtons.forEach(btn => {
+    const originalText = btn.textContent;
+    btn.textContent = '✅ Saved!';
+    btn.style.background = 'var(--green)';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.style.background = '';
+    }, 2000);
+  });
 }
 
 // Expose initMatch globally for cross-device sync
