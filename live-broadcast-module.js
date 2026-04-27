@@ -432,6 +432,16 @@ window.wrapLiveBroadcastFunctions = function() {
   _originalRecordRed = window.recordRed;
   _originalConfirmShot = window.confirmShot;
   
+  console.log('📋 Original functions:', {
+    recordGoal: typeof _originalRecordGoal,
+    recordShot: typeof _originalRecordShot,
+    recordAssist: typeof _originalRecordAssist,
+    recordYellow: typeof _originalRecordYellow,
+    recordSuspension: typeof _originalRecordSuspension,
+    recordRed: typeof _originalRecordRed,
+    confirmShot: typeof _originalConfirmShot
+  });
+  
   if (!_originalRecordGoal) {
     console.error('❌ Cannot wrap functions - window.recordGoal not defined yet!');
     return;
@@ -439,6 +449,7 @@ window.wrapLiveBroadcastFunctions = function() {
   
   // Enhanced recordGoal
   window.recordGoal = function(player) {
+    console.log('⚽ recordGoal wrapper called');
     _originalRecordGoal(player);
     broadcastEvent('goal', player);
     updateLiveScore();
