@@ -295,7 +295,12 @@ async function broadcastEvent(eventType, player, detail = '') {
  */
 let scoreUpdateTimeout;
 async function updateLiveScore() {
-  if (!isLiveBroadcasting || !currentLiveMatchId) return;
+  console.log('📊 updateLiveScore called, broadcasting:', isLiveBroadcasting, 'matchId:', currentLiveMatchId);
+  
+  if (!isLiveBroadcasting || !currentLiveMatchId) {
+    console.log('⏭️ Skipping score update - not broadcasting or no match ID');
+    return;
+  }
 
   // Clear any pending update
   clearTimeout(scoreUpdateTimeout);
@@ -305,6 +310,8 @@ async function updateLiveScore() {
     // Get scores from DOM
     const scoreHome = parseInt(document.getElementById('sbHome')?.textContent || '0');
     const scoreAway = parseInt(document.getElementById('sbAway')?.textContent || '0');
+    
+    console.log('📊 Queuing score update:', scoreHome, '-', scoreAway);
     
     // Get match time from DOM
     const timerText = document.getElementById('matchTimer')?.textContent || '00:00';
@@ -351,6 +358,7 @@ async function processLiveUpdateQueue() {
           }
         }
       } else if (update.type === 'score') {
+        console.log('📊 Processing score update:', update.data.score_home, '-', update.data.score_away);
         const { error } = await _supabase.rpc('update_live_match_score', {
           p_live_match_id: update.data.live_match_id,
           p_score_home: update.data.score_home,
@@ -364,6 +372,8 @@ async function processLiveUpdateQueue() {
               error_details: error
             });
           }
+        } else {
+          console.log('✅ Score updated successfully:', update.data.score_home, '-', update.data.score_away);
         }
       }
     }
@@ -466,9 +476,9 @@ window.wrapLiveBroadcastFunctions = function() {
 
   // Enhanced confirmShot (goalkeeper saves/goals against)
   window.confirmShot = function() {
-    const originalShotType = currentShotType;
-    const originalGkPlayer = currentGkPlayer;
-    const originalZone = selectedZone;
+    const originalShotType = window.currentShotType;
+    const originalGkPlayer = window.currentGkPlayer;
+    const originalZone = window.selectedZone;
     
     _originalConfirmShot();
     
