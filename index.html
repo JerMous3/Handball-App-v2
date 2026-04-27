@@ -2800,6 +2800,14 @@ window.openHistoryModal = openHistoryModal;
 window.closeHistoryModal = closeHistoryModal;
 window.deleteHistoryEntry = deleteHistoryEntry;
 
+// Expose direct record functions for live-broadcast wrapping
+window.recordGoal = recordGoal;
+window.recordShot = recordShot;
+window.recordAssist = recordAssist;
+window.recordYellow = recordYellow;
+window.recordSuspension = recordSuspension;
+window.recordRed = recordRed;
+
 [...rosterData.gk, ...rosterData.players, ...rosterData.subs].forEach(p => allPlayersById[p.id] = p);
 
 const activeSuspensions = [];
@@ -3510,13 +3518,8 @@ function flashRow(playerId, color) {
   setTimeout(() => { row.style.boxShadow = ''; }, 600);
 }
 
-// Expose record functions to window for live-broadcast-module
-window.recordGoal = recordGoal;
-window.recordShot = recordShot;
-window.recordAssist = recordAssist;
-window.recordYellow = recordYellow;
-window.recordSuspension = recordSuspension;
-window.recordRed = recordRed;
+// NOTE: Record functions are exposed earlier in initMatch (around line 2786)
+// Don't expose them again here as it would overwrite the live-broadcast wrappers
 
 // ─── MODAL ───────────────────────────────────────────────
 let currentGkPlayer = null;
