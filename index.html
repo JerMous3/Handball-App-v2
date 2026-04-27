@@ -3523,10 +3523,18 @@ let currentGkPlayer = null;
 let selectedZone = null;
 let currentShotType = 'save';
 
+// Expose to window for live-broadcast-module
+window.currentGkPlayer = currentGkPlayer;
+window.selectedZone = selectedZone;
+window.currentShotType = currentShotType;
+
 function openGkModal(player) {
   currentGkPlayer = player;
+  window.currentGkPlayer = player;
   selectedZone = null;
+  window.selectedZone = null;
   currentShotType = 'save';
+  window.currentShotType = 'save';
   document.getElementById('gkModalName').textContent = player.name;
   document.getElementById('shooterNumber').value = '';
   setShotType('save');
@@ -3542,6 +3550,7 @@ function closeModal() {
 
 function setShotType(type) {
   currentShotType = type;
+  window.currentShotType = type;
   document.getElementById('btnSave').className = 'shot-type-btn' + (type==='save' ? ' active' : '');
   document.getElementById('btnGoalModal').className = 'shot-type-btn' + (type==='goal' ? ' goal-active' : '');
   const btn = document.getElementById('confirmBtn');
@@ -3551,6 +3560,7 @@ function setShotType(type) {
 
 function selectZone(zone) {
   selectedZone = zone;
+  window.selectedZone = zone;
   document.querySelectorAll('.goal-cell').forEach((c,i) => {
     c.classList.toggle('selected', i===zone);
   });
