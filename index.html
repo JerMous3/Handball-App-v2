@@ -2469,6 +2469,11 @@ function launchMatch() {
 
   initMatch(rosterData);
   
+  // Wrap functions for live broadcasting (must happen AFTER initMatch)
+  if (typeof window.wrapLiveBroadcastFunctions === 'function') {
+    window.wrapLiveBroadcastFunctions();
+  }
+  
   // Store roster data globally for cross-device sync
   window.currentRoster = rosterData;
   
@@ -2623,6 +2628,12 @@ window.restoreMatchState = function(data, rosterData = null) {
     console.log('   Calling initMatch with roster...');
     // Launch the match with saved roster
     initMatch(rosterData);
+    
+    // Wrap functions for live broadcasting (must happen AFTER initMatch)
+    if (typeof window.wrapLiveBroadcastFunctions === 'function') {
+      window.wrapLiveBroadcastFunctions();
+    }
+    
     window.currentRoster = rosterData;
     console.log('   ✅ initMatch complete');
     
