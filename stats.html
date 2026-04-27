@@ -394,21 +394,38 @@
     
     async function loadMatchHistory() {
       try {
+        // Check if user is authenticated
+        const { data: { session }, error: sessionError } = await _supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          console.log('Not authenticated, redirecting to main page...');
+          document.getElementById('matchHistory').innerHTML = `
+            <div style="text-align: center; padding: 40px;">
+              <p style="color: var(--muted); margin-bottom: 16px;">You need to sign in to view statistics</p>
+              <a href="index.html" style="color: var(--accent); text-decoration: none;">← Back to Tracker</a>
+            </div>
+          `;
+          return;
+        }
+        
+        // Load matches from correct table name
         const { data, error } = await _supabase
-          .from('match_history')
+          .from('matches')
           .select('*')
-          .order('created_at', { ascending: false });
+          .eq('user_id', session.user.id)
+          .order('played_at', { ascending: false });
         
         if (error) throw error;
         
         allMatches = data || [];
+        console.log('Loaded matches:', allMatches.length);
         renderMatchHistory();
         
       } catch (error) {
         console.error('Error loading match history:', error);
         document.getElementById('matchHistory').innerHTML = `
           <div style="text-align: center; padding: 40px; color: var(--red);">
-            Failed to load match history
+            Failed to load match history: ${error.message}
           </div>
         `;
       }
@@ -419,13 +436,25 @@
       
       // Aggregate all player stats from matches
       allMatches.forEach(match => {
-        const matchData = match.match_data || {};
-        const players = matchData.players || [];
+        // Our data structure: player_stats is an object with player IDs as keys
+        const matchPlayerStats = match.player_stats || {};
         
-        players.forEach(player => {
-          if (!playerStats[player.name]) {
-            playerStats[player.name] = {
-              name: player.name,
+        // Get player names from event_log if available
+        const eventLog = match.event_log || [];
+        const playerNames = {};
+        eventLog.forEach(event => {
+          if (event.playerId && event.name) {
+            playerNames[event.playerId] = event.name;
+          }
+        });
+        
+        // Iterate through each player in this match
+        Object.entries(matchPlayerStats).forEach(([playerId, stats]) => {
+          const playerName = playerNames[playerId] || `Player ${playerId}`;
+          
+          if (!playerStats[playerName]) {
+            playerStats[playerName] = {
+              name: playerName,
               goals: 0,
               assists: 0,
               saves: 0,
@@ -437,15 +466,15 @@
             };
           }
           
-          const stats = playerStats[player.name];
-          stats.goals += player.goals || 0;
-          stats.assists += player.assists || 0;
-          stats.saves += player.saves || 0;
-          stats.shots += player.shots || 0;
-          stats.yellows += player.yellowCards || 0;
-          stats.suspensions += player.suspensions || 0;
-          stats.reds += player.redCards || 0;
-          stats.matches += 1;
+          const aggregated = playerStats[playerName];
+          aggregated.goals += stats.goals || 0;
+          aggregated.assists += stats.assists || 0;
+          aggregated.saves += stats.saves || 0;
+          aggregated.shots += stats.shots || 0;
+          aggregated.yellows += stats.yellows || 0;
+          aggregated.suspensions += stats.suspensions || 0;
+          aggregated.reds += (stats.redCard ? 1 : 0);
+          aggregated.matches++;
         });
       });
       
@@ -554,11 +583,11 @@
       }
       
       container.innerHTML = allMatches.map(match => {
-        const date = new Date(match.created_at);
+        const date = new Date(match.played_at || match.created_at);
         const teamName = match.team_name || 'Home';
         const opponent = match.opponent || 'Away';
-        const scoreHome = match.score_home || 0;
-        const scoreAway = match.score_away || 0;
+        const scoreHome = match.goals_for || 0;
+        const scoreAway = match.goals_against || 0;
         
         let result = 'draw';
         if (scoreHome > scoreAway) result = 'win';
