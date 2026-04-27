@@ -392,68 +392,96 @@ async function processLiveUpdateQueue() {
 /**
  * Wrap existing record functions to broadcast events
  * These replace/enhance your existing functions
+ * MUST be called AFTER initMatch() runs
  */
 
-// Store original functions
-const _originalRecordGoal = window.recordGoal;
-const _originalRecordShot = window.recordShot;
-const _originalRecordAssist = window.recordAssist;
-const _originalRecordYellow = window.recordYellow;
-const _originalRecordSuspension = window.recordSuspension;
-const _originalRecordRed = window.recordRed;
-const _originalConfirmShot = window.confirmShot;
+// Store original functions (will be set when wrapLiveBroadcastFunctions is called)
+let _originalRecordGoal;
+let _originalRecordShot;
+let _originalRecordAssist;
+let _originalRecordYellow;
+let _originalRecordSuspension;
+let _originalRecordRed;
+let _originalConfirmShot;
+let _functionsWrapped = false;
 
-// Enhanced recordGoal
-window.recordGoal = function(player) {
-  _originalRecordGoal(player);
-  broadcastEvent('goal', player);
-  updateLiveScore();
-};
-
-// Enhanced recordShot
-window.recordShot = function(player) {
-  _originalRecordShot(player);
-  broadcastEvent('shot', player);
-};
-
-// Enhanced recordAssist
-window.recordAssist = function(player) {
-  _originalRecordAssist(player);
-  broadcastEvent('assist', player);
-};
-
-// Enhanced recordYellow
-window.recordYellow = function(player) {
-  _originalRecordYellow(player);
-  broadcastEvent('yellow', player);
-};
-
-// Enhanced recordSuspension
-window.recordSuspension = function(player) {
-  _originalRecordSuspension(player);
-  broadcastEvent('suspension', player, '2-minute suspension');
-};
-
-// Enhanced recordRed
-window.recordRed = function(player) {
-  _originalRecordRed(player);
-  broadcastEvent('red', player);
-};
-
-// Enhanced confirmShot (goalkeeper saves/goals against)
-window.confirmShot = function() {
-  const originalShotType = currentShotType;
-  const originalGkPlayer = currentGkPlayer;
-  const originalZone = selectedZone;
-  
-  _originalConfirmShot();
-  
-  if (originalShotType === 'save') {
-    broadcastEvent('save', originalGkPlayer, getZoneName(originalZone));
-  } else {
-    broadcastEvent('goal_against', originalGkPlayer, getZoneName(originalZone));
-    updateLiveScore();
+window.wrapLiveBroadcastFunctions = function() {
+  if (_functionsWrapped) {
+    console.log('✅ Functions already wrapped');
+    return;
   }
+  
+  console.log('🔄 Wrapping record functions for live broadcasting...');
+  
+  // Store original functions
+  _originalRecordGoal = window.recordGoal;
+  _originalRecordShot = window.recordShot;
+  _originalRecordAssist = window.recordAssist;
+  _originalRecordYellow = window.recordYellow;
+  _originalRecordSuspension = window.recordSuspension;
+  _originalRecordRed = window.recordRed;
+  _originalConfirmShot = window.confirmShot;
+  
+  if (!_originalRecordGoal) {
+    console.error('❌ Cannot wrap functions - window.recordGoal not defined yet!');
+    return;
+  }
+  
+  // Enhanced recordGoal
+  window.recordGoal = function(player) {
+    _originalRecordGoal(player);
+    broadcastEvent('goal', player);
+    updateLiveScore();
+  };
+
+  // Enhanced recordShot
+  window.recordShot = function(player) {
+    _originalRecordShot(player);
+    broadcastEvent('shot', player);
+  };
+
+  // Enhanced recordAssist
+  window.recordAssist = function(player) {
+    _originalRecordAssist(player);
+    broadcastEvent('assist', player);
+  };
+
+  // Enhanced recordYellow
+  window.recordYellow = function(player) {
+    _originalRecordYellow(player);
+    broadcastEvent('yellow', player);
+  };
+
+  // Enhanced recordSuspension
+  window.recordSuspension = function(player) {
+    _originalRecordSuspension(player);
+    broadcastEvent('suspension', player, '2-minute suspension');
+  };
+
+  // Enhanced recordRed
+  window.recordRed = function(player) {
+    _originalRecordRed(player);
+    broadcastEvent('red', player);
+  };
+
+  // Enhanced confirmShot (goalkeeper saves/goals against)
+  window.confirmShot = function() {
+    const originalShotType = currentShotType;
+    const originalGkPlayer = currentGkPlayer;
+    const originalZone = selectedZone;
+    
+    _originalConfirmShot();
+    
+    if (originalShotType === 'save') {
+      broadcastEvent('save', originalGkPlayer, getZoneName(originalZone));
+    } else {
+      broadcastEvent('goal_against', originalGkPlayer, getZoneName(originalZone));
+      updateLiveScore();
+    }
+  };
+  
+  _functionsWrapped = true;
+  console.log('✅ Functions wrapped successfully!');
 };
 
 // Helper to get zone name
