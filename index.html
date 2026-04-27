@@ -2772,12 +2772,12 @@ const allPlayersById = {};
 window.allPlayersById = allPlayersById;
 
 function getPlayerById(id){ return window.allPlayersById[id]; }
-function recordGoalById(id){ recordGoal(getPlayerById(id)); }
-function recordShotById(id){ recordShot(getPlayerById(id)); }
-function recordAssistById(id){ recordAssist(getPlayerById(id)); }
-function recordYellowById(id){ recordYellow(getPlayerById(id)); }
-function recordSuspensionById(id){ recordSuspension(getPlayerById(id)); }
-function recordRedById(id){ recordRed(getPlayerById(id)); }
+function recordGoalById(id){ window.recordGoal(getPlayerById(id)); }
+function recordShotById(id){ window.recordShot(getPlayerById(id)); }
+function recordAssistById(id){ window.recordAssist(getPlayerById(id)); }
+function recordYellowById(id){ window.recordYellow(getPlayerById(id)); }
+function recordSuspensionById(id){ window.recordSuspension(getPlayerById(id)); }
+function recordRedById(id){ window.recordRed(getPlayerById(id)); }
 function openGkModalById(id){ openGkModal(getPlayerById(id)); }
 
 window.toggleTimer = toggleTimer;
