@@ -2294,8 +2294,10 @@ async function saveMatchToSupabase(matchData) {
 
 function setCloudStatus(state, msg) {
   const el = document.getElementById('cloudStatus');
-  el.textContent = msg;
-  el.className = 'cloud-status' + (state ? ' ' + state : '');
+  if (el && el.textContent !== undefined) {
+    el.textContent = msg;
+    el.className = 'cloud-status' + (state ? ' ' + state : '');
+  }
 }
 
 // ─── CLOUD MATCH HISTORY ─────────────────────────────────
@@ -2655,8 +2657,19 @@ window.restoreMatchState = function(data, rosterData = null) {
     // Restore event log
     if (data.event_log) {
       try {
-        window.eventLog = JSON.parse(data.event_log);
-        console.log('   Event log restored:', window.eventLog.length, 'events');
+        // Handle both JSON string and direct array
+        const restoredEvents = typeof data.event_log === 'string' 
+          ? JSON.parse(data.event_log) 
+          : data.event_log;
+        
+        // Clear existing array and add restored events
+        window.eventLog.length = 0;
+        if (Array.isArray(restoredEvents)) {
+          restoredEvents.forEach(event => window.eventLog.push(event));
+          console.log('   Event log restored:', window.eventLog.length, 'events');
+        } else {
+          console.warn('   Event log is not an array:', typeof restoredEvents);
+        }
       } catch (err) {
         console.error('   Failed to parse event log:', err);
       }
@@ -2665,7 +2678,14 @@ window.restoreMatchState = function(data, rosterData = null) {
 // Restore player stats
     if (data.player_stats) {
       try {
-        window.playerStats = JSON.parse(data.player_stats);
+        // Handle both JSON string and direct object
+        const restoredStats = typeof data.player_stats === 'string'
+          ? JSON.parse(data.player_stats)
+          : data.player_stats;
+        
+        // Clear existing object and merge restored stats
+        Object.keys(window.playerStats).forEach(key => delete window.playerStats[key]);
+        Object.assign(window.playerStats, restoredStats);
         console.log('   Player stats restored');
         
         // Recalculate total shots from player stats
@@ -3826,8 +3846,8 @@ function exportToExcel() {
     yellows: stats.yellows,
     suspensions: stats.suspensions,
     attacks: stats.attacks,
-    eventLog: eventLog.slice(0, 100),
-    playerStats,
+    eventLog: window.eventLog ? window.eventLog.slice(0, 100) : [],
+    playerStats: window.playerStats || {},
   };
   saveMatchToHistory(matchData);       // localStorage fallback
   saveMatchToSupabase(matchData);      // Supabase cloud save
@@ -3894,7 +3914,7 @@ function exportToExcel() {
     ['Time', 'Player', 'Event', 'Detail'],
   ];
   // eventLog is newest-first, so reverse for chronological order
-  [...eventLog].reverse().forEach(e => {
+  [...(window.eventLog || [])].reverse().forEach(e => {
     eventRows.push([e.time, e.name, e.type.replace('_', ' '), e.extra || '']);
   });
   const wsEvents = XLSX.utils.aoa_to_sheet(eventRows);
