@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Handball Tracker</title>
+<title>Handball-Tracker</title>
 
 <!-- Eruda mobile console for debugging -->
 <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
@@ -1520,7 +1520,139 @@
       <label>Team Name</label>
       <input class="auth-input" id="authTeamName" placeholder="e.g. HV Helius" />
     </div>
+    <div class="auth-field" id="inviteCodeField" style="display:none">
+      <label>Invite Code <span style="color:var(--red)">*</span></label>
+      <input class="auth-input" id="authInviteCode" placeholder="e.g. CLUB-AJAX-2024" style="text-transform:uppercase" />
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">
+        Enter the code provided by your club administrator
+      </div>
+    </div>
     <button class="auth-submit" id="authSubmit" onclick="handleAuth()">Sign In</button>
+    <div id="personalAccessSection" style="display:none;margin-top:16px;text-align:center;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">─── OR ───</div>
+      <button onclick="showPersonalAccessForm()" style="
+        background:transparent;
+        border:1px solid var(--border);
+        color:var(--text);
+        padding:10px 16px;
+        border-radius:6px;
+        font-size:14px;
+        font-weight:600;
+        cursor:pointer;
+        transition:all 0.2s;
+        width:100%;
+      " onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+         onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)'">
+        🎟️ Request Personal Access Code
+      </button>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">
+        One-time use, €5/month
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PERSONAL ACCESS REQUEST MODAL -->
+<div id="personalAccessModal" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.7);
+  z-index:10000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+">
+  <div style="
+    background:var(--surface);
+    border-radius:12px;
+    max-width:500px;
+    width:100%;
+    padding:32px;
+  ">
+    <h2 style="margin:0 0 8px 0;font-size:24px;color:var(--text)">Request Personal Access</h2>
+    <p style="margin:0 0 24px 0;font-size:14px;color:var(--muted)">
+      Fill out this form and we'll send you a personal access code within 24 hours.
+    </p>
+    
+    <div style="margin-bottom:16px">
+      <label style="display:block;margin-bottom:6px;font-weight:600;font-size:14px">Name *</label>
+      <input id="accessRequestName" type="text" placeholder="Your full name" style="
+        width:100%;
+        padding:10px 12px;
+        background:var(--bg);
+        border:1px solid var(--border);
+        border-radius:6px;
+        color:var(--text);
+        font-size:14px;
+      " />
+    </div>
+    
+    <div style="margin-bottom:16px">
+      <label style="display:block;margin-bottom:6px;font-weight:600;font-size:14px">Email *</label>
+      <input id="accessRequestEmail" type="email" placeholder="your@email.com" style="
+        width:100%;
+        padding:10px 12px;
+        background:var(--bg);
+        border:1px solid var(--border);
+        border-radius:6px;
+        color:var(--text);
+        font-size:14px;
+      " />
+    </div>
+    
+    <div style="margin-bottom:16px">
+      <label style="display:block;margin-bottom:6px;font-weight:600;font-size:14px">Phone (Optional)</label>
+      <input id="accessRequestPhone" type="tel" placeholder="+31 6 12345678" style="
+        width:100%;
+        padding:10px 12px;
+        background:var(--bg);
+        border:1px solid var(--border);
+        border-radius:6px;
+        color:var(--text);
+        font-size:14px;
+      " />
+    </div>
+    
+    <div style="margin-bottom:24px">
+      <label style="display:block;margin-bottom:6px;font-weight:600;font-size:14px">Message (Optional)</label>
+      <textarea id="accessRequestMessage" placeholder="Tell us a bit about yourself and how you'll use Handball-Tracker..." style="
+        width:100%;
+        padding:10px 12px;
+        background:var(--bg);
+        border:1px solid var(--border);
+        border-radius:6px;
+        color:var(--text);
+        font-size:14px;
+        min-height:80px;
+        resize:vertical;
+        font-family:inherit;
+      "></textarea>
+    </div>
+    
+    <div style="display:flex;gap:12px">
+      <button onclick="closePersonalAccessForm()" style="
+        flex:1;
+        padding:12px;
+        background:transparent;
+        border:1px solid var(--border);
+        color:var(--text);
+        border-radius:6px;
+        font-weight:600;
+        cursor:pointer;
+      ">Cancel</button>
+      <button onclick="submitAccessRequest()" id="submitAccessBtn" style="
+        flex:1;
+        padding:12px;
+        background:var(--accent);
+        border:none;
+        color:white;
+        border-radius:6px;
+        font-weight:600;
+        cursor:pointer;
+      ">Submit Request</button>
+    </div>
   </div>
 </div>
 
@@ -2028,6 +2160,8 @@ function switchAuthTab(tab) {
   document.getElementById('tabSignup').className = 'auth-tab' + (tab==='signup' ? ' active' : '');
   document.getElementById('authSubmit').textContent = tab === 'login' ? 'Sign In' : 'Create Account';
   document.getElementById('teamNameField').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('inviteCodeField').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('personalAccessSection').style.display = tab === 'signup' ? 'block' : 'none';
   clearAuthMessages();
 }
 
@@ -2050,6 +2184,7 @@ async function handleAuth() {
   const email    = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
   const teamName = document.getElementById('authTeamName').value.trim();
+  const inviteCode = document.getElementById('authInviteCode')?.value.trim().toUpperCase();
   const btn      = document.getElementById('authSubmit');
 
   if (!email || !password) { showAuthError('Please enter your email and password.'); return; }
@@ -2063,33 +2198,93 @@ async function handleAuth() {
     if (error) { showAuthError(error.message); btn.disabled = false; btn.textContent = 'Sign In'; return; }
     onSignedIn(data.user);
   } else {
-    // CHECK EMAIL WHITELIST BEFORE SIGNUP
-    const { data: approvedData, error: approvedError } = await _supabase
-      .from('approved_emails')
-      .select('*')
-      .eq('email', email.toLowerCase())
-      .eq('is_active', true)
-      .single();
-    
-    if (approvedError || !approvedData) {
-      showAuthError('Dit emailadres is niet geregistreerd. Ga naar handball-tracker.com om je aan te melden.');
+    // SIGNUP: VALIDATE INVITE CODE
+    if (!inviteCode) {
+      showAuthError('Please enter an invite code to create an account.');
       btn.disabled = false;
       btn.textContent = 'Create Account';
       return;
     }
     
+    // Check if invite code is valid
+    const { data: codeData, error: codeError } = await _supabase
+      .from('invite_codes')
+      .select('*')
+      .eq('code', inviteCode)
+      .eq('active', true)
+      .single();
+    
+    if (codeError || !codeData) {
+      showAuthError('Invalid invite code. Please check and try again.');
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+      return;
+    }
+    
+    // Check if code has expired
+    if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
+      showAuthError('This invite code has expired. Please contact support.');
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+      return;
+    }
+    
+    // Check if code has reached max uses
+    if (codeData.uses_count >= codeData.max_uses) {
+      showAuthError('This invite code has reached its maximum uses. Please contact your club administrator.');
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+      return;
+    }
+    
+    // Create the account
     const { data, error } = await _supabase.auth.signUp({
-      email, password,
+      email, 
+      password,
       options: {
-        emailRedirectTo: 'https://jermous3.github.io/Handball-App-v2/'
+        emailRedirectTo: 'https://jermous3.github.io/Handball-App-v2/',
+        data: {
+          club_name: codeData.club_name,
+          plan_type: codeData.plan_type,
+          invite_code: inviteCode
+        }
       }
     });
-    if (error) { showAuthError(error.message); btn.disabled = false; btn.textContent = 'Create Account'; return; }
-    // Save team name to profile (use club_name from whitelist if no team name provided)
-    const finalTeamName = teamName || approvedData.club_name;
-    if (finalTeamName && data.user) {
-      await _supabase.from('profiles').update({ team_name: finalTeamName }).eq('id', data.user.id);
+    
+    if (error) { 
+      showAuthError(error.message); 
+      btn.disabled = false; 
+      btn.textContent = 'Create Account'; 
+      return; 
     }
+    
+    // Increment invite code usage and track user
+    if (data.user) {
+      try {
+        // Call function to increment usage
+        await _supabase.rpc('increment_invite_usage', { invite_code_text: inviteCode });
+        
+        // Track which invite code this user used
+        await _supabase.from('user_invites').insert({
+          user_id: data.user.id,
+          invite_code: inviteCode,
+          club_name: codeData.club_name,
+          plan_type: codeData.plan_type
+        });
+        
+        // Save team name to profile
+        const finalTeamName = teamName || codeData.club_name;
+        if (finalTeamName) {
+          await _supabase.from('profiles').upsert({ 
+            id: data.user.id,
+            team_name: finalTeamName 
+          });
+        }
+      } catch (err) {
+        console.error('Error tracking invite usage:', err);
+      }
+    }
+    
     // If session exists immediately, email confirmation is off — log straight in
     if (data.session) {
       onSignedIn(data.user);
@@ -2097,8 +2292,9 @@ async function handleAuth() {
       // Confirmation email sent — switch to login tab and show message
       switchAuthTab('login');
       document.getElementById('authEmail').value = email;
-      showAuthSuccess('✓ Account created! Check your email to confirm, then sign in here.');
-      btn.disabled = false; btn.textContent = 'Create Account';
+      showAuthSuccess('✓ Account created! Please check your email to verify, then sign in here.');
+      btn.disabled = false; 
+      btn.textContent = 'Create Account';
     }
   }
 }
@@ -2106,6 +2302,153 @@ async function handleAuth() {
 // Expose to window for onclick handlers (replaces early stub)
 window.handleAuth = handleAuth;
 console.log('✅ Real handleAuth function loaded and assigned to window');
+
+// ─── PERSONAL ACCESS REQUEST FUNCTIONS ─────────────────────────────────
+function showPersonalAccessForm() {
+  const modal = document.getElementById('personalAccessModal');
+  modal.style.display = 'flex';
+}
+
+function closePersonalAccessForm() {
+  const modal = document.getElementById('personalAccessModal');
+  modal.style.display = 'none';
+  // Clear form
+  document.getElementById('accessRequestName').value = '';
+  document.getElementById('accessRequestEmail').value = '';
+  document.getElementById('accessRequestPhone').value = '';
+  document.getElementById('accessRequestMessage').value = '';
+}
+
+async function submitAccessRequest() {
+  const name = document.getElementById('accessRequestName').value.trim();
+  const email = document.getElementById('accessRequestEmail').value.trim();
+  const phone = document.getElementById('accessRequestPhone').value.trim();
+  const message = document.getElementById('accessRequestMessage').value.trim();
+  const btn = document.getElementById('submitAccessBtn');
+  
+  // Validation
+  if (!name || !email) {
+    alert('Please fill in your name and email.');
+    return;
+  }
+  
+  // Basic email validation
+  if (!email.includes('@')) {
+    alert('Please enter a valid email address.');
+    return;
+  }
+  
+  btn.disabled = true;
+  btn.textContent = 'Submitting...';
+  
+  try {
+    const { error } = await _supabase.from('access_requests').insert({
+      name: name,
+      email: email,
+      phone: phone || null,
+      message: message || null,
+      status: 'pending'
+    });
+    
+    if (error) throw error;
+    
+    // Success!
+    closePersonalAccessForm();
+    showAuthSuccess('✓ Request submitted! We\'ll send you an access code within 24 hours.');
+    
+  } catch (error) {
+    console.error('Error submitting access request:', error);
+    alert('Failed to submit request. Please try again or contact support.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Submit Request';
+  }
+}
+
+window.showPersonalAccessForm = showPersonalAccessForm;
+window.closePersonalAccessForm = closePersonalAccessForm;
+window.submitAccessRequest = submitAccessRequest;
+
+// ─── EMAIL VERIFICATION BANNER ─────────────────────────────────
+function showEmailVerificationBanner() {
+  // Check if banner already exists
+  if (document.getElementById('emailVerificationBanner')) return;
+  
+  const banner = document.createElement('div');
+  banner.id = 'emailVerificationBanner';
+  banner.innerHTML = `
+    <div style="
+      background: linear-gradient(135deg, #FCD34D 0%, #F59E0B 100%);
+      color: #78350F;
+      padding: 12px 20px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 14px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 9999;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    ">
+      ⚠️ Please verify your email to unlock all features. 
+      <button onclick="resendVerificationEmail()" style="
+        background: white;
+        color: #F59E0B;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-left: 12px;
+        font-size: 13px;
+      ">Resend Email</button>
+      <button onclick="dismissEmailBanner()" style="
+        background: transparent;
+        color: #78350F;
+        border: none;
+        padding: 6px 12px;
+        cursor: pointer;
+        margin-left: 8px;
+        font-size: 13px;
+      ">✕</button>
+    </div>
+  `;
+  document.body.prepend(banner);
+  
+  // Add padding to body to account for banner
+  document.body.style.paddingTop = '50px';
+}
+
+async function resendVerificationEmail() {
+  if (!currentUser) return;
+  
+  try {
+    const { error } = await _supabase.auth.resend({
+      type: 'signup',
+      email: currentUser.email
+    });
+    
+    if (error) throw error;
+    
+    alert('✓ Verification email sent! Please check your inbox.');
+  } catch (error) {
+    console.error('Error resending email:', error);
+    alert('Failed to resend email. Please try again later.');
+  }
+}
+
+function dismissEmailBanner() {
+  const banner = document.getElementById('emailVerificationBanner');
+  if (banner) {
+    banner.remove();
+    document.body.style.paddingTop = '0';
+  }
+}
+
+window.showEmailVerificationBanner = showEmailVerificationBanner;
+window.resendVerificationEmail = resendVerificationEmail;
+window.dismissEmailBanner = dismissEmailBanner;
 
 // Allow Enter key to submit auth form
 document.addEventListener('keydown', function(e) {
@@ -2115,23 +2458,14 @@ document.addEventListener('keydown', function(e) {
 });
 
 async function onSignedIn(user) {
-  // CHECK EMAIL WHITELIST - Verify user still has access
-  const { data: approvedData, error: approvedError } = await _supabase
-    .from('approved_emails')
-    .select('*')
-    .eq('email', user.email.toLowerCase())
-    .eq('is_active', true)
-    .single();
-  
-  if (approvedError || !approvedData) {
-    // User's access has been revoked
-    await _supabase.auth.signOut();
-    showAuthError('Je toegang is verlopen of ingetrokken. Neem contact op met handball-tracker.com');
-    return;
-  }
-  
   currentUser = user;
   window.currentUser = user; // Expose for external modules like live-broadcast-module.js
+  
+  // Check if email is verified
+  if (!user.email_confirmed_at) {
+    console.warn('Email not verified yet');
+    showEmailVerificationBanner();
+  }
   
   // Hide auth screen first
   document.getElementById('authScreen').classList.add('hidden');
