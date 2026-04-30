@@ -292,9 +292,9 @@
     <div class="topbar-content">
       <h2 style="margin: 0; color: var(--text); font-size: 18px; font-weight: 600;">📊 Statistics</h2>
       <button onclick="exportToExcel()" style="
-        background: var(--accent);
-        color: white;
-        border: none;
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--border);
         padding: 8px 16px;
         border-radius: 6px;
         font-weight: 600;
@@ -304,7 +304,9 @@
         align-items: center;
         gap: 6px;
         transition: all 0.2s;
-      " onmouseover="this.style.background='#6B4CE0'" onmouseout="this.style.background='var(--accent)'">
+        margin-left: auto;
+      " onmouseover="this.style.background='var(--accent)'; this.style.color='white'; this.style.borderColor='var(--accent)'" 
+         onmouseout="this.style.background='transparent'; this.style.color='var(--text)'; this.style.borderColor='var(--border)'">
         <span>💾</span>
         <span>Export to Excel</span>
       </button>
