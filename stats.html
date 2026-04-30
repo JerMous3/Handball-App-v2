@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="polish-theme.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   
   <style>
     body {
@@ -290,6 +291,23 @@
   <div class="topbar">
     <div class="topbar-content">
       <h2 style="margin: 0; color: var(--text); font-size: 18px; font-weight: 600;">📊 Statistics</h2>
+      <button onclick="exportToExcel()" style="
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+      " onmouseover="this.style.background='#6B4CE0'" onmouseout="this.style.background='var(--accent)'">
+        <span>💾</span>
+        <span>Export to Excel</span>
+      </button>
     </div>
   </div>
 
@@ -601,6 +619,177 @@
         minute: '2-digit'
       };
       return date.toLocaleDateString('en-US', options);
+    }
+    
+    function exportToExcel() {
+      const wb = XLSX.utils.book_new();
+      const dateStr = new Date().toLocaleDateString('en-GB');
+      
+      // ── Sheet 1: Player Statistics ──
+      const playerStatsRows = [
+        ['SEASON PLAYER STATISTICS', '', '', '', '', '', '', '', ''],
+        ['Generated:', dateStr, '', '', '', '', '', '', ''],
+        [],
+        ['Player', 'Matches', 'Goals', 'Assists', 'Shots', 'Shot %', 'Saves', 'Yellow Cards', 'Suspensions', 'Red Cards']
+      ];
+      
+      // Get all player stats from the leaderboards
+      const playerStats = {};
+      allMatches.forEach(match => {
+        const matchPlayerStats = match.player_stats || {};
+        const eventLog = match.event_log || [];
+        const playerNames = {};
+        
+        eventLog.forEach(event => {
+          if (event.playerId && event.name) {
+            playerNames[event.playerId] = event.name;
+          }
+        });
+        
+        Object.entries(matchPlayerStats).forEach(([playerId, stats]) => {
+          const playerName = playerNames[playerId] || `Player ${playerId}`;
+          
+          if (!playerStats[playerName]) {
+            playerStats[playerName] = {
+              name: playerName,
+              goals: 0,
+              assists: 0,
+              saves: 0,
+              shots: 0,
+              yellows: 0,
+              suspensions: 0,
+              reds: 0,
+              matches: 0
+            };
+          }
+          
+          const aggregated = playerStats[playerName];
+          aggregated.goals += stats.goals || 0;
+          aggregated.assists += stats.assists || 0;
+          aggregated.saves += stats.saves || 0;
+          aggregated.shots += stats.shots || 0;
+          aggregated.yellows += stats.yellows || 0;
+          aggregated.suspensions += stats.suspensions || 0;
+          aggregated.reds += (stats.redCard ? 1 : 0);
+          aggregated.matches++;
+        });
+      });
+      
+      // Sort by goals
+      const sortedPlayers = Object.values(playerStats).sort((a, b) => b.goals - a.goals);
+      
+      sortedPlayers.forEach(player => {
+        const shotPct = player.shots > 0 ? Math.round((player.goals / player.shots) * 100) : 0;
+        playerStatsRows.push([
+          player.name,
+          player.matches,
+          player.goals,
+          player.assists,
+          player.shots,
+          shotPct + '%',
+          player.saves,
+          player.yellows,
+          player.suspensions,
+          player.reds
+        ]);
+      });
+      
+      const wsPlayerStats = XLSX.utils.aoa_to_sheet(playerStatsRows);
+      wsPlayerStats['!cols'] = [
+        { wch: 20 }, // Player
+        { wch: 10 }, // Matches
+        { wch: 8 },  // Goals
+        { wch: 10 }, // Assists
+        { wch: 8 },  // Shots
+        { wch: 10 }, // Shot %
+        { wch: 8 },  // Saves
+        { wch: 14 }, // Yellow Cards
+        { wch: 14 }, // Suspensions
+        { wch: 12 }  // Red Cards
+      ];
+      XLSX.utils.book_append_sheet(wb, wsPlayerStats, 'Player Stats');
+      
+      // ── Sheet 2: Match History ──
+      const matchRows = [
+        ['MATCH HISTORY', '', '', '', '', '', ''],
+        ['Generated:', dateStr, '', '', '', '', ''],
+        [],
+        ['Date', 'Team', 'Score', 'Opponent', 'Result', 'Shots', 'Shot %']
+      ];
+      
+      allMatches.forEach(match => {
+        const date = new Date(match.played_at || match.created_at);
+        const teamName = match.team_name || 'Home';
+        const opponent = match.opponent || 'Away';
+        const scoreHome = match.goals_for || 0;
+        const scoreAway = match.goals_against || 0;
+        const shots = match.shots || 0;
+        const shotPct = match.shot_pct || 0;
+        
+        let result = 'Draw';
+        if (scoreHome > scoreAway) result = 'Win';
+        if (scoreHome < scoreAway) result = 'Loss';
+        
+        matchRows.push([
+          formatDate(date),
+          teamName,
+          `${scoreHome} - ${scoreAway}`,
+          opponent,
+          result,
+          shots,
+          shotPct + '%'
+        ]);
+      });
+      
+      const wsMatches = XLSX.utils.aoa_to_sheet(matchRows);
+      wsMatches['!cols'] = [
+        { wch: 20 }, // Date
+        { wch: 18 }, // Team
+        { wch: 10 }, // Score
+        { wch: 18 }, // Opponent
+        { wch: 8 },  // Result
+        { wch: 8 },  // Shots
+        { wch: 10 }  // Shot %
+      ];
+      XLSX.utils.book_append_sheet(wb, wsMatches, 'Match History');
+      
+      // ── Sheet 3: Season Summary ──
+      const totalMatches = allMatches.length;
+      const totalGoalsFor = allMatches.reduce((sum, m) => sum + (m.goals_for || 0), 0);
+      const totalGoalsAgainst = allMatches.reduce((sum, m) => sum + (m.goals_against || 0), 0);
+      const totalShots = allMatches.reduce((sum, m) => sum + (m.shots || 0), 0);
+      const totalSaves = allMatches.reduce((sum, m) => sum + (m.saves || 0), 0);
+      const wins = allMatches.filter(m => (m.goals_for || 0) > (m.goals_against || 0)).length;
+      const losses = allMatches.filter(m => (m.goals_for || 0) < (m.goals_against || 0)).length;
+      const draws = allMatches.filter(m => (m.goals_for || 0) === (m.goals_against || 0)).length;
+      
+      const summaryRows = [
+        ['SEASON SUMMARY', ''],
+        ['Generated:', dateStr],
+        [],
+        ['Total Matches', totalMatches],
+        ['Wins', wins],
+        ['Losses', losses],
+        ['Draws', draws],
+        [],
+        ['Goals Scored', totalGoalsFor],
+        ['Goals Conceded', totalGoalsAgainst],
+        ['Goal Difference', totalGoalsFor - totalGoalsAgainst],
+        ['Total Shots', totalShots],
+        ['Total Saves', totalSaves],
+        ['Avg Goals/Match', totalMatches > 0 ? (totalGoalsFor / totalMatches).toFixed(1) : 0],
+        ['Shot Efficiency %', totalShots > 0 ? Math.round((totalGoalsFor / totalShots) * 100) + '%' : '0%']
+      ];
+      
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+      wsSummary['!cols'] = [{ wch: 25 }, { wch: 15 }];
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Season Summary');
+      
+      // ── Download ──
+      const filename = `season_statistics_${dateStr.replace(/\//g,'-')}.xlsx`;
+      XLSX.writeFile(wb, filename);
+      
+      console.log('✅ Season statistics exported to Excel');
     }
     
     // Load data on page load
