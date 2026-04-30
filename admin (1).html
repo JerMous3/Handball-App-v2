@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Handball Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="polish-theme.css">
+  
+  <style>
+    body {
+      font-family: 'Manrope', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 32px;
+    }
+    
+    .section {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    th {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 2px solid var(--border);
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    
+    td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .badge-pending { background: #FCD34D; color: #78350F; }
+    .badge-approved { background: #22C55E; color: #065F46; }
+    .badge-rejected { background: #EF4444; color: #7F1D1D; }
+    .badge-active { background: #22C55E; color: #065F46; }
+    .badge-inactive { background: #6B7280; color: #F9FAFB; }
+    
+    .btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #6B4CE0;
+    }
+    
+    .btn-success {
+      background: #22C55E;
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: #16A34A;
+    }
+    
+    .btn-danger {
+      background: #EF4444;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #DC2626;
+    }
+    
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
+    
+    .code-display {
+      background: var(--bg);
+      padding: 12px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+      text-align: center;
+      margin: 16px 0;
+    }
+    
+    .progress-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.3s;
+    }
+    
+    .warning { color: #F59E0B; }
+    .danger { color: #EF4444; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔐 Handball Tracker Admin</h1>
+    <p class="subtitle">Manage invite codes, access requests, and club subscriptions</p>
+    
+    <!-- Pending Access Requests -->
+    <div class="section">
+      <div class="section-title">
+        🎟️ Pending Access Requests
+        <button class="btn btn-secondary" onclick="loadAccessRequests()" style="margin-left: auto;">↻ Refresh</button>
+      </div>
+      <div id="accessRequestsTable"></div>
+    </div>
+    
+    <!-- Generate New Invite Code -->
+    <div class="section">
+      <div class="section-title">➕ Generate New Invite Code</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div>
+          <div class="form-group">
+            <label>Code Type</label>
+            <select id="codeType" onchange="toggleCodeForm()">
+              <option value="club">Club Code</option>
+              <option value="personal">Personal Code</option>
+            </select>
+          </div>
+          
+          <div id="clubForm">
+            <div class="form-group">
+              <label>Club Name *</label>
+              <input type="text" id="clubName" placeholder="Ajax Youth Team">
+            </div>
+            
+            <div class="form-group">
+              <label>Plan Name</label>
+              <select id="planName">
+                <option value="Small">Small (10 users)</option>
+                <option value="Medium">Medium (20 users)</option>
+                <option value="Large">Large (50 users)</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label>Max Users</label>
+              <input type="number" id="maxUsers" value="10">
+            </div>
+            
+            <div class="form-group">
+              <label>Contact Email *</label>
+              <input type="email" id="contactEmail" placeholder="coach@club.com">
+            </div>
+            
+            <div class="form-group">
+              <label>Contact Name</label>
+              <input type="text" id="contactName" placeholder="Coach Name">
+            </div>
+            
+            <div class="form-group">
+              <label>Price per Month (€)</label>
+              <input type="number" id="pricePerMonth" value="20" step="0.01">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Invite Code *</label>
+            <input type="text" id="inviteCode" placeholder="CLUB-AJAX-2024" style="text-transform: uppercase;">
+            <button class="btn btn-secondary" onclick="generateRandomCode()" style="margin-top: 8px; width: 100%;">
+              🎲 Generate Random Code
+            </button>
+          </div>
+          
+          <div class="form-group">
+            <label>Max Uses</label>
+            <input type="number" id="maxUses" value="10">
+          </div>
+          
+          <div class="form-group">
+            <label>Expires At (optional)</label>
+            <input type="date" id="expiresAt">
+          </div>
+        </div>
+        
+        <div>
+          <div style="background: var(--bg); padding: 20px; border-radius: 8px; height: 100%;">
+            <h3 style="margin-top: 0;">Preview</h3>
+            <div id="codePreview"></div>
+            <button class="btn btn-primary" onclick="createInviteCode()" style="width: 100%; margin-top: 16px;">
+              ✓ Create Invite Code
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Active Invite Codes -->
+    <div class="section">
+      <div class="section-title">
+        🔑 Active Invite Codes
+        <button class="btn btn-secondary" onclick="loadInviteCodes()" style="margin-left: auto;">↻ Refresh</button>
+      </div>
+      <div id="inviteCodesTable"></div>
+    </div>
+    
+    <!-- Club Subscriptions -->
+    <div class="section">
+      <div class="section-title">
+        🏢 Club Subscriptions
+        <button class="btn btn-secondary" onclick="loadSubscriptions()" style="margin-left: auto;">↻ Refresh</button>
+      </div>
+      <div id="subscriptionsTable"></div>
+    </div>
+  </div>
+  
+  <script>
+    const SUPABASE_URL = 'https://qgqryeanopdxrwrfczcx.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_I67bdwmAkdodIk5bAQf1Zw_86KroW5R';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // Load all data on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadAccessRequests();
+      loadInviteCodes();
+      loadSubscriptions();
+      updateCodePreview();
+      
+      // Set default expiry to 1 year from now
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      document.getElementById('expiresAt').value = oneYearFromNow.toISOString().split('T')[0];
+      
+      // Auto-update preview when fields change
+      ['clubName', 'planName', 'maxUsers', 'contactEmail', 'inviteCode', 'maxUses', 'codeType'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateCodePreview);
+        if (el) el.addEventListener('change', updateCodePreview);
+      });
+    });
+    
+    function toggleCodeForm() {
+      const type = document.getElementById('codeType').value;
+      document.getElementById('clubForm').style.display = type === 'club' ? 'block' : 'none';
+      
+      if (type === 'personal') {
+        document.getElementById('maxUses').value = 1;
+      } else {
+        document.getElementById('maxUses').value = 10;
+      }
+      
+      updateCodePreview();
+    }
+    
+    function generateRandomCode() {
+      const type = document.getElementById('codeType').value;
+      const clubName = document.getElementById('clubName').value.trim();
+      
+      let code;
+      if (type === 'personal') {
+        const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+        code = `PERSONAL-2024-${random}`;
+      } else if (clubName) {
+        const cleanName = clubName.replace(/\s+/g, '-').toUpperCase();
+        const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+        code = `${cleanName}-2024-${random}`;
+      } else {
+        const random = Math.random().toString(36).substring(2, 10).toUpperCase();
+        code = `CLUB-2024-${random}`;
+      }
+      
+      document.getElementById('inviteCode').value = code;
+      updateCodePreview();
+    }
+    
+    function updateCodePreview() {
+      const type = document.getElementById('codeType').value;
+      const code = document.getElementById('inviteCode').value.trim().toUpperCase();
+      const maxUses = document.getElementById('maxUses').value;
+      
+      let html = '<div class="code-display">' + (code || 'CODE-PREVIEW') + '</div>';
+      html += '<p><strong>Type:</strong> ' + (type === 'club' ? '🏢 Club' : '👤 Personal') + '</p>';
+      html += '<p><strong>Max Uses:</strong> ' + maxUses + '</p>';
+      
+      if (type === 'club') {
+        const clubName = document.getElementById('clubName').value || 'Club Name';
+        const plan = document.getElementById('planName').value || 'Small';
+        const maxUsers = document.getElementById('maxUsers').value || '10';
+        html += '<p><strong>Club:</strong> ' + clubName + '</p>';
+        html += '<p><strong>Plan:</strong> ' + plan + ' (' + maxUsers + ' users)</p>';
+      }
+      
+      document.getElementById('codePreview').innerHTML = html;
+    }
+    
+    async function loadAccessRequests() {
+      const { data, error } = await _supabase
+        .from('access_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading access requests:', error);
+        return;
+      }
+      
+      const container = document.getElementById('accessRequestsTable');
+      
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="empty-state">No pending access requests</div>';
+        return;
+      }
+      
+      let html = '<table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Message</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>';
+      
+      data.forEach(req => {
+        const date = new Date(req.created_at).toLocaleDateString();
+        const statusClass = req.status === 'pending' ? 'badge-pending' : 
+                           req.status === 'approved' ? 'badge-approved' : 'badge-rejected';
+        
+        html += `
+          <tr>
+            <td><strong>${req.name}</strong></td>
+            <td>${req.email}</td>
+            <td>${req.phone || '-'}</td>
+            <td>${req.message || '-'}</td>
+            <td><span class="badge ${statusClass}">${req.status}</span></td>
+            <td>${date}</td>
+            <td>
+              ${req.status === 'pending' ? `
+                <button class="btn btn-success" onclick="approveRequest('${req.id}', '${req.email}')">✓ Approve</button>
+                <button class="btn btn-danger" onclick="rejectRequest('${req.id}')">✗ Reject</button>
+              ` : req.invite_code_generated ? `
+                <div class="code-display" style="margin: 0; padding: 6px; font-size: 12px;">${req.invite_code_generated}</div>
+              ` : '-'}
+            </td>
+          </tr>
+        `;
+      });
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+    
+    async function approveRequest(requestId, email) {
+      // Generate a unique personal code
+      const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const code = `PERSONAL-2024-${random}`;
+      
+      try {
+        // Create invite code
+        const { error: codeError } = await _supabase.from('invite_codes').insert({
+          code: code,
+          club_name: 'Personal User',
+          plan_type: 'personal',
+          max_uses: 1,
+          expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+        });
+        
+        if (codeError) throw codeError;
+        
+        // Update request status
+        const { error: updateError } = await _supabase
+          .from('access_requests')
+          .update({
+            status: 'approved',
+            invite_code_generated: code,
+            processed_at: new Date().toISOString()
+          })
+          .eq('id', requestId);
+        
+        if (updateError) throw updateError;
+        
+        alert(`✓ Request approved!\n\nGenerated code: ${code}\n\nPlease email this code to: ${email}`);
+        
+        loadAccessRequests();
+        loadInviteCodes();
+        
+      } catch (error) {
+        console.error('Error approving request:', error);
+        alert('Failed to approve request: ' + error.message);
+      }
+    }
+    
+    async function rejectRequest(requestId) {
+      if (!confirm('Are you sure you want to reject this request?')) return;
+      
+      const { error } = await _supabase
+        .from('access_requests')
+        .update({
+          status: 'rejected',
+          processed_at: new Date().toISOString()
+        })
+        .eq('id', requestId);
+      
+      if (error) {
+        console.error('Error rejecting request:', error);
+        alert('Failed to reject request');
+        return;
+      }
+      
+      alert('Request rejected');
+      loadAccessRequests();
+    }
+    
+    async function createInviteCode() {
+      const type = document.getElementById('codeType').value;
+      const code = document.getElementById('inviteCode').value.trim().toUpperCase();
+      const maxUses = parseInt(document.getElementById('maxUses').value);
+      const expiresAt = document.getElementById('expiresAt').value;
+      
+      if (!code) {
+        alert('Please enter an invite code');
+        return;
+      }
+      
+      try {
+        // If club type, create subscription first
+        if (type === 'club') {
+          const clubName = document.getElementById('clubName').value.trim();
+          const planName = document.getElementById('planName').value;
+          const maxUsers = parseInt(document.getElementById('maxUsers').value);
+          const contactEmail = document.getElementById('contactEmail').value.trim();
+          const contactName = document.getElementById('contactName').value.trim();
+          const pricePerMonth = parseFloat(document.getElementById('pricePerMonth').value);
+          
+          if (!clubName || !contactEmail) {
+            alert('Please fill in club name and contact email');
+            return;
+          }
+          
+          // Create subscription
+          const { error: subError } = await _supabase.from('club_subscriptions').insert({
+            club_name: clubName,
+            plan_name: planName,
+            max_users: maxUsers,
+            contact_email: contactEmail,
+            contact_name: contactName,
+            price_per_month: pricePerMonth,
+            status: 'active'
+          });
+          
+          // Ignore duplicate error
+          if (subError && !subError.message.includes('duplicate')) {
+            throw subError;
+          }
+        }
+        
+        // Create invite code
+        const { error: codeError } = await _supabase.from('invite_codes').insert({
+          code: code,
+          club_name: type === 'club' ? document.getElementById('clubName').value.trim() : 'Personal User',
+          plan_type: type,
+          max_uses: maxUses,
+          expires_at: expiresAt ? new Date(expiresAt).toISOString() : null
+        });
+        
+        if (codeError) throw codeError;
+        
+        alert(`✓ Invite code created successfully!\n\nCode: ${code}\nMax uses: ${maxUses}`);
+        
+        // Clear form
+        document.getElementById('inviteCode').value = '';
+        document.getElementById('clubName').value = '';
+        document.getElementById('contactEmail').value = '';
+        document.getElementById('contactName').value = '';
+        
+        loadInviteCodes();
+        loadSubscriptions();
+        updateCodePreview();
+        
+      } catch (error) {
+        console.error('Error creating invite code:', error);
+        alert('Failed to create invite code: ' + error.message);
+      }
+    }
+    
+    async function loadInviteCodes() {
+      const { data, error } = await _supabase
+        .from('invite_codes')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading invite codes:', error);
+        return;
+      }
+      
+      const container = document.getElementById('inviteCodesTable');
+      
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="empty-state">No invite codes yet</div>';
+        return;
+      }
+      
+      let html = '<table><thead><tr><th>Code</th><th>Club</th><th>Type</th><th>Usage</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+      
+      data.forEach(code => {
+        const usagePercent = Math.round((code.uses_count / code.max_uses) * 100);
+        const expired = code.expires_at && new Date(code.expires_at) < new Date();
+        const expiryDate = code.expires_at ? new Date(code.expires_at).toLocaleDateString() : 'Never';
+        
+        let usageClass = '';
+        if (usagePercent >= 100) usageClass = 'danger';
+        else if (usagePercent >= 80) usageClass = 'warning';
+        
+        html += `
+          <tr>
+            <td><strong style="font-family: monospace;">${code.code}</strong></td>
+            <td>${code.club_name}</td>
+            <td><span class="badge ${code.plan_type === 'club' ? 'badge-approved' : 'badge-pending'}">${code.plan_type}</span></td>
+            <td>
+              <span class="${usageClass}">${code.uses_count} / ${code.max_uses} (${usagePercent}%)</span>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: ${usagePercent}%"></div>
+              </div>
+            </td>
+            <td>${expiryDate}${expired ? ' <span class="danger">⚠️</span>' : ''}</td>
+            <td><span class="badge ${code.active ? 'badge-active' : 'badge-inactive'}">${code.active ? 'Active' : 'Inactive'}</span></td>
+            <td>
+              ${code.active ? `
+                <button class="btn btn-danger" onclick="deactivateCode('${code.id}')">Deactivate</button>
+              ` : `
+                <button class="btn btn-success" onclick="activateCode('${code.id}')">Activate</button>
+              `}
+            </td>
+          </tr>
+        `;
+      });
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+    
+    async function deactivateCode(codeId) {
+      if (!confirm('Deactivate this invite code? Users won\'t be able to use it anymore.')) return;
+      
+      const { error } = await _supabase
+        .from('invite_codes')
+        .update({ active: false })
+        .eq('id', codeId);
+      
+      if (error) {
+        alert('Failed to deactivate code');
+        return;
+      }
+      
+      loadInviteCodes();
+    }
+    
+    async function activateCode(codeId) {
+      const { error } = await _supabase
+        .from('invite_codes')
+        .update({ active: true })
+        .eq('id', codeId);
+      
+      if (error) {
+        alert('Failed to activate code');
+        return;
+      }
+      
+      loadInviteCodes();
+    }
+    
+    async function loadSubscriptions() {
+      const { data, error } = await _supabase
+        .from('club_subscriptions')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading subscriptions:', error);
+        return;
+      }
+      
+      const container = document.getElementById('subscriptionsTable');
+      
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="empty-state">No club subscriptions yet</div>';
+        return;
+      }
+      
+      let html = '<table><thead><tr><th>Club</th><th>Plan</th><th>Users</th><th>Contact</th><th>Price</th><th>Status</th></tr></thead><tbody>';
+      
+      data.forEach(sub => {
+        const usagePercent = Math.round((sub.current_users / sub.max_users) * 100);
+        
+        let usageClass = '';
+        if (usagePercent >= 100) usageClass = 'danger';
+        else if (usagePercent >= 80) usageClass = 'warning';
+        
+        html += `
+          <tr>
+            <td><strong>${sub.club_name}</strong></td>
+            <td>${sub.plan_name}</td>
+            <td>
+              <span class="${usageClass}">${sub.current_users} / ${sub.max_users} (${usagePercent}%)</span>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: ${usagePercent}%"></div>
+              </div>
+            </td>
+            <td>
+              ${sub.contact_name || '-'}<br>
+              <small style="color: var(--muted);">${sub.contact_email}</small>
+            </td>
+            <td>€${sub.price_per_month}/mo</td>
+            <td><span class="badge ${sub.status === 'active' ? 'badge-active' : 'badge-inactive'}">${sub.status}</span></td>
+          </tr>
+        `;
+      });
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+  </script>
+</body>
+</html>
