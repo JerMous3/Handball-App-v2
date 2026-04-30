@@ -313,37 +313,107 @@
       const { data: { session } } = await _supabase.auth.getSession();
       
       if (!session) {
-        // Not logged in - prompt for login
-        const email = prompt('Admin Login\n\nEnter your email:');
-        const password = prompt('Enter your password:');
-        
-        if (!email || !password) {
-          alert('Authentication required to access admin panel');
-          window.location.href = 'index.html';
-          return false;
-        }
-        
-        const { data, error } = await _supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (error) {
-          alert('Login failed: ' + error.message);
-          window.location.href = 'index.html';
-          return false;
-        }
-        
-        currentUser = data.user;
-      } else {
-        currentUser = session.user;
+        // Not logged in - show message and redirect
+        document.body.innerHTML = `
+          <div style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            text-align: center;
+            padding: 20px;
+          ">
+            <div style="max-width: 500px;">
+              <h1 style="font-size: 48px; margin-bottom: 16px;">🔐</h1>
+              <h2 style="margin-bottom: 8px;">Admin Access Required</h2>
+              <p style="color: var(--muted); margin-bottom: 24px;">
+                You need to be signed in to access the admin panel.
+              </p>
+              <p style="color: var(--muted); margin-bottom: 24px;">
+                Please sign in to the main app first, then return here.
+              </p>
+              <a href="index.html" style="
+                display: inline-block;
+                background: var(--accent);
+                color: white;
+                padding: 12px 24px;
+                border-radius: 6px;
+                text-decoration: none;
+                font-weight: 600;
+              ">Go to Main App</a>
+              <p style="color: var(--muted); margin-top: 16px; font-size: 13px;">
+                After signing in, open this admin page again.
+              </p>
+            </div>
+          </div>
+        `;
+        return false;
+      }
+      
+      currentUser = session.user;
+      
+      // Check if user is admin (jeremybekkers@icloud.com)
+      if (currentUser.email !== 'jeremybekkers@icloud.com') {
+        document.body.innerHTML = `
+          <div style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            text-align: center;
+            padding: 20px;
+          ">
+            <div style="max-width: 500px;">
+              <h1 style="font-size: 48px; margin-bottom: 16px;">⛔</h1>
+              <h2 style="margin-bottom: 8px;">Access Denied</h2>
+              <p style="color: var(--muted); margin-bottom: 24px;">
+                You are signed in as: <strong>${currentUser.email}</strong>
+              </p>
+              <p style="color: var(--muted); margin-bottom: 24px;">
+                This admin panel is restricted to authorized administrators only.
+              </p>
+              <button onclick="signOut()" style="
+                background: var(--accent);
+                color: white;
+                padding: 12px 24px;
+                border-radius: 6px;
+                border: none;
+                font-weight: 600;
+                cursor: pointer;
+                margin-right: 8px;
+              ">Sign Out</button>
+              <a href="index.html" style="
+                display: inline-block;
+                background: transparent;
+                color: var(--text);
+                padding: 12px 24px;
+                border-radius: 6px;
+                text-decoration: none;
+                font-weight: 600;
+                border: 1px solid var(--border);
+              ">Back to App</a>
+            </div>
+          </div>
+        `;
+        return false;
       }
       
       // Show user info
-      document.querySelector('h1').innerHTML = `🔐 Handball Tracker Admin <small style="font-size:14px;color:var(--muted);font-weight:400;">(${currentUser.email})</small>`;
+      document.querySelector('h1').innerHTML = `🔐 Handball Tracker Admin <small style="font-size:14px;color:var(--muted);font-weight:400;">(${currentUser.email}) <a href="#" onclick="signOut()" style="color:var(--red);text-decoration:none;margin-left:12px;">Sign Out</a></small>`;
       
       return true;
     }
+    
+    async function signOut() {
+      await _supabase.auth.signOut();
+      window.location.reload();
+    }
+    
+    window.signOut = signOut;
     
     // Load all data on page load
     window.addEventListener('DOMContentLoaded', async () => {
