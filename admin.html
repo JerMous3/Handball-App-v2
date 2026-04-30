@@ -306,8 +306,50 @@
     const SUPABASE_KEY = 'sb_publishable_I67bdwmAkdodIk5bAQf1Zw_86KroW5R';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
+    let currentUser = null;
+    
+    // Check authentication on page load
+    async function checkAuth() {
+      const { data: { session } } = await _supabase.auth.getSession();
+      
+      if (!session) {
+        // Not logged in - prompt for login
+        const email = prompt('Admin Login\n\nEnter your email:');
+        const password = prompt('Enter your password:');
+        
+        if (!email || !password) {
+          alert('Authentication required to access admin panel');
+          window.location.href = 'index.html';
+          return false;
+        }
+        
+        const { data, error } = await _supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (error) {
+          alert('Login failed: ' + error.message);
+          window.location.href = 'index.html';
+          return false;
+        }
+        
+        currentUser = data.user;
+      } else {
+        currentUser = session.user;
+      }
+      
+      // Show user info
+      document.querySelector('h1').innerHTML = `🔐 Handball Tracker Admin <small style="font-size:14px;color:var(--muted);font-weight:400;">(${currentUser.email})</small>`;
+      
+      return true;
+    }
+    
     // Load all data on page load
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
+      const authenticated = await checkAuth();
+      if (!authenticated) return;
+      
       loadAccessRequests();
       loadInviteCodes();
       loadSubscriptions();
