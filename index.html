@@ -65,11 +65,6 @@
     });
   });
   
-  // Declare functions globally so onclick handlers work
-  // These will be properly implemented later in the main script
-  window.handleAuth = function() { console.log('handleAuth not ready yet'); };
-  window.recordAttack = function() { console.log('recordAttack not ready yet'); };
-  window.deleteEvent = function() { console.log('deleteEvent not ready yet'); };
 </script>
 <style>
   :root {
@@ -85,6 +80,13 @@
     --text: #f0f2f6;
     --muted: #6b7585;
     --gk-accent: #7b5cfa;
+    --z-topbar: 100;
+    --z-mobile-tab: 200;
+    --z-modal: 1000;
+    --z-setup: 2000;
+    --z-history: 3000;
+    --z-auth: 4000;
+    --z-system: 9999;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -107,7 +109,7 @@
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: var(--z-topbar);
   }
 
   .topbar-brand {
@@ -548,12 +550,13 @@
     gap: 14px;
   }
 
-  /* GOAL GRID MODAL */
-  .modal-overlay {
+  /* SHARED MODAL OVERLAY BASE */
+  .modal-overlay,
+  .history-modal-overlay,
+  .import-modal-overlay {
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.85);
-    z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -563,9 +566,16 @@
     transition: opacity 0.2s;
   }
 
-  .modal-overlay.open {
+  .modal-overlay.open,
+  .history-modal-overlay.open,
+  .import-modal-overlay.open {
     opacity: 1;
-    pointer-events: all;
+    pointer-events: auto;
+  }
+
+  /* GOAL GRID MODAL */
+  .modal-overlay {
+    z-index: var(--z-modal);
   }
 
   .modal {
@@ -742,19 +752,8 @@
 
   /* History modal */
   .history-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    z-index: 3000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
+    z-index: var(--z-history);
   }
-  .history-modal-overlay.open { opacity: 1; pointer-events: all; }
   .history-modal {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -906,14 +905,12 @@
   }
 
   /* Responsive */
-  /* ═══════════════════════════════════════════
-     MOBILE LAYOUT  (max-width: 768px)
+  /* MOBILE LAYOUT (max-width: 768px)
      Bottom tab navigation, large touch targets,
-     full-screen panels. Desktop untouched.
-  ═══════════════════════════════════════════ */
+     full-screen panels. Desktop untouched. */
   @media (max-width: 768px) {
 
-    /* ── Topbar ── */
+    /* Topbar */
     .topbar {
       padding: 8px 12px;
       flex-wrap: nowrap;
@@ -954,7 +951,7 @@
     
     .user-badge { display: none; }
 
-    /* ── Main grid → single column, fill viewport ── */
+    /* Main grid: single column, fill viewport */
     .main {
       grid-template-columns: 1fr;
       grid-template-rows: 1fr;
@@ -963,7 +960,7 @@
       position: relative;
     }
 
-    /* ── All panels hidden by default, shown by tab ── */
+    /* All panels hidden by default, shown by tab */
     .sidebar, .players-area, .right-panel {
       display: none;
       position: absolute;
@@ -976,7 +973,7 @@
     .players-area.mobile-active,
     .right-panel.mobile-active { display: block; }
 
-    /* ── Bottom tab bar ── */
+    /* Bottom tab bar */
     .mobile-tab-bar {
       position: fixed;
       bottom: 0; left: 0; right: 0;
@@ -984,7 +981,7 @@
       background: var(--surface);
       border-top: 1px solid var(--border);
       display: flex;
-      z-index: 200;
+      z-index: var(--z-mobile-tab);
     }
     .mobile-tab {
       flex: 1;
@@ -1009,7 +1006,7 @@
     .mobile-tab.active { color: var(--accent); }
     .mobile-tab.active .tab-icon { filter: drop-shadow(0 0 4px rgba(232,255,0,0.5)); }
 
-    /* ── Player rows — bigger touch targets ── */
+    /* Player rows: bigger touch targets */
     .player-row {
       padding: 10px 10px;
       gap: 8px;
@@ -1049,7 +1046,7 @@
     .drop-zone { margin-bottom: 12px; }
     .drop-zone-empty { height: 44px; font-size: 11px; }
 
-    /* ── Stats sidebar — horizontal scroll cards on mobile ── */
+    /* Stats sidebar: horizontal scroll cards on mobile */
     .sidebar {
       padding-bottom: 16px;
     }
@@ -1061,13 +1058,13 @@
     .heatmap-grid { aspect-ratio: 3/1.6; }
     .heatmap-cell { font-size: 14px; }
 
-    /* ── Right panel ── */
+    /* Right panel */
     .right-panel { gap: 10px; }
     .suspension-item { padding: 8px 10px; }
     .suspension-timer { font-size: 20px; }
     .event-log { max-height: none; }
 
-    /* ── GK modal — full screen on mobile ── */
+    /* GK modal: full screen on mobile */
     .modal-overlay {
       align-items: flex-end;
       padding: 0;
@@ -1085,20 +1082,20 @@
     .modal-btns { margin-top: 14px; }
     .modal-btn { padding: 12px 20px; font-size: 14px; }
 
-    /* ── Setup screen on mobile ── */
+    /* Setup screen on mobile */
     .setup-card { padding-bottom: 80px; }
     .setup-team-row { grid-template-columns: 1fr; }
     .setup-row { grid-template-columns: 52px 1fr 1fr auto; gap: 5px; }
     .setup-input { padding: 8px 8px; font-size: 13px; }
     .setup-launch-btn { font-size: 18px; padding: 14px; }
 
-    /* ── Auth screen on mobile ── */
+    /* Auth screen on mobile */
     .auth-card { padding: 28px 20px; }
 
-    /* ── Import modal ── */
+    /* Import modal */
     .import-modal { border-radius: 16px 16px 0 0; }
 
-    /* ── History modal ── */
+    /* History modal */
     .history-modal {
       width: 100%;
       max-width: 100%;
@@ -1126,12 +1123,12 @@
     .mobile-tab-bar { display: flex; }
   }
 
-  /* ── TEAM SETUP SCREEN ── */
+  /* TEAM SETUP SCREEN */
   .setup-screen {
     position: fixed;
     inset: 0;
     background: var(--bg);
-    z-index: 2000;
+    z-index: var(--z-setup);
     display: flex;
     align-items: flex-start;
     justify-content: center;
@@ -1270,19 +1267,8 @@
 
   /* Import modal */
   .import-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    z-index: 3000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
+    z-index: var(--z-history);
   }
-  .import-modal-overlay.open { opacity: 1; pointer-events: all; }
   .import-modal {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -1353,12 +1339,12 @@
   }
   .shooter-input:focus { border-color: var(--red); }
   .shooter-hint { font-size: 11px; color: var(--muted); }
-  /* ── AUTH SCREEN ── */
+  /* AUTH SCREEN */
   .auth-screen {
     position: fixed;
     inset: 0;
     background: var(--bg);
-    z-index: 4000;
+    z-index: var(--z-auth);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1494,6 +1480,97 @@
   }
   .setup-roster-info { font-size: 12px; color: var(--muted); flex: 1; }
   .setup-roster-info strong { color: var(--text); }
+
+  /* Mobile panel */
+  .mobile-panel {
+    display: none;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    bottom: 60px;
+    background: var(--bg);
+    overflow-y: auto;
+    padding: 16px;
+    z-index: 50;
+  }
+
+  @media (max-width: 768px) {
+    .mobile-panel.mobile-active {
+      display: block !important;
+    }
+  }
+
+  .more-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .more-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .more-button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .more-button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+  }
+
+  .more-button:active {
+    transform: scale(0.98);
+  }
+
+  .more-button.danger {
+    background: rgba(255, 59, 59, 0.1);
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .more-button.live {
+    background: rgba(255, 59, 59, 0.15);
+    border-color: var(--red);
+    color: var(--red);
+    font-weight: 700;
+  }
+
+  .more-button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 700;
+  }
+
+  .more-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 </style>
 <body>
 
@@ -1926,98 +2003,6 @@
 
 <!-- MOBILE MORE SECTION (only visible on mobile in More tab) -->
 <div id="mobileMoreSection" class="mobile-panel" style="display: none;">
-  <style>
-    .mobile-panel {
-      display: none;
-      position: fixed;
-      top: 60px;
-      left: 0;
-      right: 0;
-      bottom: 60px;
-      background: var(--bg);
-      overflow-y: auto;
-      padding: 16px;
-      z-index: 50;
-    }
-    
-    @media (max-width: 768px) {
-      .mobile-panel.mobile-active {
-        display: block !important;
-      }
-    }
-    
-    .more-section {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-    
-    .more-section-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 12px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--border);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    
-    .more-button-group {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    
-    .more-button {
-      width: 100%;
-      padding: 14px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-    
-    .more-button:active {
-      transform: scale(0.98);
-    }
-    
-    .more-button.danger {
-      background: rgba(255, 59, 59, 0.1);
-      border-color: var(--red);
-      color: var(--red);
-    }
-    
-    .more-button.live {
-      background: rgba(255, 59, 59, 0.15);
-      border-color: var(--red);
-      color: var(--red);
-      font-weight: 700;
-    }
-    
-    .more-button.primary {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #000;
-      font-weight: 700;
-    }
-    
-    .more-button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  </style>
-  
   <!-- Team Names -->
   <div class="more-section">
     <div style="
@@ -2150,7 +2135,7 @@
 </div>
 
 <script>
-// ─── AUTH & SUPABASE ─────────────────────────────────────
+// AUTH & SUPABASE
 let currentUser = null;
 let currentAuthTab = 'login';
 
@@ -2299,11 +2284,9 @@ async function handleAuth() {
   }
 }
 
-// Expose to window for onclick handlers (replaces early stub)
 window.handleAuth = handleAuth;
-console.log('✅ Real handleAuth function loaded and assigned to window');
 
-// ─── PERSONAL ACCESS REQUEST FUNCTIONS ─────────────────────────────────
+// PERSONAL ACCESS REQUEST FUNCTIONS
 function showPersonalAccessForm() {
   const modal = document.getElementById('personalAccessModal');
   modal.style.display = 'flex';
@@ -2369,7 +2352,7 @@ window.showPersonalAccessForm = showPersonalAccessForm;
 window.closePersonalAccessForm = closePersonalAccessForm;
 window.submitAccessRequest = submitAccessRequest;
 
-// ─── EMAIL VERIFICATION BANNER ─────────────────────────────────
+// EMAIL VERIFICATION BANNER
 function showEmailVerificationBanner() {
   // Check if banner already exists
   if (document.getElementById('emailVerificationBanner')) return;
@@ -2471,33 +2454,28 @@ async function onSignedIn(user) {
   document.getElementById('authScreen').classList.add('hidden');
   
   // Try to load active match from cloud
-  console.log('🔐 Checking for active match...');
   const matchRestored = await loadMatchFromCloud();
   
   if (matchRestored) {
-    console.log('✅ Match restored from cloud');
     return; // Match was restored, don't show setup screen
   }
   
   // Only show setup screen if no active match was restored
-  if (!matchRestored) {
-    console.log('ℹ️ Showing setup screen (matchRestored = false)');
-    document.getElementById('setupScreen').classList.remove('hidden');
+  document.getElementById('setupScreen').classList.remove('hidden');
 
-    // Check for saved roster
-    const { data } = await _supabase.from('rosters').select('*').eq('user_id', user.id).maybeSingle();
-    const rosterBar = document.getElementById('rosterBar');
-    const rosterInfo = document.getElementById('rosterBarInfo');
-    rosterBar.style.display = 'flex';
-    if (data) {
-      const players = data.players || [];
-      const updated = new Date(data.updated_at).toLocaleDateString('en-GB');
-      rosterInfo.innerHTML = `<strong>${data.name}</strong> — ${players.length} players saved &nbsp;·&nbsp; Last updated ${updated}`;
-    } else {
-      rosterInfo.innerHTML = 'No saved roster yet — fill in your squad and click <strong>↑ Save Roster</strong>';
-      document.getElementById('rosterBar').querySelector('button:first-child').style.display = 'none';
-    }
-  } // end if (!matchRestored)
+  // Check for saved roster
+  const { data } = await _supabase.from('rosters').select('*').eq('user_id', user.id).maybeSingle();
+  const rosterBar = document.getElementById('rosterBar');
+  const rosterInfo = document.getElementById('rosterBarInfo');
+  rosterBar.style.display = 'flex';
+  if (data) {
+    const players = data.players || [];
+    const updated = new Date(data.updated_at).toLocaleDateString('en-GB');
+    rosterInfo.innerHTML = `<strong>${data.name}</strong> — ${players.length} players saved &nbsp;·&nbsp; Last updated ${updated}`;
+  } else {
+    rosterInfo.innerHTML = 'No saved roster yet — fill in your squad and click <strong>↑ Save Roster</strong>';
+    document.getElementById('rosterBar').querySelector('button:first-child').style.display = 'none';
+  }
 }
 
 async function signOut() {
@@ -2508,14 +2486,14 @@ async function signOut() {
   
   await _supabase.auth.signOut();
   currentUser = null;
-  window.currentUser = null; // Clear for external modules
+  window.currentUser = null;
   document.getElementById('authScreen').classList.remove('hidden');
   document.getElementById('setupScreen').classList.add('hidden');
   document.getElementById('appTopbar').style.display = 'none';
   document.getElementById('appMain').style.display = 'none';
 }
 
-// ─── ROSTER CLOUD SAVE / LOAD ────────────────────────────
+// ROSTER CLOUD SAVE / LOAD
 function collectCurrentRoster() {
   return {
     gk:      readSetupRows('setupGkRows'),
@@ -2584,7 +2562,7 @@ async function loadSavedRoster() {
   }
 }
 
-// ─── MATCH CLOUD SAVE ────────────────────────────────────
+// MATCH CLOUD SAVE
 async function saveMatchToSupabase(matchData) {
   if (!currentUser) return;
   setCloudStatus('saving', '☁ Saving...');
@@ -2634,7 +2612,7 @@ function setCloudStatus(state, msg) {
   }
 }
 
-// ─── CLOUD MATCH HISTORY ─────────────────────────────────
+// CLOUD MATCH HISTORY
 async function loadCloudHistory() {
   if (!currentUser) return loadHistory(); // fall back to localStorage
   const { data, error } = await _supabase
@@ -2665,7 +2643,7 @@ async function deleteCloudEntry(id) {
   renderHistoryList();
 }
 
-// ─── SESSION RESTORE + EMAIL CONFIRMATION HANDLER ────────
+// SESSION RESTORE + EMAIL CONFIRMATION HANDLER
 // Supabase puts tokens in the URL hash after email confirmation.
 // We detect and exchange them here before checking for a session.
 (async function checkSession() {
@@ -2708,7 +2686,7 @@ async function deleteCloudEntry(id) {
   }
 })();
 
-// ─── TEAM SETUP ──────────────────────────────────────────
+// TEAM SETUP
 let setupIdCounter = 100;
 
 const defaultRoster = { gk: [], players: [], subs: [] };
@@ -2837,7 +2815,7 @@ function launchMatch() {
   addSetupRow('sub');
 })();
 
-// ─── IMPORT MODAL ────────────────────────────────────────
+// IMPORT MODAL
 function openImportModal() {
   document.getElementById('importTextarea').value = '';
   document.getElementById('importModalOverlay').classList.add('open');
@@ -2886,7 +2864,7 @@ document.getElementById('importModalOverlay').addEventListener('click', function
   if (e.target === this) closeImportModal();
 });
 
-// ─── MOBILE TAB NAVIGATION ───────────────────────────────
+// MOBILE TAB NAVIGATION
 function switchMobileTab(tab) {
   // Only applies on mobile
   if (window.innerWidth > 768) return;
@@ -2934,73 +2912,62 @@ function initMobileLayout() {
   }
 }
 
-// ─── RESTORE MATCH STATE (for cross-device sync) ────────
+// RESTORE MATCH STATE (for cross-device sync)
 window.restoreMatchState = function(data, rosterData = null) {
-  console.log('🔄 Restoring match from cloud...');
-  console.log('   Has roster data:', !!rosterData);
-  
   if (rosterData) {
     // Full restore with roster - actually launch the match
-    console.log('   ✅ Roster data found - launching match');
-    
+
     // Set team names
     window.teamName = data.team_name || 'Team';
     window.opponent = data.opponent || 'Opponent';
-    console.log('   Team names:', window.teamName, 'vs', window.opponent);
-    
+
     // Update all team name elements
     const homeEls = document.querySelectorAll('#homeTeamName, #mobileHomeTeam, #mobileHomeTeam2');
     const awayEls = document.querySelectorAll('#awayTeamName, #mobileAwayTeam, #mobileAwayTeam2');
     homeEls.forEach(el => el.textContent = window.teamName);
     awayEls.forEach(el => el.textContent = window.opponent);
-    
+
     // Update scoreboard labels
     const labels = document.querySelectorAll('.scoreboard-teams span');
     if (labels.length >= 2) {
       labels[0].textContent = window.teamName;
       labels[2].textContent = window.opponent;
     }
-    
-    console.log('   Calling initMatch with roster...');
+
     // Launch the match with saved roster
     initMatch(rosterData);
-    
+
     // Wrap functions for live broadcasting (must happen AFTER initMatch)
     if (typeof window.wrapLiveBroadcastFunctions === 'function') {
       window.wrapLiveBroadcastFunctions();
     }
-    
+
     window.currentRoster = rosterData;
-    console.log('   ✅ initMatch complete');
-    
+
     // Restore match state - set both local and window variables
     window.matchSeconds = data.timer_seconds || 0;
     window.timerRunning = data.is_timer_running || false;
     window.timerPausedAt = data.timer_seconds || 0;
     window.timerStartTime = null;
-    window.currentHalf = data.current_half || 'first';
-    
-    console.log('   Timer restored:', window.matchSeconds, 'seconds, running:', window.timerRunning);
-    
+    window.currentHalf = data.current_half || 1;
+
     if (window.stats) {
       window.stats.goals = data.score_home || 0;
       window.stats.goalsAgainst = data.score_away || 0;
-      console.log('   Score restored:', window.stats.goals, '-', window.stats.goalsAgainst);
     }
-    
+
     // Restore event log
     if (data.event_log) {
       try {
         // Handle both JSON string and direct array
-        const restoredEvents = typeof data.event_log === 'string' 
-          ? JSON.parse(data.event_log) 
+        const restoredEvents = typeof data.event_log === 'string'
+          ? JSON.parse(data.event_log)
           : data.event_log;
-        
+
         // Clear existing array and add restored events
         window.eventLog.length = 0;
         if (Array.isArray(restoredEvents)) {
           restoredEvents.forEach(event => window.eventLog.push(event));
-          console.log('   Event log restored:', window.eventLog.length, 'events');
         } else {
           console.warn('   Event log is not an array:', typeof restoredEvents);
         }
@@ -3008,20 +2975,19 @@ window.restoreMatchState = function(data, rosterData = null) {
         console.error('   Failed to parse event log:', err);
       }
     }
-    
-// Restore player stats
+
+    // Restore player stats
     if (data.player_stats) {
       try {
         // Handle both JSON string and direct object
         const restoredStats = typeof data.player_stats === 'string'
           ? JSON.parse(data.player_stats)
           : data.player_stats;
-        
+
         // Clear existing object and merge restored stats
         Object.keys(window.playerStats).forEach(key => delete window.playerStats[key]);
         Object.assign(window.playerStats, restoredStats);
-        console.log('   Player stats restored');
-        
+
         // Recalculate total shots from player stats
         window.stats.shots = 0;
         window.stats.assists = 0;
@@ -3033,12 +2999,11 @@ window.restoreMatchState = function(data, rosterData = null) {
           window.stats.yellows += ps.yellows || 0;
           window.stats.suspensions += ps.suspensions || 0;
         });
-        console.log('   Stats recalculated: shots:', window.stats.shots);
       } catch (err) {
         console.error('   Failed to parse player stats:', err);
       }
     }
-    
+
     // Force timer display update
     const m = Math.floor(window.matchSeconds / 60);
     const s = window.matchSeconds % 60;
@@ -3046,59 +3011,45 @@ window.restoreMatchState = function(data, rosterData = null) {
     const timerEl = document.getElementById('matchTimer');
     if (timerEl) {
       timerEl.textContent = `${pad(m)}:${pad(s)}`;
-      console.log('   ✅ Timer display forced to:', timerEl.textContent);
     }
-    
+
     // Update scoreboard
     if (typeof window.updateScoreboard === 'function') {
       window.updateScoreboard();
     }
-    
+
     // Call renderPlayers to show the player list
     if (typeof window.renderPlayers === 'function') {
       window.renderPlayers();
-      console.log('   ✅ Players rendered');
     }
-    
+
     // Call renderEventLog to show the events
     if (typeof window.renderEventLog === 'function') {
       window.renderEventLog();
-      console.log('   ✅ Event log rendered');
     }
-    
-    console.log('   UI updated');
-    
+
     // Show the app
-    console.log('   Showing app screen...');
     document.getElementById('authScreen').classList.add('hidden');
     document.getElementById('setupScreen').classList.add('hidden');
     document.getElementById('appTopbar').style.display = '';
     document.getElementById('appMain').style.display = '';
-    console.log('   ✅ App screen visible');
-    
+
     // Start auto-save
     if (typeof startAutoSave === 'function') {
       startAutoSave();
-      console.log('   ✅ Auto-save started');
     }
-    
-    console.log('✅ Match fully restored!');
-    
+
   } else {
     // Partial restore - just pre-fill setup screen
-    console.log('   ⚠️ No roster data - pre-filling setup screen');
-    
     const teamNameInput = document.getElementById('setupTeamName');
     const opponentInput = document.getElementById('setupOpponent');
-    
+
     if (teamNameInput) teamNameInput.value = data.team_name || '';
     if (opponentInput) opponentInput.value = data.opponent || '';
-    
-    console.log('ℹ️ Team names pre-filled. User can load their roster and continue.');
   }
 };
 
-// ─── MATCH INIT (called after setup) ────────────────────
+// MATCH INIT (called after setup)
 function initMatch(rosterData) {
 
 const stats = {
@@ -3116,7 +3067,7 @@ const playerStats = {};
   playerStats[p.id] = { goals:0, shots:0, assists:0, yellows:0, suspensions:0, redCard:false, saves:0 };
 });
 
-// ─── ZONE TRACKING ──────────────────────────────────────
+// ZONE TRACKING
 const playerZone = {};
 rosterData.gk.forEach(p      => playerZone[p.id] = 'gk');
 rosterData.players.forEach(p => playerZone[p.id] = 'field');
@@ -3208,7 +3159,7 @@ function undoLastAction() {
   }
 }
 
-// ─── TIMER ───────────────────────────────────────────────
+// TIMER
 let matchSeconds = 0;
 let timerRunning = false;
 let timerInterval = null;
@@ -3439,10 +3390,7 @@ async function resetTimer() {
   // Clear current match from cloud
   if (typeof clearMatchFromCloud === 'function') {
     await clearMatchFromCloud();
-    console.log('✅ Match cleared from cloud');
   }
-  
-  console.log('Match reset complete');
 }
 
 function switchHalf() {
@@ -3494,7 +3442,7 @@ function getCurrentTime() {
 // Expose to window
 window.getCurrentTime = getCurrentTime;
 
-// ─── SUSPENSION TIMERS ────────────────────────────────────
+// SUSPENSION TIMERS
 function addSuspension(player) {
   const susp = { playerId: player.id, name: player.name, remaining: 120 };
   activeSuspensions.push(susp);
@@ -3509,7 +3457,6 @@ function tickSuspensions() {
       const pid = activeSuspensions[i].playerId;
       activeSuspensions.splice(i, 1);
       // un-suspend player
-      playerStats[pid].suspensions = Math.max(0, playerStats[pid].suspensions - 0); // keep count
       const row = document.querySelector(`[data-player-id="${pid}"]`);
       if (row) row.classList.remove('suspended');
     }
@@ -3537,7 +3484,7 @@ function renderSuspensions() {
   }).join('');
 }
 
-// ─── STATS ───────────────────────────────────────────────
+// STATS
 function updateStats() {
   const pct = stats.shots > 0 ? Math.round(stats.goals/stats.shots*100) : 0;
   document.getElementById('shotPct').innerHTML = `${pct}%<span id="shotFrac">${stats.goals}/${stats.shots}</span>`;
@@ -3589,7 +3536,7 @@ function updateStats() {
 // Expose to window for cross-device sync
 window.updateStats = updateStats;
 
-// ─── EVENT LOG ───────────────────────────────────────────
+// EVENT LOG
 const eventIcons = {
   goal:'⚽', shot:'🎯', assist:'🤝', yellow:'🟡',
   suspension:'⏱️', red:'🟥', save:'🧤', goal_against:'🥅', substitution:'🔄', halftime:'🔔'
@@ -3637,12 +3584,10 @@ window.deleteEvent = function deleteEvent(idx) {
   
   const event = eventLog[idx];
   
-  // Find player in the active roster
-  const allPlayers = [...document.querySelectorAll('.player-row')];
-  const playerRow = allPlayers.find(row => {
-    const nameEl = row.querySelector('.player-name');
-    return nameEl && nameEl.textContent.trim() === event.name;
-  });
+  // Find player row by stored playerId
+  const playerRow = event.playerId
+    ? document.querySelector(`[data-player-id="${event.playerId}"]`)
+    : null;
   
   if (!playerRow) {
     // Event exists but player not found, just remove from log
@@ -3736,7 +3681,7 @@ window.deleteEvent = function deleteEvent(idx) {
   }
 }
 
-// ─── PLAYER ACTIONS ──────────────────────────────────────
+// PLAYER ACTIONS
 function bumpScore(elId) {
   const el = document.getElementById(elId);
   el.classList.add('bump');
@@ -3753,12 +3698,9 @@ window.updateScoreboard = updateScoreboard;
 
 window.recordAttack = function recordAttack() {
   stats.attacks++;
-  console.log('Attack recorded! Total attacks:', stats.attacks);
-  
+
   const counterEl = document.getElementById('attackCounter');
-  if (!counterEl) {
-    console.error('attackCounter element not found!');
-    return;
+  if (!counterEl) return;
   }
   
   counterEl.textContent = stats.attacks;
@@ -3821,17 +3763,10 @@ function recordYellow(player) {
 }
 
 function recordSuspension(player) {
-  console.log('🔍 recordSuspension called for:', player);
   stats.suspensions++;
   playerStats[player.id].suspensions++;
   addEvent('suspension', player);
-  console.log('🔍 Calling window.addSuspension...');
-  if (typeof window.addSuspension === 'function') {
-    window.addSuspension(player);
-  } else {
-    console.error('❌ window.addSuspension is not defined!');
-  }
-  console.log('🔍 Active suspensions:', window.activeSuspensions);
+  window.addSuspension(player);
   pushUndo(() => {
     stats.suspensions--;
     playerStats[player.id].suspensions--;
@@ -3843,13 +3778,10 @@ function recordSuspension(player) {
     if (row) row.classList.remove('suspended');
   });
   const row = document.querySelector(`[data-player-id="${player.id}"]`);
-  console.log('🔍 Found row:', row);
   if (row) {
     row.classList.add('suspended');
-    console.log('✅ Added suspended class to row');
   }
   updateStats(); renderPlayers();
-  console.log('✅ recordSuspension complete');
 }
 
 function recordRed(player) {
@@ -3874,7 +3806,7 @@ function flashRow(playerId, color) {
 // NOTE: Record functions are exposed earlier in initMatch (around line 2786)
 // Don't expose them again here as it would overwrite the live-broadcast wrappers
 
-// ─── MODAL ───────────────────────────────────────────────
+// MODAL
 let currentGkPlayer = null;
 let selectedZone = null;
 let currentShotType = 'save';
@@ -3980,7 +3912,7 @@ document.getElementById('modalOverlay').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
 
-// ─── RENDER ──────────────────────────────────────────────
+// RENDER
 function buildPlayerRow(player, zone) {
   const isGk = zone === 'gk';
   const isSub = zone === 'sub';
@@ -4072,7 +4004,7 @@ function renderPlayers() {
 window.renderPlayers = renderPlayers;
 window.renderEventLog = renderEventLog;
 
-// ─── DRAG AND DROP ───────────────────────────────────────
+// DRAG AND DROP
 let draggedPlayerId = null;
 
 function initDragAndDrop() {
@@ -4141,14 +4073,14 @@ function initDragAndDrop() {
   });
 }
 
-// ─── EXPORT TO EXCEL ─────────────────────────────────────
+// EXPORT TO EXCEL
 function exportToExcel() {
   const wb = XLSX.utils.book_new();
   const matchTimer = document.getElementById('matchTimer');
   const matchTime = matchTimer ? matchTimer.textContent : '00:00';
   const dateStr = new Date().toLocaleDateString('en-GB');
 
-  // ── Save to history ──
+  // Save to history
   // Use window.teamName and window.opponent if available, otherwise try to parse from topbarBrand
   let teamName = window.teamName || 'Home';
   let opponent = window.opponent || 'Away';
@@ -4186,7 +4118,7 @@ function exportToExcel() {
   saveMatchToHistory(matchData);       // localStorage fallback
   saveMatchToSupabase(matchData);      // Supabase cloud save
 
-  // ── Sheet 1: Match Summary ──
+  // Sheet 1: Match Summary
   const summaryData = [
     ['HANDBALL MATCH REPORT'],
     ['Date', dateStr],
@@ -4220,7 +4152,7 @@ function exportToExcel() {
   wsSummary['!cols'] = [{ wch: 28 }, { wch: 18 }];
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Match Summary');
 
-  // ── Sheet 2: Player Stats ──
+  // Sheet 2: Player Stats
   const allPlayers = Object.values(allPlayersById);
   const playerRows = [
     ['#', 'Name', 'Position', 'Zone', 'Goals', 'Shots', 'Shot %', 'Assists', 'Saves', 'Yellow Cards', '2-Min Suspensions', 'Red Card'],
@@ -4243,7 +4175,7 @@ function exportToExcel() {
   ];
   XLSX.utils.book_append_sheet(wb, wsPlayers, 'Player Stats');
 
-  // ── Sheet 3: Event Log ──
+  // Sheet 3: Event Log
   const eventRows = [
     ['Time', 'Player', 'Event', 'Detail'],
   ];
@@ -4255,13 +4187,11 @@ function exportToExcel() {
   wsEvents['!cols'] = [{ wch: 8 }, { wch: 22 }, { wch: 18 }, { wch: 16 }];
   XLSX.utils.book_append_sheet(wb, wsEvents, 'Event Log');
 
-  // ── Download ──
+  // Download
   const filename = `handball_match_${dateStr.replace(/\//g,'-')}.xlsx`;
   XLSX.writeFile(wb, filename);
-  
-  // Show success notification
-  console.log('✅ Match saved to history and Excel file downloaded');
-  
+
+
   // Optional: Show a brief visual confirmation
   const exportButtons = document.querySelectorAll('.export');
   exportButtons.forEach(btn => {
@@ -4289,7 +4219,7 @@ window.deleteCloudEntry = deleteCloudEntry;
 
 } // end initMatch
 
-// ─── MATCH HISTORY (localStorage) ───────────────────────
+// MATCH HISTORY (localStorage)
 const HISTORY_KEY = 'handballtrack_history';
 
 function loadHistory() {
