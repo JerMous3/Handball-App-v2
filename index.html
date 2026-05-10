@@ -1605,6 +1605,9 @@
       </div>
     </div>
     <button class="auth-submit" id="authSubmit" onclick="handleAuth()">Sign In</button>
+    <div id="forgotPasswordLink" style="text-align:center;margin-top:12px;">
+      <button onclick="showForgotPassword()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;padding:0;">Forgot password?</button>
+    </div>
     <div id="personalAccessSection" style="display:none;margin-top:16px;text-align:center;">
       <div style="font-size:13px;color:var(--muted);margin-bottom:8px">─── OR ───</div>
       <button onclick="showPersonalAccessForm()" style="
@@ -1626,6 +1629,43 @@
         One-time use, €5/month
       </div>
     </div>
+  </div>
+</div>
+
+<!-- FORGOT PASSWORD OVERLAY -->
+<div class="auth-screen" id="forgotScreen" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">⬡ Handball-Tracker</div>
+    <div class="auth-tagline">Enter your email and we'll send you a reset link</div>
+    <div class="auth-error" id="forgotError"></div>
+    <div class="auth-success" id="forgotSuccess"></div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input class="auth-input" id="forgotEmail" type="email" placeholder="coach@example.com" />
+    </div>
+    <button class="auth-submit" id="forgotSubmit" onclick="handleForgotPassword()">Send Reset Link</button>
+    <div style="text-align:center;margin-top:12px;">
+      <button onclick="hideForgotPassword()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;padding:0;">← Back to Sign In</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD OVERLAY (shown after clicking email link) -->
+<div class="auth-screen" id="resetScreen" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">⬡ Handball-Tracker</div>
+    <div class="auth-tagline">Choose a new password</div>
+    <div class="auth-error" id="resetError"></div>
+    <div class="auth-success" id="resetSuccess"></div>
+    <div class="auth-field">
+      <label>New Password</label>
+      <input class="auth-input" id="resetPassword" type="password" placeholder="••••••••" />
+    </div>
+    <div class="auth-field">
+      <label>Confirm Password</label>
+      <input class="auth-input" id="resetPasswordConfirm" type="password" placeholder="••••••••" />
+    </div>
+    <button class="auth-submit" id="resetSubmit" onclick="handleResetPassword()">Set New Password</button>
   </div>
 </div>
 
@@ -2147,8 +2187,117 @@ function switchAuthTab(tab) {
   document.getElementById('teamNameField').style.display = tab === 'signup' ? 'block' : 'none';
   document.getElementById('inviteCodeField').style.display = tab === 'signup' ? 'block' : 'none';
   document.getElementById('personalAccessSection').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('forgotPasswordLink').style.display = tab === 'login' ? 'block' : 'none';
   clearAuthMessages();
 }
+
+// ── FORGOT / RESET PASSWORD ──────────────────────────────────────────────────
+
+function showForgotPassword() {
+  document.getElementById('authScreen').style.display = 'none';
+  const screen = document.getElementById('forgotScreen');
+  screen.style.display = 'flex';
+  // Pre-fill email if the user already typed one
+  const existingEmail = document.getElementById('authEmail').value.trim();
+  if (existingEmail) document.getElementById('forgotEmail').value = existingEmail;
+}
+
+function hideForgotPassword() {
+  document.getElementById('forgotScreen').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+  document.getElementById('forgotError').classList.remove('show');
+  document.getElementById('forgotSuccess').classList.remove('show');
+}
+
+async function handleForgotPassword() {
+  const email = document.getElementById('forgotEmail').value.trim();
+  const btn   = document.getElementById('forgotSubmit');
+  const errEl = document.getElementById('forgotError');
+  const okEl  = document.getElementById('forgotSuccess');
+
+  errEl.classList.remove('show');
+  okEl.classList.remove('show');
+
+  if (!email) {
+    errEl.textContent = 'Please enter your email address.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  const { error } = await _supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://app.handball-tracker.com/'
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'Send Reset Link';
+
+  if (error) {
+    errEl.textContent = error.message;
+    errEl.classList.add('show');
+  } else {
+    okEl.textContent = '✓ Reset link sent! Check your email, then come back here to set your new password.';
+    okEl.classList.add('show');
+  }
+}
+
+async function handleResetPassword() {
+  const pw      = document.getElementById('resetPassword').value;
+  const pwConf  = document.getElementById('resetPasswordConfirm').value;
+  const btn     = document.getElementById('resetSubmit');
+  const errEl   = document.getElementById('resetError');
+  const okEl    = document.getElementById('resetSuccess');
+
+  errEl.classList.remove('show');
+  okEl.classList.remove('show');
+
+  if (!pw || !pwConf) {
+    errEl.textContent = 'Please fill in both fields.';
+    errEl.classList.add('show');
+    return;
+  }
+  if (pw !== pwConf) {
+    errEl.textContent = 'Passwords do not match.';
+    errEl.classList.add('show');
+    return;
+  }
+  if (pw.length < 6) {
+    errEl.textContent = 'Password must be at least 6 characters.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  const { error } = await _supabase.auth.updateUser({ password: pw });
+
+  btn.disabled = false;
+  btn.textContent = 'Set New Password';
+
+  if (error) {
+    errEl.textContent = error.message;
+    errEl.classList.add('show');
+  } else {
+    okEl.textContent = '✓ Password updated! Signing you in...';
+    okEl.classList.add('show');
+    // Give the user a moment to read the message, then enter the app
+    setTimeout(async () => {
+      const { data: { session } } = await _supabase.auth.getSession();
+      if (session?.user) {
+        document.getElementById('resetScreen').style.display = 'none';
+        onSignedIn(session.user);
+      }
+    }, 1500);
+  }
+}
+
+window.showForgotPassword  = showForgotPassword;
+window.hideForgotPassword  = hideForgotPassword;
+window.handleForgotPassword = handleForgotPassword;
+window.handleResetPassword = handleResetPassword;
 
 function showAuthError(msg) {
   const el = document.getElementById('authError');
@@ -2655,9 +2804,18 @@ async function deleteCloudEntry(id) {
   // Handle implicit flow: #access_token=...&type=signup (or recovery)
   if (hash && hash.includes('access_token')) {
     try {
+      const params = new URLSearchParams(hash.slice(1)); // strip leading '#'
+      const type   = params.get('type');
       const { data, error } = await _supabase.auth.getSession();
       // Clean the URL so tokens don't stay in the address bar
       window.history.replaceState(null, '', window.location.pathname);
+      if (type === 'recovery' && data?.session?.user) {
+        // Show the set-new-password screen instead of entering the app
+        document.getElementById('authScreen').style.display   = 'none';
+        document.getElementById('forgotScreen').style.display = 'none';
+        document.getElementById('resetScreen').style.display  = 'flex';
+        return;
+      }
       if (data?.session?.user) {
         onSignedIn(data.session.user);
         return;
