@@ -54,16 +54,81 @@ body.light-mode {
   --surface2: #e4e7ed;
   --border:   #cdd2db;
   --text:     #1a1e28;
-  --muted:    #6b7585;
+  --muted:    #8a93a0;
 
-  /* Softer shadows in light mode */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
-  --shadow-glow: 0 0 30px rgba(180, 200, 0, 0.12);
+  --shadow-sm:   0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md:   0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-lg:   0 8px 32px rgba(0, 0, 0, 0.16);
+  --shadow-glow: 0 0 30px rgba(180, 200, 0, 0.10);
 }
 
-/* Scrollbar adapts to light mode */
+/* ── Stat cards, timer block, attack counter ── */
+body.light-mode .stat-card,
+body.light-mode .timer-block,
+body.light-mode .attack-counter-container {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f2f5 100%) !important;
+  border: 1px solid #cdd2db !important;
+}
+
+/* ── Scoreboard ── */
+body.light-mode .scoreboard {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f2f5 100%) !important;
+  border: 1px solid #cdd2db !important;
+}
+
+/* Yellow text is unreadable on light — use dark ink instead */
+body.light-mode .scoreboard-score,
+body.light-mode .timer-display,
+body.light-mode .stat-value {
+  color: #1a1e28 !important;
+  text-shadow: none !important;
+}
+
+/* Running timer: use a darker olive/green so it stays readable */
+body.light-mode .timer-display.running {
+  color: #6b7200 !important;
+  text-shadow: none !important;
+}
+
+/* Labels */
+body.light-mode .stat-label,
+body.light-mode .timer-label,
+body.light-mode .scoreboard-label,
+body.light-mode .scoreboard-teams {
+  color: var(--muted) !important;
+}
+
+/* ── Topbar ── */
+body.light-mode .topbar {
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* ── Buttons: hover glow toned down ── */
+body.light-mode .btn-sm:hover {
+  box-shadow: 0 4px 12px rgba(140, 160, 0, 0.20) !important;
+}
+
+body.light-mode .btn-sm.active {
+  box-shadow: 0 0 20px rgba(140, 160, 0, 0.25) !important;
+}
+
+/* ── Player row hover ── */
+body.light-mode .player-row:hover {
+  background: rgba(140, 160, 0, 0.06) !important;
+}
+
+/* ── Event item hover ── */
+body.light-mode .event-item:hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+
+/* ── Modal ── */
+body.light-mode .modal {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f6f9 100%) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* ── Scrollbars ── */
 body.light-mode ::-webkit-scrollbar-track {
   background: #e4e7ed;
 }
@@ -72,20 +137,25 @@ body.light-mode ::-webkit-scrollbar-thumb {
   border-color: #e4e7ed;
 }
 
-/* Scoreboard/timer gradients adapt */
-body.light-mode .scoreboard,
-body.light-mode .timer-block {
-  background: linear-gradient(135deg, #ffffff 0%, #f0f2f5 100%) !important;
-}
-
-/* Modal background in light mode */
-body.light-mode .modal {
-  background: linear-gradient(135deg, #ffffff 0%, #f5f6f9 100%) !important;
-}
-
-/* Stat bar track in light mode */
+/* ── Stat bar track ── */
 body.light-mode .stat-bar-bg {
-  background: #e4e7ed !important;
+  background: #d5d9e0 !important;
+}
+
+/* ── Timer group border ── */
+body.light-mode .timer-btn-group {
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+/* ── Mobile tab active state ── */
+body.light-mode .mobile-tab.active {
+  background: rgba(140, 160, 0, 0.08) !important;
+}
+
+/* ── Focus ring ── */
+body.light-mode button:focus-visible,
+body.light-mode .btn-sm:focus-visible {
+  outline-color: #6b7200 !important;
 }
 
 /* ===================================================================
