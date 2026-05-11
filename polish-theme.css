@@ -45,6 +45,50 @@
 }
 
 /* ===================================================================
+   LIGHT MODE
+   =================================================================== */
+
+body.light-mode {
+  --bg:       #f0f2f5;
+  --surface:  #ffffff;
+  --surface2: #e4e7ed;
+  --border:   #cdd2db;
+  --text:     #1a1e28;
+  --muted:    #6b7585;
+
+  /* Softer shadows in light mode */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.16);
+  --shadow-glow: 0 0 30px rgba(180, 200, 0, 0.12);
+}
+
+/* Scrollbar adapts to light mode */
+body.light-mode ::-webkit-scrollbar-track {
+  background: #e4e7ed;
+}
+
+body.light-mode ::-webkit-scrollbar-thumb {
+  border-color: #e4e7ed;
+}
+
+/* Scoreboard/timer gradients adapt */
+body.light-mode .scoreboard,
+body.light-mode .timer-block {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f2f5 100%) !important;
+}
+
+/* Modal background in light mode */
+body.light-mode .modal {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f6f9 100%) !important;
+}
+
+/* Stat bar track in light mode */
+body.light-mode .stat-bar-bg {
+  background: #e4e7ed !important;
+}
+
+/* ===================================================================
    TYPOGRAPHY UPGRADE
    =================================================================== */
 
