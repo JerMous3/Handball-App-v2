@@ -251,6 +251,12 @@ body.light-mode .auth-submit:hover {
   background: #2e3545 !important;
 }
 
+/* ── Team names header (inline accent colour) ── */
+body.light-mode #teamNamesInner,
+body.light-mode #teamNamesInner span:not([style*="muted"]) {
+  color: #1a1e28 !important;
+}
+
 /* ── Focus ring ── */
 body.light-mode button:focus-visible,
 body.light-mode .btn-sm:focus-visible {
