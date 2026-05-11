@@ -152,6 +152,105 @@ body.light-mode .mobile-tab.active {
   background: rgba(140, 160, 0, 0.08) !important;
 }
 
+/* ── Action buttons: replace hardcoded dark fills with light surfaces ── */
+body.light-mode .btn-goal {
+  background: #f5ffd6 !important;
+  color: #4a5500 !important;
+  border: 1px solid #b8cc00 !important;
+}
+
+body.light-mode .btn-shot {
+  background: #e8fdf0 !important;
+  color: #0a5e2a !important;
+  border: 1px solid #00b85e !important;
+}
+
+body.light-mode .btn-assist {
+  background: #e6f8ff !important;
+  color: #005f7a !important;
+  border: 1px solid #00a8cc !important;
+}
+
+body.light-mode .btn-yellow {
+  background: #fffbe6 !important;
+  color: #7a5500 !important;
+  border: 1px solid #e6a800 !important;
+}
+
+body.light-mode .btn-suspend {
+  background: #fff3e6 !important;
+  color: #7a3d00 !important;
+  border: 1px solid #e07000 !important;
+}
+
+body.light-mode .btn-red {
+  background: #fff0f0 !important;
+  color: #8a0000 !important;
+  border: 1px solid #cc2222 !important;
+}
+
+body.light-mode .btn-save {
+  background: #f0ecff !important;
+  color: #3d1f99 !important;
+  border: 1px solid #7b5cfa !important;
+}
+
+/* ── Attack counter: yellow accent → dark ink ── */
+body.light-mode #attackCounter {
+  color: #1a1e28 !important;
+}
+
+/* ── +1 Attack button: yellow bg → dark button ── */
+body.light-mode button[onclick="recordAttack()"] {
+  background: #1a1e28 !important;
+  color: #ffffff !important;
+}
+
+/* ── Team names (scoreboard) ── */
+body.light-mode .scoreboard-teams span,
+body.light-mode .team-vs {
+  color: #1a1e28 !important;
+}
+
+/* ── Topbar brand icon ── */
+body.light-mode .topbar-brand {
+  color: #1a1e28 !important;
+}
+
+/* ── Accent-coloured text elements ── */
+body.light-mode .pstat.goals,
+body.light-mode .half-badge {
+  color: #4a5500 !important;
+  border-color: #b8cc00 !important;
+}
+
+/* ── Topbar btn-sm hover/active: keep readable ── */
+body.light-mode .btn-sm:hover {
+  border-color: #6b7200 !important;
+  color: #4a5000 !important;
+}
+
+body.light-mode .btn-sm.active {
+  background: #1a1e28 !important;
+  color: #ffffff !important;
+  border-color: #1a1e28 !important;
+}
+
+/* ── Auth accent (sign in button, active tab) ── */
+body.light-mode .auth-tab.active {
+  color: #4a5500 !important;
+  border-bottom-color: #4a5500 !important;
+}
+
+body.light-mode .auth-submit {
+  background: #1a1e28 !important;
+  color: #ffffff !important;
+}
+
+body.light-mode .auth-submit:hover {
+  background: #2e3545 !important;
+}
+
 /* ── Focus ring ── */
 body.light-mode button:focus-visible,
 body.light-mode .btn-sm:focus-visible {
