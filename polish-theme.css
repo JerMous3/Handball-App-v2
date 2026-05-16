@@ -8,16 +8,16 @@
 :root {
   /* Keep original black & yellow colors */
   --bg: #0a0c10;
-  --surface: var(--surface);
-  --surface2: var(--surface2);
+  --surface: #12151c;
+  --surface2: #1a1f2a;
   --border: #252b38;
-  --accent: var(--accent);
+  --accent: #e8ff00;
   --accent2: #00d4ff;
   --red: #ff3b3b;
   --yellow: #ffc700;
   --green: #00e87a;
-  --text: var(--text);
-  --muted: var(--muted);
+  --text: #f0f2f6;
+  --muted: #6b7585;
   --gk-accent: #7b5cfa;
 
   /* Z-index scale */
