@@ -8,14 +8,16 @@
 <!-- Eruda mobile console for debugging -->
 <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 <script>
-  // Only enable Eruda on mobile devices or when ?debug=1 is in URL
-  if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.location.search.includes('debug=1')) {
+  // Only enable Eruda when ?debug=1 is in URL
+  if (window.location.search.includes('debug=1')) {
     eruda.init();
     console.log('📱 Eruda mobile console enabled');
   }
 </script>
 
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="polish-theme.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -67,27 +69,7 @@
   
 </script>
 <style>
-  :root {
-    --bg: #0a0c10;
-    --surface: #12151c;
-    --surface2: #1a1f2a;
-    --border: #252b38;
-    --accent: #e8ff00;
-    --accent2: #00d4ff;
-    --red: #ff3b3b;
-    --yellow: #ffc700;
-    --green: #00e87a;
-    --text: #f0f2f6;
-    --muted: #6b7585;
-    --gk-accent: #7b5cfa;
-    --z-topbar: 100;
-    --z-mobile-tab: 200;
-    --z-modal: 1000;
-    --z-setup: 2000;
-    --z-history: 3000;
-    --z-auth: 4000;
-    --z-system: 9999;
-  }
+  /* Design tokens live in polish-theme.css */
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -440,20 +422,9 @@
     overflow: hidden;
   }
 
-  .player-row::before {
-    content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 3px;
-    background: var(--border);
-    border-radius: 3px 0 0 3px;
-  }
-
-  .player-row.gk::before { background: var(--gk-accent); }
-  .player-row.suspended::before { background: var(--yellow); }
-  .player-row.suspended { opacity: 0.6; }
-  .player-row.red-carded { opacity: 0.35; pointer-events: none; }
-  .player-row.red-carded::before { background: var(--red); }
+  .player-row.gk { border-color: var(--gk-accent); }
+  .player-row.suspended { border-color: var(--yellow); opacity: 0.6; }
+  .player-row.red-carded { border-color: var(--red); opacity: 0.35; pointer-events: none; }
 
   .player-row:hover { border-color: var(--accent); }
   .player-row.gk:hover { border-color: var(--gk-accent); }
@@ -1174,7 +1145,6 @@
     color: var(--text);
     width: 100%;
     transition: border-color 0.15s;
-    outline: none;
   }
   .setup-input:focus { border-color: var(--accent); }
   .setup-input.gk-input:focus { border-color: var(--gk-accent); }
@@ -1334,7 +1304,6 @@
     color: var(--text);
     width: 72px;
     text-align: center;
-    outline: none;
     transition: border-color 0.15s;
   }
   .shooter-input:focus { border-color: var(--red); }
@@ -1400,7 +1369,6 @@
     font-family: 'DM Sans', sans-serif;
     font-size: 14px;
     color: var(--text);
-    outline: none;
     transition: border-color 0.15s;
   }
   .auth-input:focus { border-color: var(--accent); }
@@ -1579,26 +1547,26 @@
   <div class="auth-card">
     <div class="auth-logo">⬡ Handball-Tracker</div>
     <div class="auth-tagline">Sign in to save your roster and match history</div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Sign In</button>
-      <button class="auth-tab" id="tabSignup" onclick="switchAuthTab('signup')">Create Account</button>
+    <div class="auth-tabs" role="tablist" aria-label="Authentication">
+      <button class="auth-tab active" id="tabLogin" role="tab" aria-selected="true" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="tabSignup" role="tab" aria-selected="false" onclick="switchAuthTab('signup')">Create Account</button>
     </div>
-    <div class="auth-error" id="authError"></div>
-    <div class="auth-success" id="authSuccess"></div>
+    <div class="auth-error" id="authError" role="alert"></div>
+    <div class="auth-success" id="authSuccess" role="status"></div>
     <div class="auth-field">
-      <label>Email</label>
+      <label for="authEmail">Email</label>
       <input class="auth-input" id="authEmail" type="email" placeholder="coach@example.com" />
     </div>
     <div class="auth-field">
-      <label>Password</label>
+      <label for="authPassword">Password</label>
       <input class="auth-input" id="authPassword" type="password" placeholder="••••••••" />
     </div>
     <div class="auth-field" id="teamNameField" style="display:none">
-      <label>Team Name</label>
+      <label for="authTeamName">Team Name</label>
       <input class="auth-input" id="authTeamName" placeholder="e.g. HV Helius" />
     </div>
     <div class="auth-field" id="inviteCodeField" style="display:none">
-      <label>Invite Code <span style="color:var(--red)">*</span></label>
+      <label for="authInviteCode">Invite Code <span style="color:var(--red)">*</span></label>
       <input class="auth-input" id="authInviteCode" placeholder="e.g. CLUB-AJAX-2024" style="text-transform:uppercase" />
       <div style="font-size:12px;color:var(--muted);margin-top:4px">
         Enter the code provided by your club administrator
@@ -1637,10 +1605,10 @@
   <div class="auth-card">
     <div class="auth-logo">⬡ Handball-Tracker</div>
     <div class="auth-tagline">Enter your email and we'll send you a reset link</div>
-    <div class="auth-error" id="forgotError"></div>
-    <div class="auth-success" id="forgotSuccess"></div>
+    <div class="auth-error" id="forgotError" role="alert"></div>
+    <div class="auth-success" id="forgotSuccess" role="status"></div>
     <div class="auth-field">
-      <label>Email</label>
+      <label for="forgotEmail">Email</label>
       <input class="auth-input" id="forgotEmail" type="email" placeholder="coach@example.com" />
     </div>
     <button class="auth-submit" id="forgotSubmit" onclick="handleForgotPassword()">Send Reset Link</button>
@@ -1655,14 +1623,14 @@
   <div class="auth-card">
     <div class="auth-logo">⬡ Handball-Tracker</div>
     <div class="auth-tagline">Choose a new password</div>
-    <div class="auth-error" id="resetError"></div>
-    <div class="auth-success" id="resetSuccess"></div>
+    <div class="auth-error" id="resetError" role="alert"></div>
+    <div class="auth-success" id="resetSuccess" role="status"></div>
     <div class="auth-field">
-      <label>New Password</label>
+      <label for="resetPassword">New Password</label>
       <input class="auth-input" id="resetPassword" type="password" placeholder="••••••••" />
     </div>
     <div class="auth-field">
-      <label>Confirm Password</label>
+      <label for="resetPasswordConfirm">Confirm Password</label>
       <input class="auth-input" id="resetPasswordConfirm" type="password" placeholder="••••••••" />
     </div>
     <button class="auth-submit" id="resetSubmit" onclick="handleResetPassword()">Set New Password</button>
@@ -1842,8 +1810,8 @@
 </div>
 <!-- IMPORT MODAL -->
 <div class="import-modal-overlay" id="importModalOverlay">
-  <div class="import-modal">
-    <div class="modal-title">Import Player List</div>
+  <div class="import-modal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
+    <div class="modal-title" id="importModalTitle">Import Player List</div>
     <div class="modal-sub">Paste your squad — one player per line.</div>
     <div class="import-format-hint">
       Use <code>GK:</code> / <code>Field:</code> / <code>Sub:</code> as section headers.<br>
@@ -1902,8 +1870,8 @@
 
 <!-- HISTORY MODAL -->
 <div class="history-modal-overlay" id="historyModalOverlay">
-  <div class="history-modal">
-    <div class="modal-title">Match History</div>
+  <div class="history-modal" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
+    <div class="modal-title" id="historyModalTitle">Match History</div>
     <div class="modal-sub" id="historyModalSub">Saved to your account — up to 20 matches.</div>
     <div class="history-list" id="historyList"></div>
     <div class="modal-btns" style="margin-top:14px">
@@ -1919,7 +1887,7 @@
   <div class="sidebar">
     <div class="sidebar-title">Statistics</div>
 
-    <div class="stat-card">
+    <div class="stat-card stat-card--primary">
       <div class="stat-label">Shot Efficiency</div>
       <div class="stat-value" id="shotPct">0%<span id="shotFrac">0/0</span></div>
       <div class="stat-bar-bg">
@@ -1927,7 +1895,7 @@
       </div>
     </div>
 
-    <div class="stat-card">
+    <div class="stat-card stat-card--primary stat-card--gk">
       <div class="stat-label">GK Save Rate</div>
       <div class="stat-value" id="savePct">0%<span id="saveFrac">0/0</span></div>
       <div class="stat-bar-bg">
@@ -1935,19 +1903,19 @@
       </div>
     </div>
 
-    <div class="stat-card">
-      <div class="stat-label">Shots on Goal</div>
-      <div class="stat-value" id="shotsOnGoal">0<span>shots</span></div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-label">Yellow Cards</div>
-      <div class="stat-value" id="yellowCount">0<span>cards</span></div>
-    </div>
-
-    <div class="stat-card">
-      <div class="stat-label">2-Min Suspensions</div>
-      <div class="stat-value" id="suspCount">0<span>total</span></div>
+    <div class="stat-counts">
+      <div class="stat-count-item">
+        <div class="stat-count-value" id="shotsOnGoal">0</div>
+        <div class="stat-count-label">Shots</div>
+      </div>
+      <div class="stat-count-item stat-count-item--yellow">
+        <div class="stat-count-value" id="yellowCount">0</div>
+        <div class="stat-count-label">Yellows</div>
+      </div>
+      <div class="stat-count-item stat-count-item--suspend">
+        <div class="stat-count-value" id="suspCount">0</div>
+        <div class="stat-count-label">2-Min</div>
+      </div>
     </div>
 
     <div class="sidebar-title" style="margin-top:4px">GK Shot Zones</div>
@@ -2120,8 +2088,8 @@
   </button>
 </div>
 <div class="modal-overlay" id="modalOverlay">
-  <div class="modal">
-    <div class="modal-title">Shot Placement</div>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shotModalTitle">
+    <div class="modal-title" id="shotModalTitle">Shot Placement</div>
     <div class="modal-sub">Goalkeeper: <span id="gkModalName">—</span></div>
 
     <div class="shot-type-toggle">
@@ -2152,13 +2120,13 @@
         <line x1="260" y1="20" x2="260" y2="182" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
         <line x1="20" y1="101" x2="380" y2="101" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
       </svg>
-      <div class="goal-grid-overlay" id="goalGrid">
-        <div class="goal-cell" data-zone="0" onclick="selectZone(0)"><span class="goal-cell-label">TL</span></div>
-        <div class="goal-cell" data-zone="1" onclick="selectZone(1)"><span class="goal-cell-label">TC</span></div>
-        <div class="goal-cell" data-zone="2" onclick="selectZone(2)"><span class="goal-cell-label">TR</span></div>
-        <div class="goal-cell" data-zone="3" onclick="selectZone(3)"><span class="goal-cell-label">BL</span></div>
-        <div class="goal-cell" data-zone="4" onclick="selectZone(4)"><span class="goal-cell-label">BC</span></div>
-        <div class="goal-cell" data-zone="5" onclick="selectZone(5)"><span class="goal-cell-label">BR</span></div>
+      <div class="goal-grid-overlay" id="goalGrid" role="group" aria-label="Select shot zone">
+        <div class="goal-cell" data-zone="0" role="button" tabindex="0" aria-pressed="false" aria-label="Top left" onclick="selectZone(0)" onkeydown="if(event.key==='Enter'||event.key===' '){selectZone(0);event.preventDefault()}"><span class="goal-cell-label">TL</span></div>
+        <div class="goal-cell" data-zone="1" role="button" tabindex="0" aria-pressed="false" aria-label="Top center" onclick="selectZone(1)" onkeydown="if(event.key==='Enter'||event.key===' '){selectZone(1);event.preventDefault()}"><span class="goal-cell-label">TC</span></div>
+        <div class="goal-cell" data-zone="2" role="button" tabindex="0" aria-pressed="false" aria-label="Top right" onclick="selectZone(2)" onkeydown="if(event.key==='Enter'||event.key===' '){selectZone(2);event.preventDefault()}"><span class="goal-cell-label">TR</span></div>
+        <div class="goal-cell" data-zone="3" role="button" tabindex="0" aria-pressed="false" aria-label="Bottom left" onclick="selectZone(3)" onkeydown="if(event.key==='Enter'||event.key===' '){selectZone(3);event.preventDefault()}"><span class="goal-cell-label">BL</span></div>
+        <div class="goal-cell" data-zone="4" role="button" tabindex="0" aria-pressed="false" aria-label="Bottom center" onclick="selectZone(4)" onkeydown="if(event.key==='Enter'||event.key===' '){selectZone(4);event.preventDefault()}"><span class="goal-cell-label">BC</span></div>
+        <div class="goal-cell" data-zone="5" role="button" tabindex="0" aria-pressed="false" aria-label="Bottom right" onclick="selectZone(5)" onkeydown="if(event.key==='Enter'||event.key===' '){selectZone(5);event.preventDefault()}"><span class="goal-cell-label">BR</span></div>
       </div>
     </div>
 
@@ -2197,10 +2165,45 @@ function toggleTheme() {
 }
 window.toggleTheme = toggleTheme;
 
+// ── FOCUS TRAP ────────────────────────────────────────────────────────────────
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+let _focusTrapEl = null;
+let _focusTrapHandler = null;
+let _focusTrapPrior = null;
+
+function trapFocus(containerEl) {
+  _focusTrapPrior = document.activeElement;
+  _focusTrapEl = containerEl;
+  const focusable = () => Array.from(containerEl.querySelectorAll(FOCUSABLE)).filter(el => !el.closest('[hidden]'));
+  const first = () => focusable()[0];
+  const last  = () => focusable()[focusable().length - 1];
+  _focusTrapHandler = (e) => {
+    if (e.key !== 'Tab') return;
+    const els = focusable();
+    if (!els.length) { e.preventDefault(); return; }
+    if (e.shiftKey) {
+      if (document.activeElement === els[0]) { e.preventDefault(); els[els.length - 1].focus(); }
+    } else {
+      if (document.activeElement === els[els.length - 1]) { e.preventDefault(); els[0].focus(); }
+    }
+  };
+  document.addEventListener('keydown', _focusTrapHandler);
+  requestAnimationFrame(() => { const f = first(); if (f) f.focus(); });
+}
+
+function releaseFocus() {
+  if (_focusTrapHandler) document.removeEventListener('keydown', _focusTrapHandler);
+  _focusTrapHandler = null;
+  _focusTrapEl = null;
+  if (_focusTrapPrior) { _focusTrapPrior.focus(); _focusTrapPrior = null; }
+}
+
 function switchAuthTab(tab) {
   currentAuthTab = tab;
   document.getElementById('tabLogin').className  = 'auth-tab' + (tab==='login'  ? ' active' : '');
+  document.getElementById('tabLogin').setAttribute('aria-selected', tab === 'login' ? 'true' : 'false');
   document.getElementById('tabSignup').className = 'auth-tab' + (tab==='signup' ? ' active' : '');
+  document.getElementById('tabSignup').setAttribute('aria-selected', tab === 'signup' ? 'true' : 'false');
   document.getElementById('authSubmit').textContent = tab === 'login' ? 'Sign In' : 'Create Account';
   document.getElementById('teamNameField').style.display = tab === 'signup' ? 'block' : 'none';
   document.getElementById('inviteCodeField').style.display = tab === 'signup' ? 'block' : 'none';
@@ -2874,10 +2877,10 @@ function makeSetupRow(section, num='', name='', pos='') {
   div.className = 'setup-row';
   div.dataset.rowId = id;
   div.innerHTML = `
-    <input class="setup-input${isGk?' gk-input':''}" placeholder="#" value="${num}" data-field="num" style="text-align:center" />
-    <input class="setup-input${isGk?' gk-input':''}" placeholder="Full name" value="${name}" data-field="name" />
-    <input class="setup-input${isGk?' gk-input':''}" placeholder="Position" value="${pos}" data-field="pos" />
-    <button class="setup-remove-btn" onclick="removeSetupRow('${section}',${id})">×</button>
+    <input class="setup-input${isGk?' gk-input':''}" placeholder="#" value="${num}" data-field="num" style="text-align:center" aria-label="Jersey number" />
+    <input class="setup-input${isGk?' gk-input':''}" placeholder="Full name" value="${name}" data-field="name" aria-label="Player name" />
+    <input class="setup-input${isGk?' gk-input':''}" placeholder="Position" value="${pos}" data-field="pos" aria-label="Position" />
+    <button class="setup-remove-btn" onclick="removeSetupRow('${section}',${id})" aria-label="Remove player">×</button>
   `;
   return div;
 }
@@ -2995,10 +2998,12 @@ function launchMatch() {
 function openImportModal() {
   document.getElementById('importTextarea').value = '';
   document.getElementById('importModalOverlay').classList.add('open');
+  trapFocus(document.querySelector('#importModalOverlay .import-modal'));
 }
 
 function closeImportModal() {
   document.getElementById('importModalOverlay').classList.remove('open');
+  releaseFocus();
 }
 
 function applyImport() {
@@ -3671,9 +3676,9 @@ function updateStats() {
   document.getElementById('savePct').innerHTML = `${svPct}%<span id="saveFrac">${stats.saves}/${total}</span>`;
   document.getElementById('saveBar').style.width = svPct + '%';
 
-  document.getElementById('shotsOnGoal').innerHTML = `${stats.shots}<span>shots</span>`;
-  document.getElementById('yellowCount').innerHTML = `${stats.yellows}<span>cards</span>`;
-  document.getElementById('suspCount').innerHTML = `${stats.suspensions}<span>total</span>`;
+  document.getElementById('shotsOnGoal').textContent = stats.shots;
+  document.getElementById('yellowCount').textContent = stats.yellows;
+  document.getElementById('suspCount').textContent = stats.suspensions;
   
   // Update shot zone heatmap with color coding
   const maxZone = Math.max(...stats.zones, 1);
@@ -4003,10 +4008,12 @@ function openGkModal(player) {
   setShotType('save');
   document.querySelectorAll('.goal-cell').forEach(c => c.classList.remove('selected'));
   document.getElementById('modalOverlay').classList.add('open');
+  trapFocus(document.querySelector('#modalOverlay .modal'));
 }
 
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
+  releaseFocus();
   currentGkPlayer = null;
   selectedZone = null;
 }
@@ -4026,6 +4033,7 @@ function selectZone(zone) {
   window.selectedZone = zone;
   document.querySelectorAll('.goal-cell').forEach((c,i) => {
     c.classList.toggle('selected', i===zone);
+    c.setAttribute('aria-pressed', i===zone ? 'true' : 'false');
   });
 }
 
@@ -4421,10 +4429,12 @@ function saveMatchToHistory(matchData) {
 function openHistoryModal() {
   renderHistoryList();
   document.getElementById('historyModalOverlay').classList.add('open');
+  trapFocus(document.querySelector('#historyModalOverlay .history-modal'));
 }
 
 function closeHistoryModal() {
   document.getElementById('historyModalOverlay').classList.remove('open');
+  releaseFocus();
 }
 
 function deleteHistoryEntry(id) {

@@ -3,23 +3,31 @@
    Enhanced UX while keeping Black & Yellow aesthetic
    =================================================================== */
 
-/* Better Typography - Manrope is more refined than DM Sans */
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap');
+/* Fonts loaded via <link> in HTML — no @import needed */
 
 :root {
   /* Keep original black & yellow colors */
   --bg: #0a0c10;
-  --surface: #12151c;
-  --surface2: #1a1f2a;
+  --surface: var(--surface);
+  --surface2: var(--surface2);
   --border: #252b38;
-  --accent: #e8ff00;
+  --accent: var(--accent);
   --accent2: #00d4ff;
   --red: #ff3b3b;
   --yellow: #ffc700;
   --green: #00e87a;
-  --text: #f0f2f6;
-  --muted: #6b7585;
+  --text: var(--text);
+  --muted: var(--muted);
   --gk-accent: #7b5cfa;
+
+  /* Z-index scale */
+  --z-topbar: 100;
+  --z-mobile-tab: 200;
+  --z-modal: 1000;
+  --z-setup: 2000;
+  --z-history: 3000;
+  --z-auth: 4000;
+  --z-system: 9999;
   
   /* Design system - consistent spacing & radius */
   --radius-sm: 6px;
@@ -41,7 +49,7 @@
   /* Transitions */
   --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-bounce: 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --transition-bounce: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ===================================================================
@@ -290,7 +298,7 @@ body {
 /* Scoreboard - Keep original size but add polish */
 .scoreboard {
   padding: 8px 20px !important; /* Back to smaller size */
-  background: linear-gradient(135deg, #1a1f2a 0%, #12151c 100%) !important;
+  background: linear-gradient(135deg, var(--surface2) 0%, var(--surface) 100%) !important;
   box-shadow: 
     var(--shadow-glow),
     var(--shadow-lg) !important;
@@ -328,7 +336,7 @@ body {
 /* Timer - Back to original size */
 .timer-block {
   padding: 8px 20px !important; /* Back to smaller - was 10px 24px */
-  background: linear-gradient(135deg, #1a1f2a 0%, #12151c 100%) !important;
+  background: linear-gradient(135deg, var(--surface2) 0%, var(--surface) 100%) !important;
   box-shadow: var(--shadow-sm) !important;
   border-radius: var(--radius-md) !important;
   transition: all var(--transition-base);
@@ -358,7 +366,7 @@ body {
 /* Scoreboard - Match timer size */
 .scoreboard {
   padding: 8px 20px !important;
-  background: linear-gradient(135deg, #1a1f2a 0%, #12151c 100%) !important;
+  background: linear-gradient(135deg, var(--surface2) 0%, var(--surface) 100%) !important;
   box-shadow: 
     var(--shadow-glow),
     var(--shadow-lg) !important;
@@ -496,17 +504,16 @@ body {
 .player-row {
   transition: all var(--transition-base) !important;
   cursor: pointer;
-  border-left: 3px solid transparent !important;
 }
 
 .player-row:hover {
   background: rgba(232, 255, 0, 0.05) !important;
   transform: translateX(4px) !important;
-  border-left-color: var(--accent) !important;
+  border-color: var(--accent) !important;
 }
 
 .player-row.gk-row:hover {
-  border-left-color: var(--gk-accent) !important;
+  border-color: var(--gk-accent) !important;
   background: rgba(123, 92, 250, 0.05) !important;
 }
 
@@ -562,7 +569,7 @@ body {
 .stat-card,
 .timer-block,
 .attack-counter-container {
-  background: linear-gradient(135deg, #1a1f2a 0%, #16181f 100%) !important;
+  background: linear-gradient(135deg, var(--surface2) 0%, #16181f 100%) !important;
   box-shadow: var(--shadow-sm) !important;
 }
 
@@ -628,12 +635,12 @@ body {
 .stat-label,
 .timer-label,
 .scoreboard-label {
-  color: #6b7585 !important; /* More muted */
+  color: var(--muted) !important; /* More muted */
   font-size: 10px !important;
 }
 
 .stat-value {
-  color: #f0f2f6 !important; /* Bright white for data */
+  color: var(--text) !important; /* Bright white for data */
   font-size: 32px !important;
   font-weight: 700 !important;
   letter-spacing: 2px !important;
@@ -641,7 +648,7 @@ body {
 
 /* Yellow only for active/important */
 .timer-display.running {
-  color: #e8ff00 !important;
+  color: var(--accent) !important;
   text-shadow: 0 0 24px rgba(232, 255, 0, 0.5) !important;
   animation: timerPulse 2s ease-in-out infinite;
 }
@@ -658,7 +665,7 @@ body {
 
 /* Event log timestamps - very subtle */
 .event-time {
-  color: #6b7585 !important;
+  color: var(--muted) !important;
   font-size: 11px !important;
 }
 
@@ -736,6 +743,41 @@ body {
   display: block !important;
 }
 
+/* ===================================================================
+   MEDIUM VIEWPORT (769px – 1024px)
+   Narrow the sidebars; protect the center player area.
+   =================================================================== */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .main {
+    grid-template-columns: 220px 1fr 200px !important;
+  }
+
+  .stat-value {
+    font-size: 24px !important;
+  }
+
+  .action-btns {
+    max-width: 220px !important;
+  }
+
+  .action-btn {
+    padding: 5px 7px !important;
+    font-size: 10px !important;
+  }
+
+  .topbar-brand {
+    font-size: 20px !important;
+  }
+
+  .timer-display {
+    font-size: 26px !important;
+  }
+
+  .scoreboard-score {
+    font-size: 28px !important;
+  }
+}
+
 @media (max-width: 768px) {
   /* Topbar mobile layout - stack or scroll */
   .topbar {
@@ -810,7 +852,7 @@ body {
   /* Clear active indicator */
   .mobile-tab.active {
     background: rgba(232, 255, 0, 0.08) !important;
-    border-top: 3px solid #e8ff00 !important;
+    border-top: 3px solid var(--accent) !important;
   }
   
   .mobile-tab.active .tab-icon {
@@ -853,8 +895,19 @@ body {
 button:focus-visible,
 .player-row:focus-visible,
 .btn-sm:focus-visible {
-  outline: 2px solid #e8ff00 !important;
+  outline: 2px solid var(--accent) !important;
   outline-offset: 3px !important;
+}
+
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px !important;
+}
+
+body.light-mode input:focus-visible,
+body.light-mode textarea:focus-visible {
+  outline-color: #6b7200 !important;
 }
 
 /* Better disabled states */
@@ -878,18 +931,18 @@ html {
 }
 
 ::-webkit-scrollbar-track {
-  background: #12151c;
+  background: var(--surface);
   border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #e8ff00 0%, #d4e600 100%);
+  background: linear-gradient(135deg, var(--accent) 0%, #d4e600 100%);
   border-radius: 5px;
-  border: 2px solid #12151c;
+  border: 2px solid var(--surface);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #e8ff00;
+  background: var(--accent);
 }
 
 /* Selection color */
@@ -903,6 +956,14 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* ===================================================================
    9. MODAL IMPROVEMENTS
    =================================================================== */
@@ -910,7 +971,7 @@ html {
 .modal {
   border-radius: var(--radius-lg) !important;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6) !important;
-  background: linear-gradient(135deg, #1a1f2a 0%, #12151c 100%) !important;
+  background: linear-gradient(135deg, var(--surface2) 0%, var(--surface) 100%) !important;
 }
 
 .modal-title {
@@ -920,7 +981,7 @@ html {
 }
 
 .modal-sub {
-  color: #6b7585 !important;
+  color: var(--muted) !important;
   margin-bottom: 20px !important;
 }
 
@@ -946,7 +1007,7 @@ html {
 
 .no-suspensions,
 .history-empty {
-  color: #6b7585 !important;
+  color: var(--muted) !important;
   padding: 24px !important;
   text-align: center;
   font-size: 14px !important;
@@ -964,18 +1025,76 @@ html {
 }
 
 /* ===================================================================
+   STAT HIERARCHY
+   =================================================================== */
+
+/* Primary cards (Shot Efficiency, GK Save Rate) — enlarged */
+.stat-card--primary .stat-value {
+  font-size: 36px !important;
+}
+
+.stat-card--primary {
+  border-bottom: 2px solid var(--accent) !important;
+}
+
+.stat-card--gk {
+  border-bottom-color: var(--gk-accent) !important;
+}
+
+/* Compact count row (Shots / Yellows / 2-Min) */
+.stat-counts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.stat-count-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  text-align: center;
+  transition: all var(--transition-base);
+}
+
+.stat-count-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-count-value {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 28px;
+  color: var(--text);
+  line-height: 1;
+  letter-spacing: 1px;
+}
+
+.stat-count-item--yellow .stat-count-value { color: var(--yellow); }
+.stat-count-item--suspend .stat-count-value { color: #ff9800; }
+
+.stat-count-label {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+/* ===================================================================
    BONUS: Stat bars
    =================================================================== */
 
 .stat-bar-bg {
-  background: #1a1f2a !important;
+  background: var(--surface2) !important;
   border-radius: 3px !important;
   overflow: hidden;
   height: 6px !important;
 }
 
 .stat-bar {
-  background: linear-gradient(90deg, #e8ff00 0%, #d4e600 100%) !important;
+  background: linear-gradient(90deg, var(--accent) 0%, #d4e600 100%) !important;
   box-shadow: 0 0 8px rgba(232, 255, 0, 0.4) !important;
   border-radius: 3px !important;
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
@@ -987,11 +1106,10 @@ html {
 
 /* Topbar brand animation */
 .topbar-brand {
-  transition: all var(--transition-base);
+  transition: transform var(--transition-base);
 }
 
 .topbar-brand:hover {
-  letter-spacing: 5px;
   transform: scale(1.05);
 }
 
@@ -1020,7 +1138,3 @@ html {
   font-weight: 600 !important;
 }
 
-/* Smooth everything */
-* {
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
