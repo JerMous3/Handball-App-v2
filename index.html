@@ -912,12 +912,15 @@
     .btn-sm { padding: 5px 9px; font-size: 11px; }
     
     /* Hide buttons on mobile - accessible via More tab */
-    .btn-sm.history, 
-    .btn-sm.export, 
+    .btn-sm.history,
+    .btn-sm.export,
     .btn-sm.signout,
     .topbar-right a[href="watch.html"],
-    .topbar-right a[href="stats.html"] { 
-      display: none !important; 
+    .topbar-right a[href="stats.html"],
+    #undoBtn,
+    #themeToggleBtn,
+    .topbar-right button[onclick="switchHalf()"] {
+      display: none !important;
     }
     
     .user-badge { display: none; }
@@ -2037,6 +2040,10 @@
         ↩ Undo Last Action
       </button>
       
+      <button class="more-button" onclick="switchHalf()">
+        ½ Switch Half
+      </button>
+
       <button class="more-button live" id="mobileLiveBtn" onclick="typeof startLiveMatch === 'function' ? startLiveMatch() : alert('Live broadcasting not available')">
         🔴 Go Live
       </button>
@@ -2063,6 +2070,10 @@
         💾 Save Match
       </button>
       
+      <button class="more-button" onclick="toggleTheme()">
+        ☀️ Toggle Theme
+      </button>
+
       <button class="more-button" onclick="signOut()">
         🚪 Sign Out
       </button>
