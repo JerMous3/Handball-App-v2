@@ -2731,10 +2731,31 @@ async function loadSavedRoster() {
 }
 
 // MATCH CLOUD SAVE
+function showToast(msg, type = 'info') {
+  const existing = document.getElementById('saveToast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.id = 'saveToast';
+  t.textContent = msg;
+  t.style.cssText = `
+    position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+    background:${type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : 'var(--surface2)'};
+    color:${type === 'success' ? '#000' : 'var(--text)'};
+    padding:12px 20px;border-radius:8px;font-size:14px;font-weight:600;
+    z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.4);
+    max-width:90vw;text-align:center;
+  `;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), type === 'error' ? 6000 : 3000);
+}
+
 async function saveMatchToSupabase(matchData) {
-  if (!currentUser) return;
-  setCloudStatus('saving', '☁ Saving...');
-  const { error } = await _supabase.from('matches').insert({
+  if (!currentUser) {
+    showToast('Not signed in — match not saved to cloud', 'error');
+    return;
+  }
+
+  const fullPayload = {
     user_id:       currentUser.id,
     team_name:     matchData.teamName,
     opponent:      matchData.opponent,
@@ -2749,26 +2770,43 @@ async function saveMatchToSupabase(matchData) {
     attacks:       matchData.attacks || 0,
     event_log:     matchData.eventLog || [],
     player_stats:  matchData.playerStats || {},
-  });
+  };
+
+  let { error } = await _supabase.from('matches').insert(fullPayload);
+
+  // If full insert fails, retry with only the base columns that are guaranteed to exist
   if (error) {
-    setCloudStatus('error', '❌ Save failed');
+    console.warn('Full match insert failed, retrying with base columns:', error.message);
+    const basePayload = {
+      user_id:       currentUser.id,
+      team_name:     matchData.teamName,
+      opponent:      matchData.opponent,
+      goals_for:     matchData.goalsFor,
+      goals_against: matchData.goalsAgainst,
+      shots:         matchData.shots,
+      shot_pct:      matchData.shotPct,
+      saves:         matchData.saves,
+      save_pct:      matchData.savePct,
+      yellows:       matchData.yellows,
+    };
+    const retry = await _supabase.from('matches').insert(basePayload);
+    error = retry.error;
+    if (!retry.error) {
+      showToast('Match saved (some stats missing — add attacks/suspensions/player_stats columns to your matches table)', 'info');
+      return;
+    }
+  }
+
+  if (error) {
     console.error('Match save error:', error);
-    
-    // Log error to Supabase
+    showToast(`Save failed: ${error.message}`, 'error');
     logError('match_save_failed', error, {
-      matchData: {
-        teamName: matchData.teamName,
-        opponent: matchData.opponent,
-        goalsFor: matchData.goalsFor,
-        goalsAgainst: matchData.goalsAgainst,
-        attacks: matchData.attacks,
-      },
+      matchData: { teamName: matchData.teamName, opponent: matchData.opponent, goalsFor: matchData.goalsFor, goalsAgainst: matchData.goalsAgainst },
       userId: currentUser?.id,
       timestamp: new Date().toISOString()
     });
   } else {
-    setCloudStatus('saved', '✓ Saved');
-    setTimeout(() => setCloudStatus('', ''), 3000);
+    showToast('Match saved ✓', 'success');
   }
 }
 
