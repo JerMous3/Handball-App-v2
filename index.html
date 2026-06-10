@@ -1438,15 +1438,39 @@
   /* Roster load button on setup screen */
   .setup-roster-bar {
     display: flex;
-    gap: 10px;
-    align-items: center;
+    flex-direction: column;
+    gap: 8px;
     margin-bottom: 16px;
-    padding: 10px 14px;
+    padding: 12px 14px;
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 10px;
   }
-  .setup-roster-info { font-size: 12px; color: var(--muted); flex: 1; }
+  .setup-roster-bar-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  .setup-roster-bar-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .setup-roster-select {
+    flex: 1;
+    min-width: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  .setup-roster-select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .setup-roster-info { font-size: 12px; color: var(--muted); }
   .setup-roster-info strong { color: var(--text); }
 
   /* Mobile panel */
@@ -1748,9 +1772,16 @@
     <div class="setup-subtitle">Fill in your squad before the match — all fields are optional except at least one player per section.</div>
 
     <div class="setup-roster-bar" id="rosterBar" style="display:none">
-      <div class="setup-roster-info" id="rosterBarInfo">Loading saved roster...</div>
-      <button class="setup-import-btn" onclick="loadSavedRoster()">↓ Load Saved Roster</button>
-      <button class="setup-import-btn" onclick="saveRosterToCloud()" style="border-color:var(--green);color:var(--green)">↑ Save Roster</button>
+      <div class="setup-roster-bar-title">Saved Rosters</div>
+      <div class="setup-roster-bar-row">
+        <select class="setup-roster-select" id="rosterSelect">
+          <option value="">— New roster —</option>
+        </select>
+        <button class="setup-import-btn" onclick="loadSelectedRoster()">↓ Load</button>
+        <button class="setup-import-btn" onclick="saveRosterToCloud()" style="border-color:var(--green);color:var(--green)">↑ Save</button>
+        <button class="setup-import-btn" onclick="deleteSelectedRoster()" style="border-color:var(--red);color:var(--red)" title="Delete selected roster">✕</button>
+      </div>
+      <div class="setup-roster-info" id="rosterBarInfo"></div>
     </div>
 
     <div class="setup-import-bar">
@@ -2631,19 +2662,9 @@ async function onSignedIn(user) {
   // Only show setup screen if no active match was restored
   document.getElementById('setupScreen').classList.remove('hidden');
 
-  // Check for saved roster
-  const { data } = await _supabase.from('rosters').select('*').eq('user_id', user.id).maybeSingle();
-  const rosterBar = document.getElementById('rosterBar');
-  const rosterInfo = document.getElementById('rosterBarInfo');
-  rosterBar.style.display = 'flex';
-  if (data) {
-    const players = data.players || [];
-    const updated = new Date(data.updated_at).toLocaleDateString('en-GB');
-    rosterInfo.innerHTML = `<strong>${data.name}</strong> — ${players.length} players saved &nbsp;·&nbsp; Last updated ${updated}`;
-  } else {
-    rosterInfo.innerHTML = 'No saved roster yet — fill in your squad and click <strong>↑ Save Roster</strong>';
-    document.getElementById('rosterBar').querySelector('button:first-child').style.display = 'none';
-  }
+  // Load all saved rosters
+  document.getElementById('rosterBar').style.display = 'flex';
+  await refreshRosterDropdown();
 }
 
 async function signOut() {
@@ -2662,6 +2683,8 @@ async function signOut() {
 }
 
 // ROSTER CLOUD SAVE / LOAD
+let savedRosters = [];
+
 function collectCurrentRoster() {
   return {
     gk:      readSetupRows('setupGkRows'),
@@ -2670,51 +2693,87 @@ function collectCurrentRoster() {
   };
 }
 
+async function refreshRosterDropdown() {
+  if (!currentUser) return;
+  const { data } = await _supabase.from('rosters').select('*').eq('user_id', currentUser.id).order('updated_at', { ascending: false });
+  savedRosters = data || [];
+
+  const sel = document.getElementById('rosterSelect');
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">— New roster —</option>';
+  savedRosters.forEach(r => {
+    const date = new Date(r.updated_at).toLocaleDateString('en-GB');
+    const count = (r.players || []).length;
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = `${r.name} · ${count} players · ${date}`;
+    sel.appendChild(opt);
+  });
+  // Re-select previously selected roster if it still exists
+  if (currentVal && sel.querySelector(`option[value="${currentVal}"]`)) {
+    sel.value = currentVal;
+  }
+
+  const info = document.getElementById('rosterBarInfo');
+  info.textContent = savedRosters.length === 0
+    ? 'No rosters saved yet — fill in your squad and click ↑ Save'
+    : `${savedRosters.length} roster${savedRosters.length !== 1 ? 's' : ''} saved`;
+}
+
 async function saveRosterToCloud() {
   if (!currentUser) return;
   const roster = collectCurrentRoster();
-  // Tag each player with their section so loading is always exact
   const allPlayers = [
     ...roster.gk.map(p      => ({ ...p, _zone: 'gk' })),
     ...roster.players.map(p => ({ ...p, _zone: 'field' })),
     ...roster.subs.map(p    => ({ ...p, _zone: 'sub' })),
   ];
   const teamName = document.getElementById('setupTeamName').value.trim() || 'My Team';
-  const rosterInfo = document.getElementById('rosterBarInfo');
-  rosterInfo.innerHTML = '💾 Saving...';
+  const selectedId = document.getElementById('rosterSelect').value;
+  const info = document.getElementById('rosterBarInfo');
+  info.textContent = '💾 Saving...';
 
-  const { data: existing } = await _supabase.from('rosters').select('id').eq('user_id', currentUser.id).maybeSingle();
   let error;
-  if (existing) {
+  if (selectedId) {
+    // Update the selected roster
     ({ error } = await _supabase.from('rosters').update({
       name: teamName, players: allPlayers, updated_at: new Date().toISOString()
-    }).eq('user_id', currentUser.id));
+    }).eq('id', selectedId).eq('user_id', currentUser.id));
   } else {
+    // Save as new roster — ask for a name if team name is generic
+    let rosterName = teamName;
+    if (!rosterName || rosterName === 'My Team') {
+      rosterName = prompt('Name this roster (e.g. "HV Helius U19"):') || 'My Team';
+    }
     ({ error } = await _supabase.from('rosters').insert({
-      user_id: currentUser.id, name: teamName, players: allPlayers
+      user_id: currentUser.id, name: rosterName, players: allPlayers
     }));
   }
 
   if (error) {
-    rosterInfo.innerHTML = '❌ Save failed — ' + error.message;
+    info.textContent = '❌ Save failed — ' + error.message;
   } else {
-    rosterInfo.innerHTML = `<strong>${teamName}</strong> — ${allPlayers.length} players saved &nbsp;·&nbsp; Just now`;
-    document.getElementById('rosterBar').querySelector('button:first-child').style.display = '';
+    await refreshRosterDropdown();
+    // Select the just-saved roster in the dropdown
+    const sel = document.getElementById('rosterSelect');
+    if (!selectedId && savedRosters.length > 0) sel.value = savedRosters[0].id;
   }
 }
 
-async function loadSavedRoster() {
+async function loadSelectedRoster() {
   if (!currentUser) return;
-  const { data, error } = await _supabase.from('rosters').select('*').eq('user_id', currentUser.id).maybeSingle();
-  if (error || !data) { alert('Could not load roster.'); return; }
+  const selectedId = document.getElementById('rosterSelect').value;
+  if (!selectedId) { showToast('Select a roster from the dropdown first', 'info'); return; }
+
+  const roster = savedRosters.find(r => r.id === selectedId);
+  if (!roster) { showToast('Could not find roster', 'error'); return; }
 
   document.getElementById('setupGkRows').innerHTML = '';
   document.getElementById('setupFieldRows').innerHTML = '';
   document.getElementById('setupSubRows').innerHTML = '';
 
-  const players = data.players || [];
+  const players = roster.players || [];
   players.forEach(p => {
-    // Use saved _zone tag first, fall back to position keyword for old saves
     let zone = p._zone;
     if (!zone) {
       const posLower = (p.pos || '').toLowerCase();
@@ -2725,8 +2784,27 @@ async function loadSavedRoster() {
     addSetupRow(zone, p.num, p.name, p.pos);
   });
 
-  if (data.name && data.name !== 'My Team') {
-    document.getElementById('setupTeamName').value = data.name;
+  if (roster.name && roster.name !== 'My Team') {
+    document.getElementById('setupTeamName').value = roster.name;
+  }
+  showToast(`Loaded: ${roster.name}`, 'success');
+}
+
+async function deleteSelectedRoster() {
+  if (!currentUser) return;
+  const selectedId = document.getElementById('rosterSelect').value;
+  if (!selectedId) { showToast('Select a roster to delete', 'info'); return; }
+
+  const roster = savedRosters.find(r => r.id === selectedId);
+  if (!roster) return;
+  if (!confirm(`Delete roster "${roster.name}"? This cannot be undone.`)) return;
+
+  const { error } = await _supabase.from('rosters').delete().eq('id', selectedId).eq('user_id', currentUser.id);
+  if (error) {
+    showToast('Delete failed — ' + error.message, 'error');
+  } else {
+    await refreshRosterDropdown();
+    showToast('Roster deleted', 'info');
   }
 }
 
@@ -4394,7 +4472,8 @@ window.exportToExcel = exportToExcel;
 window.signOut = signOut;
 window.switchMobileTab = switchMobileTab;
 window.saveRosterToCloud = saveRosterToCloud;
-window.loadSavedRoster = loadSavedRoster;
+window.loadSelectedRoster = loadSelectedRoster;
+window.deleteSelectedRoster = deleteSelectedRoster;
 window.switchAuthTab = switchAuthTab;
 window.deleteCloudEntry = deleteCloudEntry;
 
