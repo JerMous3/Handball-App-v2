@@ -45,8 +45,17 @@ async function saveMatchToCloud() {
       roster_data: window.currentRoster ? JSON.stringify(window.currentRoster) : null,
       // Save event log
       event_log: window.eventLog ? JSON.stringify(window.eventLog) : null,
-      // Save player stats
-      player_stats: window.playerStats ? JSON.stringify(window.playerStats) : null
+      // Save player stats, plus aggregate match stats that can't be derived from player stats alone
+      player_stats: window.playerStats ? JSON.stringify({
+        ...window.playerStats,
+        _matchStats: {
+          saves:      window.stats?.saves      || 0,
+          attacks:    window.stats?.attacks    || 0,
+          zones:      window.stats?.zones      || [0,0,0,0,0,0],
+          zonesSaves: window.stats?.zonesSaves || [0,0,0,0,0,0],
+          zonesGoals: window.stats?.zonesGoals || [0,0,0,0,0,0],
+        }
+      }) : null
     };
     
     // Skip if empty match
