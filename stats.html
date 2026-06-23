@@ -303,24 +303,35 @@
     }
 
     @media (max-width: 768px) {
+      .topbar-content {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 0 12px;
+      }
+
+      .btn-new-season {
+        font-size: 12px;
+        padding: 6px 10px;
+      }
+
       .stats-grid {
         grid-template-columns: 1fr;
       }
-      
+
       .table-header,
       .table-row {
         grid-template-columns: 1fr;
         gap: 8px;
       }
-      
+
       .table-header {
         display: none;
       }
-      
+
       .table-row {
         padding: 16px;
       }
-      
+
       .page-title {
         font-size: 36px;
       }
