@@ -3339,21 +3339,36 @@ window.restoreMatchState = function(data, rosterData = null) {
           ? JSON.parse(data.player_stats)
           : data.player_stats;
 
+        // Extract embedded match-level stats (zones, saves, attacks) before merging player stats
+        const embeddedMatchStats = restoredStats._matchStats;
+        delete restoredStats._matchStats;
+
         // Clear existing object and merge restored stats
         Object.keys(window.playerStats).forEach(key => delete window.playerStats[key]);
         Object.assign(window.playerStats, restoredStats);
 
-        // Recalculate total shots from player stats
+        // Recalculate totals from player stats
         window.stats.shots = 0;
         window.stats.assists = 0;
         window.stats.yellows = 0;
         window.stats.suspensions = 0;
+        window.stats.saves = 0;
         Object.values(window.playerStats).forEach(ps => {
           window.stats.shots += ps.shots || 0;
           window.stats.assists += ps.assists || 0;
           window.stats.yellows += ps.yellows || 0;
           window.stats.suspensions += ps.suspensions || 0;
+          window.stats.saves += ps.saves || 0;
         });
+
+        // Restore zone data and attacks from embedded snapshot (not derivable from player stats)
+        if (embeddedMatchStats) {
+          window.stats.saves      = embeddedMatchStats.saves      || window.stats.saves;
+          window.stats.attacks    = embeddedMatchStats.attacks    || 0;
+          window.stats.zones      = embeddedMatchStats.zones      || [0,0,0,0,0,0];
+          window.stats.zonesSaves = embeddedMatchStats.zonesSaves || [0,0,0,0,0,0];
+          window.stats.zonesGoals = embeddedMatchStats.zonesGoals || [0,0,0,0,0,0];
+        }
       } catch (err) {
         console.error('   Failed to parse player stats:', err);
       }
@@ -3381,6 +3396,11 @@ window.restoreMatchState = function(data, rosterData = null) {
     // Call renderEventLog to show the events
     if (typeof window.renderEventLog === 'function') {
       window.renderEventLog();
+    }
+
+    // Update stat cards and GK zone heatmap with restored data
+    if (typeof window.updateStats === 'function') {
+      window.updateStats();
     }
 
     // Show the app
