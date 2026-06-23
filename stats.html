@@ -376,17 +376,6 @@
         </div>
       </div>
       
-      <!-- Top Assisters -->
-      <div class="stat-card">
-        <div class="stat-header">
-          <div class="stat-icon">🎯</div>
-          <div class="stat-title">Top Assisters</div>
-        </div>
-        <div class="leaderboard" id="topAssisters">
-          <div style="text-align: center; padding: 20px; color: var(--muted);">Loading...</div>
-        </div>
-      </div>
-      
       <!-- Best Goalkeepers -->
       <div class="stat-card">
         <div class="stat-header">
@@ -630,22 +619,6 @@
             player.goals,
             `${player.matches} matches`,
             '⚽'
-          )).join('')
-        : '<div style="text-align: center; padding: 20px; color: var(--muted);">No data yet</div>';
-      
-      // Top Assisters
-      const topAssisters = players
-        .filter(p => p.assists > 0)
-        .sort((a, b) => b.assists - a.assists)
-        .slice(0, 5);
-      
-      document.getElementById('topAssisters').innerHTML = topAssisters.length > 0
-        ? topAssisters.map((player, index) => renderLeaderboardItem(
-            index + 1,
-            player.name,
-            player.assists,
-            `${player.goals} goals`,
-            '🎯'
           )).join('')
         : '<div style="text-align: center; padding: 20px; color: var(--muted);">No data yet</div>';
       
