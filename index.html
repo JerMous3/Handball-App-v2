@@ -1438,6 +1438,35 @@
   .cloud-status.saved  { color: var(--green); }
   .cloud-status.error  { color: var(--red); }
 
+  /* Season picker modal */
+  .season-picker-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000; opacity: 0; pointer-events: none;
+    transition: opacity 0.15s;
+  }
+  .season-picker-overlay.open { opacity: 1; pointer-events: all; }
+  .season-picker-box {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px 28px; width: 320px; max-width: 90vw;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .season-picker-title {
+    font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px;
+  }
+  .season-picker-sub {
+    font-size: 12px; color: var(--muted); margin-bottom: 16px;
+  }
+  .season-picker-select {
+    width: 100%; padding: 9px 12px; border-radius: 7px;
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); font-size: 14px; margin-bottom: 18px;
+    appearance: none; cursor: pointer;
+  }
+  .season-picker-select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .season-picker-btns { display: flex; gap: 10px; }
+  .season-picker-btns .modal-btn { flex: 1; }
+
   /* Roster load button on setup screen */
   .setup-roster-bar {
     display: flex;
@@ -1896,9 +1925,25 @@
     <a href="watch.html" target="_blank" class="btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">📺 Live</a>
     <a href="stats.html" target="_blank" class="btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">📊 Stats</a>
     <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
-    <button class="btn-sm export" onclick="exportToExcel()" title="Save match to history and download Excel file">💾 Save</button>
+    <button class="btn-sm export" onclick="saveMatch()" title="Save match to history">💾 Save</button>
+    <button class="btn-sm" onclick="exportToExcel()" title="Download Excel file">⬇ Excel</button>
     <button class="btn-sm" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle light/dark mode">☀️</button>
     <button class="btn-sm signout" onclick="signOut()">Sign Out</button>
+  </div>
+</div>
+
+<!-- SEASON PICKER MODAL -->
+<div class="season-picker-overlay" id="seasonPickerOverlay">
+  <div class="season-picker-box">
+    <div class="season-picker-title">Save Match</div>
+    <div class="season-picker-sub">Which season should this match be added to?</div>
+    <select class="season-picker-select" id="seasonPickerSelect">
+      <option value="">Current Season</option>
+    </select>
+    <div class="season-picker-btns">
+      <button class="modal-btn cancel" onclick="closeSeasonPicker()">Cancel</button>
+      <button class="modal-btn confirm" onclick="confirmSaveMatch()">Save</button>
+    </div>
   </div>
 </div>
 
@@ -1993,7 +2038,7 @@
       </div>
       
       <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
-      <button class="btn-sm export" onclick="exportToExcel()" title="Save match to history and download Excel file">💾 Save</button>
+      <button class="btn-sm export" onclick="saveMatch()" title="Save match to history">💾 Save</button>
       <button class="btn-sm signout" onclick="signOut()" style="display:none" id="mobileSignout">Sign Out</button>
     </div>
     <div class="section-header-row">
@@ -2097,8 +2142,11 @@
         📋 Match History
       </button>
       
-      <button class="more-button" onclick="exportToExcel()">
+      <button class="more-button" onclick="saveMatch()">
         💾 Save Match
+      </button>
+      <button class="more-button" onclick="exportToExcel()">
+        ⬇ Export Excel
       </button>
       
       <button class="more-button" onclick="toggleTheme()">
@@ -2838,6 +2886,7 @@ async function saveMatchToSupabase(matchData) {
     attacks:       matchData.attacks || 0,
     event_log:     matchData.eventLog || [],
     player_stats:  matchData.playerStats || {},
+    season:        matchData.season || null,
   });
   if (error) {
     setCloudStatus('error', '❌ Save failed');
@@ -4343,19 +4392,15 @@ function initDragAndDrop() {
   });
 }
 
-// EXPORT TO EXCEL
-function exportToExcel() {
-  const wb = XLSX.utils.book_new();
+// BUILD MATCH DATA (shared by save and export)
+function buildMatchData() {
   const matchTimer = document.getElementById('matchTimer');
   const matchTime = matchTimer ? matchTimer.textContent : '00:00';
   const dateStr = new Date().toLocaleDateString('en-GB');
 
-  // Save to history
-  // Use window.teamName and window.opponent if available, otherwise try to parse from topbarBrand
   let teamName = window.teamName || 'Home';
   let opponent = window.opponent || 'Away';
-  
-  // If window variables not set, try topbarBrand as fallback
+
   if ((teamName === 'Home' || !teamName) && (opponent === 'Away' || !opponent)) {
     const topbarBrand = document.getElementById('topbarBrand');
     if (topbarBrand && topbarBrand.textContent) {
@@ -4367,13 +4412,15 @@ function exportToExcel() {
       }
     }
   }
-  
-  const shotPct  = stats.shots > 0 ? Math.round(stats.goals / stats.shots * 100) : 0;
+
+  const shotPct   = stats.shots > 0 ? Math.round(stats.goals / stats.shots * 100) : 0;
   const totalFaced = stats.saves + stats.goalsAgainst;
-  const savePct  = totalFaced > 0 ? Math.round(stats.saves / totalFaced * 100) : 0;
-  const matchData = {
+  const savePct   = totalFaced > 0 ? Math.round(stats.saves / totalFaced * 100) : 0;
+
+  return {
     id: Date.now().toString(),
     date: dateStr,
+    matchTime,
     teamName, opponent,
     goalsFor: stats.goals,
     goalsAgainst: stats.goalsAgainst,
@@ -4385,8 +4432,65 @@ function exportToExcel() {
     eventLog: window.eventLog ? window.eventLog.slice(0, 100) : [],
     playerStats: window.playerStats || {},
   };
-  saveMatchToHistory(matchData);       // localStorage fallback
-  saveMatchToSupabase(matchData);      // Supabase cloud save
+}
+
+// SAVE MATCH (history + cloud, no download)
+async function saveMatch() {
+  // Fetch existing season names then open picker
+  const sel = document.getElementById('seasonPickerSelect');
+  sel.innerHTML = '<option value="">Current Season</option>';
+
+  if (currentUser) {
+    try {
+      const { data } = await _supabase
+        .from('matches')
+        .select('season')
+        .eq('user_id', currentUser.id)
+        .not('season', 'is', null);
+      const names = [...new Set((data || []).map(m => m.season))].sort((a, b) => b.localeCompare(a));
+      names.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = n;
+        sel.appendChild(opt);
+      });
+    } catch (_) {}
+  }
+
+  document.getElementById('seasonPickerOverlay').classList.add('open');
+}
+
+function closeSeasonPicker() {
+  document.getElementById('seasonPickerOverlay').classList.remove('open');
+}
+
+async function confirmSaveMatch() {
+  const season = document.getElementById('seasonPickerSelect').value || null;
+  closeSeasonPicker();
+
+  const matchData = { ...buildMatchData(), season };
+  saveMatchToHistory(matchData);
+  await saveMatchToSupabase(matchData);
+
+  // Visual confirmation on all Save buttons
+  const exportButtons = document.querySelectorAll('.export');
+  exportButtons.forEach(btn => {
+    const originalText = btn.textContent;
+    btn.textContent = '✅ Saved!';
+    btn.style.background = 'var(--green)';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.style.background = '';
+    }, 2000);
+  });
+}
+
+// EXPORT TO EXCEL
+function exportToExcel() {
+  const matchData = buildMatchData();
+  const wb = XLSX.utils.book_new();
+  const dateStr = matchData.date;
+  const matchTime = matchData.matchTime;
 
   // Sheet 1: Match Summary
   const summaryData = [
@@ -4460,25 +4564,15 @@ function exportToExcel() {
   // Download
   const filename = `handball_match_${dateStr.replace(/\//g,'-')}.xlsx`;
   XLSX.writeFile(wb, filename);
-
-
-  // Optional: Show a brief visual confirmation
-  const exportButtons = document.querySelectorAll('.export');
-  exportButtons.forEach(btn => {
-    const originalText = btn.textContent;
-    btn.textContent = '✅ Saved!';
-    btn.style.background = 'var(--green)';
-    setTimeout(() => {
-      btn.textContent = originalText;
-      btn.style.background = '';
-    }, 2000);
-  });
 }
 
 // Expose initMatch globally for cross-device sync
 window.initMatch = initMatch;
 
 // Expose other functions to window for onclick handlers and external modules
+window.saveMatch = saveMatch;
+window.closeSeasonPicker = closeSeasonPicker;
+window.confirmSaveMatch = confirmSaveMatch;
 window.exportToExcel = exportToExcel;
 window.signOut = signOut;
 window.switchMobileTab = switchMobileTab;
