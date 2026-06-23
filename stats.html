@@ -376,22 +376,11 @@
         </div>
       </div>
       
-      <!-- Top Assisters -->
-      <div class="stat-card">
-        <div class="stat-header">
-          <div class="stat-icon">🎯</div>
-          <div class="stat-title">Top Assisters</div>
-        </div>
-        <div class="leaderboard" id="topAssisters">
-          <div style="text-align: center; padding: 20px; color: var(--muted);">Loading...</div>
-        </div>
-      </div>
-      
-      <!-- Best Goalkeepers -->
+      <!-- Stop % -->
       <div class="stat-card">
         <div class="stat-header">
           <div class="stat-icon">🧤</div>
-          <div class="stat-title">Best Goalkeepers</div>
+          <div class="stat-title">Stop %</div>
         </div>
         <div class="leaderboard" id="topGoalkeepers">
           <div style="text-align: center; padding: 20px; color: var(--muted);">Loading...</div>
@@ -575,22 +564,27 @@
         // Get player names from event_log if available
         const eventLog = match.event_log || [];
         const playerNames = {};
+        const goalsAgainstByName = {};
         eventLog.forEach(event => {
           if (event.playerId && event.name) {
             playerNames[event.playerId] = event.name;
           }
+          if (event.type === 'goal_against' && event.name) {
+            goalsAgainstByName[event.name] = (goalsAgainstByName[event.name] || 0) + 1;
+          }
         });
-        
+
         // Iterate through each player in this match
         Object.entries(matchPlayerStats).forEach(([playerId, stats]) => {
           const playerName = playerNames[playerId] || `Player ${playerId}`;
-          
+
           if (!playerStats[playerName]) {
             playerStats[playerName] = {
               name: playerName,
               goals: 0,
               assists: 0,
               saves: 0,
+              goalsAgainst: 0,
               shots: 0,
               yellows: 0,
               suspensions: 0,
@@ -598,11 +592,12 @@
               matches: 0
             };
           }
-          
+
           const aggregated = playerStats[playerName];
           aggregated.goals += stats.goals || 0;
           aggregated.assists += stats.assists || 0;
           aggregated.saves += stats.saves || 0;
+          aggregated.goalsAgainst += goalsAgainstByName[playerName] || 0;
           aggregated.shots += stats.shots || 0;
           aggregated.yellows += stats.yellows || 0;
           aggregated.suspensions += stats.suspensions || 0;
@@ -633,34 +628,22 @@
           )).join('')
         : '<div style="text-align: center; padding: 20px; color: var(--muted);">No data yet</div>';
       
-      // Top Assisters
-      const topAssisters = players
-        .filter(p => p.assists > 0)
-        .sort((a, b) => b.assists - a.assists)
-        .slice(0, 5);
-      
-      document.getElementById('topAssisters').innerHTML = topAssisters.length > 0
-        ? topAssisters.map((player, index) => renderLeaderboardItem(
+      // Stop % (goalkeepers)
+      const goalkeepers = players
+        .filter(p => (p.saves + p.goalsAgainst) > 0)
+        .map(p => ({
+          ...p,
+          shotsFaced: p.saves + p.goalsAgainst,
+          stopPct: Math.round((p.saves / (p.saves + p.goalsAgainst)) * 100)
+        }))
+        .sort((a, b) => b.stopPct - a.stopPct);
+
+      document.getElementById('topGoalkeepers').innerHTML = goalkeepers.length > 0
+        ? goalkeepers.map((player, index) => renderLeaderboardItem(
             index + 1,
             player.name,
-            player.assists,
-            `${player.goals} goals`,
-            '🎯'
-          )).join('')
-        : '<div style="text-align: center; padding: 20px; color: var(--muted);">No data yet</div>';
-      
-      // Best Goalkeepers
-      const topGoalkeepers = players
-        .filter(p => p.saves > 0)
-        .sort((a, b) => b.saves - a.saves)
-        .slice(0, 5);
-      
-      document.getElementById('topGoalkeepers').innerHTML = topGoalkeepers.length > 0
-        ? topGoalkeepers.map((player, index) => renderLeaderboardItem(
-            index + 1,
-            player.name,
-            player.saves,
-            `${player.matches} matches`,
+            player.stopPct + '%',
+            `${player.saves} saves · ${player.shotsFaced} faced`,
             '🧤'
           )).join('')
         : '<div style="text-align: center; padding: 20px; color: var(--muted);">No data yet</div>';
