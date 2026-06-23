@@ -891,7 +891,7 @@
     .topbar-brand { font-size: 16px; letter-spacing: 2px; }
     
     /* Hide left section on mobile (Reset button - available in More tab) */
-    .topbar-left { display: none; }
+    .topbar-left { display: none !important; }
     
     /* Center section takes more space */
     .topbar-center { flex: 1; }
@@ -912,12 +912,15 @@
     .btn-sm { padding: 5px 9px; font-size: 11px; }
     
     /* Hide buttons on mobile - accessible via More tab */
-    .btn-sm.history, 
-    .btn-sm.export, 
+    .btn-sm.history,
+    .btn-sm.export,
     .btn-sm.signout,
     .topbar-right a[href="watch.html"],
-    .topbar-right a[href="stats.html"] { 
-      display: none !important; 
+    .topbar-right a[href="stats.html"],
+    #undoBtn,
+    #themeToggleBtn,
+    .topbar-right button[onclick="switchHalf()"] {
+      display: none !important;
     }
     
     .user-badge { display: none; }
@@ -1435,18 +1438,71 @@
   .cloud-status.saved  { color: var(--green); }
   .cloud-status.error  { color: var(--red); }
 
+  /* Season picker modal */
+  .season-picker-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000; opacity: 0; pointer-events: none;
+    transition: opacity 0.15s;
+  }
+  .season-picker-overlay.open { opacity: 1; pointer-events: all; }
+  .season-picker-box {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px 28px; width: 320px; max-width: 90vw;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .season-picker-title {
+    font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px;
+  }
+  .season-picker-sub {
+    font-size: 12px; color: var(--muted); margin-bottom: 16px;
+  }
+  .season-picker-select {
+    width: 100%; padding: 9px 12px; border-radius: 7px;
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); font-size: 14px; margin-bottom: 18px;
+    appearance: none; cursor: pointer;
+  }
+  .season-picker-select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .season-picker-btns { display: flex; gap: 10px; }
+  .season-picker-btns .modal-btn { flex: 1; }
+
   /* Roster load button on setup screen */
   .setup-roster-bar {
     display: flex;
-    gap: 10px;
-    align-items: center;
+    flex-direction: column;
+    gap: 8px;
     margin-bottom: 16px;
-    padding: 10px 14px;
+    padding: 12px 14px;
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 10px;
   }
-  .setup-roster-info { font-size: 12px; color: var(--muted); flex: 1; }
+  .setup-roster-bar-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  .setup-roster-bar-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .setup-roster-select {
+    flex: 1;
+    min-width: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  .setup-roster-select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .setup-roster-info { font-size: 12px; color: var(--muted); }
   .setup-roster-info strong { color: var(--text); }
 
   /* Mobile panel */
@@ -1748,9 +1804,16 @@
     <div class="setup-subtitle">Fill in your squad before the match — all fields are optional except at least one player per section.</div>
 
     <div class="setup-roster-bar" id="rosterBar" style="display:none">
-      <div class="setup-roster-info" id="rosterBarInfo">Loading saved roster...</div>
-      <button class="setup-import-btn" onclick="loadSavedRoster()">↓ Load Saved Roster</button>
-      <button class="setup-import-btn" onclick="saveRosterToCloud()" style="border-color:var(--green);color:var(--green)">↑ Save Roster</button>
+      <div class="setup-roster-bar-title">Saved Rosters</div>
+      <div class="setup-roster-bar-row">
+        <select class="setup-roster-select" id="rosterSelect">
+          <option value="">— New roster —</option>
+        </select>
+        <button class="setup-import-btn" onclick="loadSelectedRoster()">↓ Load</button>
+        <button class="setup-import-btn" onclick="saveRosterToCloud()" style="border-color:var(--green);color:var(--green)">↑ Save</button>
+        <button class="setup-import-btn" onclick="deleteSelectedRoster()" style="border-color:var(--red);color:var(--red)" title="Delete selected roster">✕</button>
+      </div>
+      <div class="setup-roster-info" id="rosterBarInfo"></div>
     </div>
 
     <div class="setup-import-bar">
@@ -1862,9 +1925,25 @@
     <a href="watch.html" target="_blank" class="btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">📺 Live</a>
     <a href="stats.html" target="_blank" class="btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">📊 Stats</a>
     <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
-    <button class="btn-sm export" onclick="exportToExcel()" title="Save match to history and download Excel file">💾 Save</button>
+    <button class="btn-sm export" onclick="saveMatch()" title="Save match to history">💾 Save</button>
+    <button class="btn-sm" onclick="exportToExcel()" title="Download Excel file">⬇ Excel</button>
     <button class="btn-sm" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle light/dark mode">☀️</button>
     <button class="btn-sm signout" onclick="signOut()">Sign Out</button>
+  </div>
+</div>
+
+<!-- SEASON PICKER MODAL -->
+<div class="season-picker-overlay" id="seasonPickerOverlay">
+  <div class="season-picker-box">
+    <div class="season-picker-title">Save Match</div>
+    <div class="season-picker-sub">Which season should this match be added to?</div>
+    <select class="season-picker-select" id="seasonPickerSelect">
+      <option value="">Current Season</option>
+    </select>
+    <div class="season-picker-btns">
+      <button class="modal-btn cancel" onclick="closeSeasonPicker()">Cancel</button>
+      <button class="modal-btn confirm" onclick="confirmSaveMatch()">Save</button>
+    </div>
   </div>
 </div>
 
@@ -1959,7 +2038,7 @@
       </div>
       
       <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
-      <button class="btn-sm export" onclick="exportToExcel()" title="Save match to history and download Excel file">💾 Save</button>
+      <button class="btn-sm export" onclick="saveMatch()" title="Save match to history">💾 Save</button>
       <button class="btn-sm signout" onclick="signOut()" style="display:none" id="mobileSignout">Sign Out</button>
     </div>
     <div class="section-header-row">
@@ -2037,6 +2116,10 @@
         ↩ Undo Last Action
       </button>
       
+      <button class="more-button" onclick="switchHalf()">
+        ½ Switch Half
+      </button>
+
       <button class="more-button live" id="mobileLiveBtn" onclick="typeof startLiveMatch === 'function' ? startLiveMatch() : alert('Live broadcasting not available')">
         🔴 Go Live
       </button>
@@ -2059,10 +2142,17 @@
         📋 Match History
       </button>
       
-      <button class="more-button" onclick="exportToExcel()">
+      <button class="more-button" onclick="saveMatch()">
         💾 Save Match
       </button>
+      <button class="more-button" onclick="exportToExcel()">
+        ⬇ Export Excel
+      </button>
       
+      <button class="more-button" onclick="toggleTheme()">
+        ☀️ Toggle Theme
+      </button>
+
       <button class="more-button" onclick="signOut()">
         🚪 Sign Out
       </button>
@@ -2631,19 +2721,9 @@ async function onSignedIn(user) {
   // Only show setup screen if no active match was restored
   document.getElementById('setupScreen').classList.remove('hidden');
 
-  // Check for saved roster
-  const { data } = await _supabase.from('rosters').select('*').eq('user_id', user.id).maybeSingle();
-  const rosterBar = document.getElementById('rosterBar');
-  const rosterInfo = document.getElementById('rosterBarInfo');
-  rosterBar.style.display = 'flex';
-  if (data) {
-    const players = data.players || [];
-    const updated = new Date(data.updated_at).toLocaleDateString('en-GB');
-    rosterInfo.innerHTML = `<strong>${data.name}</strong> — ${players.length} players saved &nbsp;·&nbsp; Last updated ${updated}`;
-  } else {
-    rosterInfo.innerHTML = 'No saved roster yet — fill in your squad and click <strong>↑ Save Roster</strong>';
-    document.getElementById('rosterBar').querySelector('button:first-child').style.display = 'none';
-  }
+  // Load all saved rosters
+  document.getElementById('rosterBar').style.display = 'flex';
+  await refreshRosterDropdown();
 }
 
 async function signOut() {
@@ -2662,6 +2742,8 @@ async function signOut() {
 }
 
 // ROSTER CLOUD SAVE / LOAD
+let savedRosters = [];
+
 function collectCurrentRoster() {
   return {
     gk:      readSetupRows('setupGkRows'),
@@ -2670,51 +2752,87 @@ function collectCurrentRoster() {
   };
 }
 
+async function refreshRosterDropdown() {
+  if (!currentUser) return;
+  const { data } = await _supabase.from('rosters').select('*').eq('user_id', currentUser.id).order('updated_at', { ascending: false });
+  savedRosters = data || [];
+
+  const sel = document.getElementById('rosterSelect');
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">— New roster —</option>';
+  savedRosters.forEach(r => {
+    const date = new Date(r.updated_at).toLocaleDateString('en-GB');
+    const count = (r.players || []).length;
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = `${r.name} · ${count} players · ${date}`;
+    sel.appendChild(opt);
+  });
+  // Re-select previously selected roster if it still exists
+  if (currentVal && sel.querySelector(`option[value="${currentVal}"]`)) {
+    sel.value = currentVal;
+  }
+
+  const info = document.getElementById('rosterBarInfo');
+  info.textContent = savedRosters.length === 0
+    ? 'No rosters saved yet — fill in your squad and click ↑ Save'
+    : `${savedRosters.length} roster${savedRosters.length !== 1 ? 's' : ''} saved`;
+}
+
 async function saveRosterToCloud() {
   if (!currentUser) return;
   const roster = collectCurrentRoster();
-  // Tag each player with their section so loading is always exact
   const allPlayers = [
     ...roster.gk.map(p      => ({ ...p, _zone: 'gk' })),
     ...roster.players.map(p => ({ ...p, _zone: 'field' })),
     ...roster.subs.map(p    => ({ ...p, _zone: 'sub' })),
   ];
   const teamName = document.getElementById('setupTeamName').value.trim() || 'My Team';
-  const rosterInfo = document.getElementById('rosterBarInfo');
-  rosterInfo.innerHTML = '💾 Saving...';
+  const selectedId = document.getElementById('rosterSelect').value;
+  const info = document.getElementById('rosterBarInfo');
+  info.textContent = '💾 Saving...';
 
-  const { data: existing } = await _supabase.from('rosters').select('id').eq('user_id', currentUser.id).maybeSingle();
   let error;
-  if (existing) {
+  if (selectedId) {
+    // Update the selected roster
     ({ error } = await _supabase.from('rosters').update({
       name: teamName, players: allPlayers, updated_at: new Date().toISOString()
-    }).eq('user_id', currentUser.id));
+    }).eq('id', selectedId).eq('user_id', currentUser.id));
   } else {
+    // Save as new roster — ask for a name if team name is generic
+    let rosterName = teamName;
+    if (!rosterName || rosterName === 'My Team') {
+      rosterName = prompt('Name this roster (e.g. "HV Helius U19"):') || 'My Team';
+    }
     ({ error } = await _supabase.from('rosters').insert({
-      user_id: currentUser.id, name: teamName, players: allPlayers
+      user_id: currentUser.id, name: rosterName, players: allPlayers
     }));
   }
 
   if (error) {
-    rosterInfo.innerHTML = '❌ Save failed — ' + error.message;
+    info.textContent = '❌ Save failed — ' + error.message;
   } else {
-    rosterInfo.innerHTML = `<strong>${teamName}</strong> — ${allPlayers.length} players saved &nbsp;·&nbsp; Just now`;
-    document.getElementById('rosterBar').querySelector('button:first-child').style.display = '';
+    await refreshRosterDropdown();
+    // Select the just-saved roster in the dropdown
+    const sel = document.getElementById('rosterSelect');
+    if (!selectedId && savedRosters.length > 0) sel.value = savedRosters[0].id;
   }
 }
 
-async function loadSavedRoster() {
+async function loadSelectedRoster() {
   if (!currentUser) return;
-  const { data, error } = await _supabase.from('rosters').select('*').eq('user_id', currentUser.id).maybeSingle();
-  if (error || !data) { alert('Could not load roster.'); return; }
+  const selectedId = document.getElementById('rosterSelect').value;
+  if (!selectedId) { showToast('Select a roster from the dropdown first', 'info'); return; }
+
+  const roster = savedRosters.find(r => r.id === selectedId);
+  if (!roster) { showToast('Could not find roster', 'error'); return; }
 
   document.getElementById('setupGkRows').innerHTML = '';
   document.getElementById('setupFieldRows').innerHTML = '';
   document.getElementById('setupSubRows').innerHTML = '';
 
-  const players = data.players || [];
+  const players = roster.players || [];
   players.forEach(p => {
-    // Use saved _zone tag first, fall back to position keyword for old saves
     let zone = p._zone;
     if (!zone) {
       const posLower = (p.pos || '').toLowerCase();
@@ -2725,16 +2843,56 @@ async function loadSavedRoster() {
     addSetupRow(zone, p.num, p.name, p.pos);
   });
 
-  if (data.name && data.name !== 'My Team') {
-    document.getElementById('setupTeamName').value = data.name;
+  if (roster.name && roster.name !== 'My Team') {
+    document.getElementById('setupTeamName').value = roster.name;
+  }
+  showToast(`Loaded: ${roster.name}`, 'success');
+}
+
+async function deleteSelectedRoster() {
+  if (!currentUser) return;
+  const selectedId = document.getElementById('rosterSelect').value;
+  if (!selectedId) { showToast('Select a roster to delete', 'info'); return; }
+
+  const roster = savedRosters.find(r => r.id === selectedId);
+  if (!roster) return;
+  if (!confirm(`Delete roster "${roster.name}"? This cannot be undone.`)) return;
+
+  const { error } = await _supabase.from('rosters').delete().eq('id', selectedId).eq('user_id', currentUser.id);
+  if (error) {
+    showToast('Delete failed — ' + error.message, 'error');
+  } else {
+    await refreshRosterDropdown();
+    showToast('Roster deleted', 'info');
   }
 }
 
 // MATCH CLOUD SAVE
+function showToast(msg, type = 'info') {
+  const existing = document.getElementById('saveToast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.id = 'saveToast';
+  t.textContent = msg;
+  t.style.cssText = `
+    position:fixed;bottom:80px;left:50%;transform:translateX(-50%);
+    background:${type === 'error' ? 'var(--red)' : type === 'success' ? 'var(--green)' : 'var(--surface2)'};
+    color:${type === 'success' ? '#000' : 'var(--text)'};
+    padding:12px 20px;border-radius:8px;font-size:14px;font-weight:600;
+    z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.4);
+    max-width:90vw;text-align:center;
+  `;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), type === 'error' ? 6000 : 3000);
+}
+
 async function saveMatchToSupabase(matchData) {
-  if (!currentUser) return;
-  setCloudStatus('saving', '☁ Saving...');
-  const { error } = await _supabase.from('matches').insert({
+  if (!currentUser) {
+    showToast('Not signed in — match not saved to cloud', 'error');
+    return;
+  }
+
+  const fullPayload = {
     user_id:       currentUser.id,
     team_name:     matchData.teamName,
     opponent:      matchData.opponent,
@@ -2749,26 +2907,44 @@ async function saveMatchToSupabase(matchData) {
     attacks:       matchData.attacks || 0,
     event_log:     matchData.eventLog || [],
     player_stats:  matchData.playerStats || {},
-  });
+    season:        matchData.season || null,
+  };
+
+  let { error } = await _supabase.from('matches').insert(fullPayload);
+
+  // If full insert fails, retry with only the base columns that are guaranteed to exist
   if (error) {
-    setCloudStatus('error', '❌ Save failed');
+    console.warn('Full match insert failed, retrying with base columns:', error.message);
+    const basePayload = {
+      user_id:       currentUser.id,
+      team_name:     matchData.teamName,
+      opponent:      matchData.opponent,
+      goals_for:     matchData.goalsFor,
+      goals_against: matchData.goalsAgainst,
+      shots:         matchData.shots,
+      shot_pct:      matchData.shotPct,
+      saves:         matchData.saves,
+      save_pct:      matchData.savePct,
+      yellows:       matchData.yellows,
+    };
+    const retry = await _supabase.from('matches').insert(basePayload);
+    error = retry.error;
+    if (!retry.error) {
+      showToast('Match saved (some stats missing — add attacks/suspensions/player_stats columns to your matches table)', 'info');
+      return;
+    }
+  }
+
+  if (error) {
     console.error('Match save error:', error);
-    
-    // Log error to Supabase
+    showToast(`Save failed: ${error.message}`, 'error');
     logError('match_save_failed', error, {
-      matchData: {
-        teamName: matchData.teamName,
-        opponent: matchData.opponent,
-        goalsFor: matchData.goalsFor,
-        goalsAgainst: matchData.goalsAgainst,
-        attacks: matchData.attacks,
-      },
+      matchData: { teamName: matchData.teamName, opponent: matchData.opponent, goalsFor: matchData.goalsFor, goalsAgainst: matchData.goalsAgainst },
       userId: currentUser?.id,
       timestamp: new Date().toISOString()
     });
   } else {
-    setCloudStatus('saved', '✓ Saved');
-    setTimeout(() => setCloudStatus('', ''), 3000);
+    showToast('Match saved ✓', 'success');
   }
 }
 
@@ -4274,19 +4450,15 @@ function initDragAndDrop() {
   });
 }
 
-// EXPORT TO EXCEL
-function exportToExcel() {
-  const wb = XLSX.utils.book_new();
+// BUILD MATCH DATA (shared by save and export)
+function buildMatchData() {
   const matchTimer = document.getElementById('matchTimer');
   const matchTime = matchTimer ? matchTimer.textContent : '00:00';
   const dateStr = new Date().toLocaleDateString('en-GB');
 
-  // Save to history
-  // Use window.teamName and window.opponent if available, otherwise try to parse from topbarBrand
   let teamName = window.teamName || 'Home';
   let opponent = window.opponent || 'Away';
-  
-  // If window variables not set, try topbarBrand as fallback
+
   if ((teamName === 'Home' || !teamName) && (opponent === 'Away' || !opponent)) {
     const topbarBrand = document.getElementById('topbarBrand');
     if (topbarBrand && topbarBrand.textContent) {
@@ -4298,13 +4470,15 @@ function exportToExcel() {
       }
     }
   }
-  
-  const shotPct  = stats.shots > 0 ? Math.round(stats.goals / stats.shots * 100) : 0;
+
+  const shotPct   = stats.shots > 0 ? Math.round(stats.goals / stats.shots * 100) : 0;
   const totalFaced = stats.saves + stats.goalsAgainst;
-  const savePct  = totalFaced > 0 ? Math.round(stats.saves / totalFaced * 100) : 0;
-  const matchData = {
+  const savePct   = totalFaced > 0 ? Math.round(stats.saves / totalFaced * 100) : 0;
+
+  return {
     id: Date.now().toString(),
     date: dateStr,
+    matchTime,
     teamName, opponent,
     goalsFor: stats.goals,
     goalsAgainst: stats.goalsAgainst,
@@ -4316,8 +4490,65 @@ function exportToExcel() {
     eventLog: window.eventLog ? window.eventLog.slice(0, 100) : [],
     playerStats: window.playerStats || {},
   };
-  saveMatchToHistory(matchData);       // localStorage fallback
-  saveMatchToSupabase(matchData);      // Supabase cloud save
+}
+
+// SAVE MATCH (history + cloud, no download)
+async function saveMatch() {
+  // Fetch existing season names then open picker
+  const sel = document.getElementById('seasonPickerSelect');
+  sel.innerHTML = '<option value="">Current Season</option>';
+
+  if (currentUser) {
+    try {
+      const { data } = await _supabase
+        .from('matches')
+        .select('season')
+        .eq('user_id', currentUser.id)
+        .not('season', 'is', null);
+      const names = [...new Set((data || []).map(m => m.season))].sort((a, b) => b.localeCompare(a));
+      names.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n;
+        opt.textContent = n;
+        sel.appendChild(opt);
+      });
+    } catch (_) {}
+  }
+
+  document.getElementById('seasonPickerOverlay').classList.add('open');
+}
+
+function closeSeasonPicker() {
+  document.getElementById('seasonPickerOverlay').classList.remove('open');
+}
+
+async function confirmSaveMatch() {
+  const season = document.getElementById('seasonPickerSelect').value || null;
+  closeSeasonPicker();
+
+  const matchData = { ...buildMatchData(), season };
+  saveMatchToHistory(matchData);
+  await saveMatchToSupabase(matchData);
+
+  // Visual confirmation on all Save buttons
+  const exportButtons = document.querySelectorAll('.export');
+  exportButtons.forEach(btn => {
+    const originalText = btn.textContent;
+    btn.textContent = '✅ Saved!';
+    btn.style.background = 'var(--green)';
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.style.background = '';
+    }, 2000);
+  });
+}
+
+// EXPORT TO EXCEL
+function exportToExcel() {
+  const matchData = buildMatchData();
+  const wb = XLSX.utils.book_new();
+  const dateStr = matchData.date;
+  const matchTime = matchData.matchTime;
 
   // Sheet 1: Match Summary
   const summaryData = [
@@ -4391,30 +4622,21 @@ function exportToExcel() {
   // Download
   const filename = `handball_match_${dateStr.replace(/\//g,'-')}.xlsx`;
   XLSX.writeFile(wb, filename);
-
-
-  // Optional: Show a brief visual confirmation
-  const exportButtons = document.querySelectorAll('.export');
-  exportButtons.forEach(btn => {
-    const originalText = btn.textContent;
-    btn.textContent = '✅ Saved!';
-    btn.style.background = 'var(--green)';
-    setTimeout(() => {
-      btn.textContent = originalText;
-      btn.style.background = '';
-    }, 2000);
-  });
 }
 
 // Expose initMatch globally for cross-device sync
 window.initMatch = initMatch;
 
 // Expose other functions to window for onclick handlers and external modules
+window.saveMatch = saveMatch;
+window.closeSeasonPicker = closeSeasonPicker;
+window.confirmSaveMatch = confirmSaveMatch;
 window.exportToExcel = exportToExcel;
 window.signOut = signOut;
 window.switchMobileTab = switchMobileTab;
 window.saveRosterToCloud = saveRosterToCloud;
-window.loadSavedRoster = loadSavedRoster;
+window.loadSelectedRoster = loadSelectedRoster;
+window.deleteSelectedRoster = deleteSelectedRoster;
 window.switchAuthTab = switchAuthTab;
 window.deleteCloudEntry = deleteCloudEntry;
 

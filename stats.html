@@ -263,7 +263,45 @@
       font-size: 16px;
       color: var(--muted);
     }
-    
+
+    .season-select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    .season-select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    .btn-new-season {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-new-season:hover { background: var(--accent); color: #000; }
+
+    .season-badge {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 600;
+      margin-left: 12px;
+      vertical-align: middle;
+    }
+
     @media (max-width: 768px) {
       .stats-grid {
         grid-template-columns: 1fr;
@@ -292,7 +330,11 @@
 <body>
   <div class="topbar">
     <div class="topbar-content">
-      <h2 style="margin: 0; color: var(--text); font-size: 18px; font-weight: 600;">📊 Statistics</h2>
+      <h2 style="margin: 0; color: var(--text); font-size: 18px; font-weight: 600; white-space: nowrap;">📊 Statistics</h2>
+      <select class="season-select" id="seasonSelect" onchange="onSeasonChange()" style="flex:1; max-width: 240px;">
+        <option value="">Current Season</option>
+      </select>
+      <button class="btn-new-season" onclick="startNewSeason()">+ New Season</button>
       <button onclick="exportToExcel()" style="
         background: transparent;
         color: var(--text);
@@ -306,18 +348,18 @@
         align-items: center;
         gap: 6px;
         transition: all 0.2s;
-        margin-left: auto;
-      " onmouseover="this.style.background='var(--accent)'; this.style.color='white'; this.style.borderColor='var(--accent)'" 
+        white-space: nowrap;
+      " onmouseover="this.style.background='var(--accent)'; this.style.color='#000'; this.style.borderColor='var(--accent)'"
          onmouseout="this.style.background='transparent'; this.style.color='var(--text)'; this.style.borderColor='var(--border)'">
         <span>💾</span>
-        <span>Export to Excel</span>
+        <span>Export</span>
       </button>
     </div>
   </div>
 
   <div class="container">
     <div class="page-header">
-      <h1 class="page-title">Season Statistics</h1>
+      <h1 class="page-title">Season Statistics<span class="season-badge" id="seasonBadge">Current Season</span></h1>
       <p class="page-subtitle">Aggregated player and team performance from match history</p>
     </div>
     
@@ -387,45 +429,76 @@
   <script>
     const SUPABASE_URL = 'https://qgqryeanopdxrwrfczcx.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_I67bdwmAkdodIk5bAQf1Zw_86KroW5R';
-    
+
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    
+
     let allMatches = [];
-    
+    let currentSession = null;
+    let selectedSeason = null; // null = current season
+
     async function loadData() {
+      const { data: { session }, error: sessionError } = await _supabase.auth.getSession();
+      if (sessionError || !session) {
+        document.getElementById('matchHistory').innerHTML = `
+          <div style="text-align: center; padding: 40px;">
+            <p style="color: var(--muted); margin-bottom: 16px;">You need to sign in to view statistics</p>
+            <a href="index.html" style="color: var(--accent); text-decoration: none;">← Back to Tracker</a>
+          </div>
+        `;
+        return;
+      }
+      currentSession = session;
+      await loadSeasonNames();
       await loadMatchHistory();
       calculateStats();
     }
-    
+
+    async function loadSeasonNames() {
+      const { data } = await _supabase
+        .from('matches')
+        .select('season')
+        .eq('user_id', currentSession.user.id)
+        .not('season', 'is', null)
+        .order('season', { ascending: false });
+
+      const names = [...new Set((data || []).map(m => m.season))].sort((a, b) => b.localeCompare(a));
+      const sel = document.getElementById('seasonSelect');
+      sel.innerHTML = '<option value="">Current Season</option>';
+      names.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        sel.appendChild(opt);
+      });
+      if (selectedSeason) sel.value = selectedSeason;
+    }
+
+    function onSeasonChange() {
+      selectedSeason = document.getElementById('seasonSelect').value || null;
+      const badge = document.getElementById('seasonBadge');
+      badge.textContent = selectedSeason || 'Current Season';
+      loadMatchHistory().then(() => calculateStats());
+    }
+
     async function loadMatchHistory() {
       try {
-        // Check if user is authenticated
-        const { data: { session }, error: sessionError } = await _supabase.auth.getSession();
-        
-        if (sessionError || !session) {
-          console.log('Not authenticated, redirecting to main page...');
-          document.getElementById('matchHistory').innerHTML = `
-            <div style="text-align: center; padding: 40px;">
-              <p style="color: var(--muted); margin-bottom: 16px;">You need to sign in to view statistics</p>
-              <a href="index.html" style="color: var(--accent); text-decoration: none;">← Back to Tracker</a>
-            </div>
-          `;
-          return;
-        }
-        
-        // Load matches from correct table name
-        const { data, error } = await _supabase
+        let query = _supabase
           .from('matches')
           .select('*')
-          .eq('user_id', session.user.id)
+          .eq('user_id', currentSession.user.id)
           .order('played_at', { ascending: false });
-        
+
+        if (selectedSeason) {
+          query = query.eq('season', selectedSeason);
+        } else {
+          query = query.is('season', null);
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
-        
+
         allMatches = data || [];
-        console.log('Loaded matches:', allMatches.length);
         renderMatchHistory();
-        
       } catch (error) {
         console.error('Error loading match history:', error);
         document.getElementById('matchHistory').innerHTML = `
@@ -434,6 +507,61 @@
           </div>
         `;
       }
+    }
+
+    async function startNewSeason() {
+      // Count current-season matches first
+      const { count } = await _supabase
+        .from('matches')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', currentSession.user.id)
+        .is('season', null);
+
+      if (!count || count === 0) {
+        alert('No matches in the current season yet — play some matches first.');
+        return;
+      }
+
+      const seasonName = prompt(
+        `Name the current season before starting fresh.\n\n` +
+        `Example: "2024/2025" or "Spring 2025"\n\n` +
+        `This will archive all ${count} current match${count !== 1 ? 'es' : ''} under that name.`
+      );
+      if (!seasonName || !seasonName.trim()) return;
+
+      const name = seasonName.trim();
+
+      // Check for duplicate season name
+      const { data: existing } = await _supabase
+        .from('matches')
+        .select('id')
+        .eq('user_id', currentSession.user.id)
+        .eq('season', name)
+        .limit(1);
+      if (existing && existing.length > 0) {
+        alert(`A season named "${name}" already exists. Choose a different name.`);
+        return;
+      }
+
+      const { error } = await _supabase
+        .from('matches')
+        .update({ season: name })
+        .eq('user_id', currentSession.user.id)
+        .is('season', null);
+
+      if (error) {
+        alert('Failed to archive season: ' + error.message);
+        return;
+      }
+
+      // Switch view to the newly archived season
+      selectedSeason = name;
+      await loadSeasonNames();
+      document.getElementById('seasonSelect').value = name;
+      document.getElementById('seasonBadge').textContent = name;
+      await loadMatchHistory();
+      calculateStats();
+      alert(`Season "${name}" archived. Starting fresh — new matches will go into the current season.`);
     }
     
     function calculateStats() {
