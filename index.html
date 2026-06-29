@@ -4500,12 +4500,20 @@ async function saveMatch() {
 
   if (currentUser) {
     try {
-      const { data } = await _supabase
-        .from('matches')
-        .select('season')
-        .eq('user_id', currentUser.id)
-        .not('season', 'is', null);
-      const names = [...new Set((data || []).map(m => m.season))].sort((a, b) => b.localeCompare(a));
+      const [matchesRes, seasonsRes] = await Promise.all([
+        _supabase
+          .from('matches')
+          .select('season')
+          .eq('user_id', currentUser.id)
+          .not('season', 'is', null),
+        _supabase
+          .from('seasons')
+          .select('name')
+          .eq('user_id', currentUser.id),
+      ]);
+      const fromMatches = (matchesRes.data || []).map(m => m.season);
+      const fromSeasons = (seasonsRes.data || []).map(s => s.name);
+      const names = [...new Set([...fromMatches, ...fromSeasons])].sort((a, b) => b.localeCompare(a));
       names.forEach(n => {
         const opt = document.createElement('option');
         opt.value = n;

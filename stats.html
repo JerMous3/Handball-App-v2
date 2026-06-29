@@ -436,6 +436,8 @@
     let currentSession = null;
     let selectedSeason = null; // null = current season
 
+    const LAST_SEASON_KEY = 'hb-stats-last-season';
+
     async function loadData() {
       const { data: { session }, error: sessionError } = await _supabase.auth.getSession();
       if (sessionError || !session) {
@@ -449,19 +451,30 @@
       }
       currentSession = session;
       await loadSeasonNames();
+      restoreLastSeason();
       await loadMatchHistory();
       calculateStats();
     }
 
     async function loadSeasonNames() {
-      const { data } = await _supabase
-        .from('matches')
-        .select('season')
-        .eq('user_id', currentSession.user.id)
-        .not('season', 'is', null)
-        .order('season', { ascending: false });
+      // Season names come from two places: labels already on saved matches,
+      // and seasons created ahead of time (stored in the `seasons` table).
+      const [matchesRes, seasonsRes] = await Promise.all([
+        _supabase
+          .from('matches')
+          .select('season')
+          .eq('user_id', currentSession.user.id)
+          .not('season', 'is', null),
+        _supabase
+          .from('seasons')
+          .select('name')
+          .eq('user_id', currentSession.user.id),
+      ]);
 
-      const names = [...new Set((data || []).map(m => m.season))].sort((a, b) => b.localeCompare(a));
+      const fromMatches = (matchesRes.data || []).map(m => m.season);
+      const fromSeasons = (seasonsRes.data || []).map(s => s.name);
+      const names = [...new Set([...fromMatches, ...fromSeasons])].sort((a, b) => b.localeCompare(a));
+
       const sel = document.getElementById('seasonSelect');
       sel.innerHTML = '<option value="">Current Season</option>';
       names.forEach(name => {
@@ -473,8 +486,24 @@
       if (selectedSeason) sel.value = selectedSeason;
     }
 
+    // Restore the season the user last viewed on this device, if it still exists.
+    function restoreLastSeason() {
+      let stored = null;
+      try { stored = localStorage.getItem(LAST_SEASON_KEY); } catch (_) {}
+      if (stored === null) return; // no preference saved yet → keep Current Season
+
+      const sel = document.getElementById('seasonSelect');
+      const exists = [...sel.options].some(o => o.value === stored);
+      if (!exists) return; // season was deleted/renamed → fall back to Current Season
+
+      sel.value = stored;
+      selectedSeason = stored || null;
+      document.getElementById('seasonBadge').textContent = selectedSeason || 'Current Season';
+    }
+
     function onSeasonChange() {
       selectedSeason = document.getElementById('seasonSelect').value || null;
+      try { localStorage.setItem(LAST_SEASON_KEY, selectedSeason || ''); } catch (_) {}
       const badge = document.getElementById('seasonBadge');
       badge.textContent = selectedSeason || 'Current Season';
       loadMatchHistory().then(() => calculateStats());
@@ -510,58 +539,87 @@
     }
 
     async function startNewSeason() {
-      // Count current-season matches first
+      // How many matches are sitting in the current (unlabelled) season?
       const { count } = await _supabase
         .from('matches')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', currentSession.user.id)
         .is('season', null);
-
-      if (!count || count === 0) {
-        alert('No matches in the current season yet — play some matches first.');
-        return;
-      }
+      const currentCount = count || 0;
 
       const seasonName = prompt(
-        `Name the current season before starting fresh.\n\n` +
+        `Name the new season.\n\n` +
         `Example: "2024/2025" or "Spring 2025"\n\n` +
-        `This will archive all ${count} current match${count !== 1 ? 'es' : ''} under that name.`
+        (currentCount > 0
+          ? `You have ${currentCount} match${currentCount !== 1 ? 'es' : ''} in the current season — ` +
+            `after naming, you'll choose whether to archive them into it.`
+          : `It will be available to pick when saving matches.`)
       );
       if (!seasonName || !seasonName.trim()) return;
 
       const name = seasonName.trim();
 
-      // Check for duplicate season name
-      const { data: existing } = await _supabase
-        .from('matches')
-        .select('id')
-        .eq('user_id', currentSession.user.id)
-        .eq('season', name)
-        .limit(1);
-      if (existing && existing.length > 0) {
+      // Reject a name already used by a match label or a pre-created season.
+      const [matchDup, seasonDup] = await Promise.all([
+        _supabase
+          .from('matches')
+          .select('id')
+          .eq('user_id', currentSession.user.id)
+          .eq('season', name)
+          .limit(1),
+        _supabase
+          .from('seasons')
+          .select('id')
+          .eq('user_id', currentSession.user.id)
+          .eq('name', name)
+          .limit(1),
+      ]);
+      if ((matchDup.data && matchDup.data.length > 0) || (seasonDup.data && seasonDup.data.length > 0)) {
         alert(`A season named "${name}" already exists. Choose a different name.`);
         return;
       }
 
-      const { error } = await _supabase
-        .from('matches')
-        .update({ season: name })
-        .eq('user_id', currentSession.user.id)
-        .is('season', null);
-
-      if (error) {
-        alert('Failed to archive season: ' + error.message);
+      // Register the season so it persists (and syncs) even before it has matches.
+      const { error: insertError } = await _supabase
+        .from('seasons')
+        .insert({ user_id: currentSession.user.id, name });
+      if (insertError) {
+        alert('Failed to create season: ' + insertError.message);
         return;
       }
 
-      // Switch view to the newly archived season
+      // If there are current matches, offer to archive them into the new season.
+      let archived = false;
+      if (currentCount > 0) {
+        archived = confirm(
+          `Archive the ${currentCount} current match${currentCount !== 1 ? 'es' : ''} into "${name}"?\n\n` +
+          `OK — move them into "${name}" and start fresh.\n` +
+          `Cancel — just create "${name}" and leave current matches as they are.`
+        );
+        if (archived) {
+          const { error } = await _supabase
+            .from('matches')
+            .update({ season: name })
+            .eq('user_id', currentSession.user.id)
+            .is('season', null);
+          if (error) {
+            alert('Season created, but archiving current matches failed: ' + error.message);
+            archived = false;
+          }
+        }
+      }
+
+      // Switch the view to the new season.
       selectedSeason = name;
+      try { localStorage.setItem(LAST_SEASON_KEY, name); } catch (_) {}
       await loadSeasonNames();
       document.getElementById('seasonSelect').value = name;
       document.getElementById('seasonBadge').textContent = name;
       await loadMatchHistory();
       calculateStats();
-      alert(`Season "${name}" archived. Starting fresh — new matches will go into the current season.`);
+      alert(archived
+        ? `Season "${name}" created and ${currentCount} match${currentCount !== 1 ? 'es' : ''} archived into it. New matches default to the current season.`
+        : `Season "${name}" created. Pick it from the season menu when saving a match.`);
     }
     
     function calculateStats() {
