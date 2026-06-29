@@ -5,7 +5,11 @@
 -- stores names that have no matches yet so they still appear in the season
 -- pickers and sync across devices.
 
-create table if not exists public.seasons (
+-- Remove any pre-existing/leftover `seasons` table with a different shape.
+-- Safe here: no app code has written real season data to it yet.
+drop table if exists public.seasons cascade;
+
+create table public.seasons (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references auth.users (id) on delete cascade,
   name       text not null,
