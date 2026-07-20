@@ -3094,6 +3094,17 @@ async function deleteCloudEntry(id) {
   const { data: { session } } = await _supabase.auth.getSession();
   if (session?.user) {
     onSignedIn(session.user);
+    return;
+  }
+
+  // Deep link from the marketing site: ?request=access lands straight on the
+  // personal access request form instead of the sign-in tab. Signed-in users
+  // never reach this, they are already inside the app above.
+  if (new URLSearchParams(search).get('request') === 'access') {
+    switchAuthTab('signup');
+    showPersonalAccessForm();
+    // Drop the parameter so a refresh does not reopen the form
+    window.history.replaceState(null, '', window.location.pathname);
   }
 })();
 
