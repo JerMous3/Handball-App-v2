@@ -1693,6 +1693,23 @@
   </div>
 </div>
 
+<!-- TRIAL ENDED OVERLAY (shown once a capped trial account hits its login limit) -->
+<div class="auth-screen" id="trialEndedScreen" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">⬡ Handball-Tracker</div>
+    <div class="auth-tagline">Your trial has ended</div>
+    <p style="color:var(--muted);font-size:14px;line-height:1.5;margin:8px 0 16px;">
+      You've used up the free sign-ins on this trial account. Upgrade to a paid plan to keep unlimited access.
+    </p>
+    <a class="auth-submit" style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;" href="mailto:jeremybekkers@icloud.com?subject=Upgrade%20Handball-Tracker%20trial">
+      Upgrade to Paid
+    </a>
+    <div style="text-align:center;margin-top:12px;">
+      <button onclick="signOutFromTrialScreen()" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;text-decoration:underline;padding:0;">Sign Out</button>
+    </div>
+  </div>
+</div>
+
 <!-- PERSONAL ACCESS REQUEST MODAL -->
 <div id="personalAccessModal" style="
   display:none;
@@ -2439,7 +2456,7 @@ async function handleAuth() {
   if (currentAuthTab === 'login') {
     const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
     if (error) { showAuthError(error.message); btn.disabled = false; btn.textContent = 'Sign In'; return; }
-    onSignedIn(data.user);
+    onSignedIn(data.user, { isExplicitLogin: true });
   } else {
     // SIGNUP: VALIDATE INVITE CODE
     if (!inviteCode) {
@@ -2515,14 +2532,16 @@ async function handleAuth() {
           plan_type: codeData.plan_type
         });
         
-        // Save team name to profile
+        // Save team name + trial login-limit to profile
         const finalTeamName = teamName || codeData.club_name;
-        if (finalTeamName) {
-          await _supabase.from('profiles').upsert({ 
-            id: data.user.id,
-            team_name: finalTeamName 
-          });
-        }
+        await _supabase.from('profiles').upsert({
+          id: data.user.id,
+          email: email,
+          team_name: finalTeamName || undefined,
+          login_count: 0,
+          login_limit: codeData.login_limit ?? null,
+          is_paid: false
+        });
       } catch (err) {
         console.error('Error tracking invite usage:', err);
       }
@@ -2698,10 +2717,34 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-async function onSignedIn(user) {
+async function onSignedIn(user, { isExplicitLogin = false } = {}) {
+  // TRIAL LOGIN LIMIT CHECK
+  // Runs on every entry point (explicit sign-in, signup, session restore) so a
+  // capped account can't dodge the gate by just keeping the tab open. Only an
+  // explicit sign-in (password submit) burns down the counter.
+  const { data: profile } = await _supabase
+    .from('profiles')
+    .select('login_count, login_limit, is_paid')
+    .eq('id', user.id)
+    .single();
+
+  if (profile) {
+    const hasLimit = profile.login_limit !== null && profile.login_limit !== undefined;
+    const capped = !profile.is_paid && hasLimit && profile.login_count >= profile.login_limit;
+
+    if (capped) {
+      showTrialEndedScreen();
+      return;
+    }
+
+    if (isExplicitLogin && !profile.is_paid && hasLimit) {
+      await _supabase.from('profiles').update({ login_count: profile.login_count + 1 }).eq('id', user.id);
+    }
+  }
+
   currentUser = user;
   window.currentUser = user; // Expose for external modules like live-broadcast-module.js
-  
+
   // Check if email is verified
   if (!user.email_confirmed_at) {
     console.warn('Email not verified yet');
@@ -2725,6 +2768,24 @@ async function onSignedIn(user) {
   document.getElementById('rosterBar').style.display = 'flex';
   await refreshRosterDropdown();
 }
+
+function showTrialEndedScreen() {
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('appTopbar').style.display = 'none';
+  document.getElementById('appMain').style.display = 'none';
+  document.getElementById('trialEndedScreen').style.display = 'flex';
+}
+
+window.showTrialEndedScreen = showTrialEndedScreen;
+
+async function signOutFromTrialScreen() {
+  await _supabase.auth.signOut();
+  document.getElementById('trialEndedScreen').style.display = 'none';
+  document.getElementById('authScreen').classList.remove('hidden');
+}
+
+window.signOutFromTrialScreen = signOutFromTrialScreen;
 
 async function signOut() {
   // Stop auto-saving
