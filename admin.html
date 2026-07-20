@@ -263,7 +263,15 @@
             <label>Max Uses</label>
             <input type="number" id="maxUses" value="10">
           </div>
-          
+
+          <div class="form-group">
+            <label>Login Limit (optional)</label>
+            <input type="number" id="loginLimit" placeholder="e.g. 5 or 10 — blank = unlimited">
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">
+              Accounts created with this code get locked out after this many sign-ins, until marked paid in Trial Users below.
+            </div>
+          </div>
+
           <div class="form-group">
             <label>Expires At (optional)</label>
             <input type="date" id="expiresAt">
@@ -299,8 +307,17 @@
       </div>
       <div id="subscriptionsTable"></div>
     </div>
+
+    <!-- Trial Users -->
+    <div class="section">
+      <div class="section-title">
+        👤 Trial Users
+        <button class="btn btn-secondary" onclick="loadUsers()" style="margin-left: auto;">↻ Refresh</button>
+      </div>
+      <div id="usersTable"></div>
+    </div>
   </div>
-  
+
   <script>
     const SUPABASE_URL = 'https://qgqryeanopdxrwrfczcx.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_I67bdwmAkdodIk5bAQf1Zw_86KroW5R';
@@ -423,6 +440,7 @@
       loadAccessRequests();
       loadInviteCodes();
       loadSubscriptions();
+      loadUsers();
       updateCodePreview();
       
       // Set default expiry to 1 year from now
@@ -431,7 +449,7 @@
       document.getElementById('expiresAt').value = oneYearFromNow.toISOString().split('T')[0];
       
       // Auto-update preview when fields change
-      ['clubName', 'planName', 'maxUsers', 'contactEmail', 'inviteCode', 'maxUses', 'codeType'].forEach(id => {
+      ['clubName', 'planName', 'maxUsers', 'contactEmail', 'inviteCode', 'maxUses', 'loginLimit', 'codeType'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', updateCodePreview);
         if (el) el.addEventListener('change', updateCodePreview);
@@ -476,10 +494,12 @@
       const type = document.getElementById('codeType').value;
       const code = document.getElementById('inviteCode').value.trim().toUpperCase();
       const maxUses = document.getElementById('maxUses').value;
-      
+      const loginLimit = document.getElementById('loginLimit').value;
+
       let html = '<div class="code-display">' + (code || 'CODE-PREVIEW') + '</div>';
       html += '<p><strong>Type:</strong> ' + (type === 'club' ? '🏢 Club' : '👤 Personal') + '</p>';
       html += '<p><strong>Max Uses:</strong> ' + maxUses + '</p>';
+      html += '<p><strong>Login Limit:</strong> ' + (loginLimit || 'Unlimited') + '</p>';
       
       if (type === 'club') {
         const clubName = document.getElementById('clubName').value || 'Club Name';
@@ -606,6 +626,8 @@
       const type = document.getElementById('codeType').value;
       const code = document.getElementById('inviteCode').value.trim().toUpperCase();
       const maxUses = parseInt(document.getElementById('maxUses').value);
+      const loginLimitRaw = document.getElementById('loginLimit').value;
+      const loginLimit = loginLimitRaw ? parseInt(loginLimitRaw) : null;
       const expiresAt = document.getElementById('expiresAt').value;
       
       if (!code) {
@@ -651,18 +673,20 @@
           club_name: type === 'club' ? document.getElementById('clubName').value.trim() : 'Personal User',
           plan_type: type,
           max_uses: maxUses,
+          login_limit: loginLimit,
           expires_at: expiresAt ? new Date(expiresAt).toISOString() : null
         });
-        
+
         if (codeError) throw codeError;
-        
-        alert(`✓ Invite code created successfully!\n\nCode: ${code}\nMax uses: ${maxUses}`);
-        
+
+        alert(`✓ Invite code created successfully!\n\nCode: ${code}\nMax uses: ${maxUses}\nLogin limit: ${loginLimit || 'Unlimited'}`);
+
         // Clear form
         document.getElementById('inviteCode').value = '';
         document.getElementById('clubName').value = '';
         document.getElementById('contactEmail').value = '';
         document.getElementById('contactName').value = '';
+        document.getElementById('loginLimit').value = '';
         
         loadInviteCodes();
         loadSubscriptions();
@@ -692,7 +716,7 @@
         return;
       }
       
-      let html = '<table><thead><tr><th>Code</th><th>Club</th><th>Type</th><th>Usage</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+      let html = '<table><thead><tr><th>Code</th><th>Club</th><th>Type</th><th>Usage</th><th>Login Limit</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
       
       data.forEach(code => {
         const usagePercent = Math.round((code.uses_count / code.max_uses) * 100);
@@ -714,6 +738,7 @@
                 <div class="progress-fill" style="width: ${usagePercent}%"></div>
               </div>
             </td>
+            <td>${code.login_limit ? code.login_limit + ' logins' : 'Unlimited'}</td>
             <td>${expiryDate}${expired ? ' <span class="danger">⚠️</span>' : ''}</td>
             <td><span class="badge ${code.active ? 'badge-active' : 'badge-inactive'}">${code.active ? 'Active' : 'Inactive'}</span></td>
             <td>
@@ -810,6 +835,66 @@
       
       html += '</tbody></table>';
       container.innerHTML = html;
+    }
+
+    async function loadUsers() {
+      const { data, error } = await _supabase
+        .from('profiles')
+        .select('*')
+        .order('login_count', { ascending: false });
+
+      if (error) {
+        console.error('Error loading users:', error);
+        return;
+      }
+
+      const container = document.getElementById('usersTable');
+
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="empty-state">No users yet</div>';
+        return;
+      }
+
+      let html = '<table><thead><tr><th>Email</th><th>Team</th><th>Logins</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+
+      data.forEach(profile => {
+        const hasLimit = profile.login_limit !== null && profile.login_limit !== undefined;
+        const capped = !profile.is_paid && hasLimit && profile.login_count >= profile.login_limit;
+        const loginsText = hasLimit ? `${profile.login_count} / ${profile.login_limit}` : `${profile.login_count} (unlimited)`;
+
+        html += `
+          <tr>
+            <td>${profile.email || '-'}</td>
+            <td>${profile.team_name || '-'}</td>
+            <td><span class="${capped ? 'danger' : ''}">${loginsText}</span></td>
+            <td><span class="badge ${profile.is_paid ? 'badge-active' : (capped ? 'badge-rejected' : 'badge-pending')}">${profile.is_paid ? 'Paid' : (capped ? 'Trial ended' : 'Trial')}</span></td>
+            <td>
+              ${profile.is_paid ? `
+                <button class="btn btn-secondary" onclick="togglePaid('${profile.id}', false)">Revert to Trial</button>
+              ` : `
+                <button class="btn btn-success" onclick="togglePaid('${profile.id}', true)">✓ Upgrade to Paid</button>
+              `}
+            </td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    async function togglePaid(userId, isPaid) {
+      const { error } = await _supabase
+        .from('profiles')
+        .update({ is_paid: isPaid })
+        .eq('id', userId);
+
+      if (error) {
+        alert('Failed to update user: ' + error.message);
+        return;
+      }
+
+      loadUsers();
     }
   </script>
 </body>
