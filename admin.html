@@ -740,12 +740,16 @@
             </td>
             <td>${code.login_limit ? code.login_limit + ' logins' : 'Unlimited'}</td>
             <td>${expiryDate}${expired ? ' <span class="danger">⚠️</span>' : ''}</td>
-            <td><span class="badge ${code.active ? 'badge-active' : 'badge-inactive'}">${code.active ? 'Active' : 'Inactive'}</span></td>
+            <td>
+              <span class="badge ${code.active ? 'badge-active' : 'badge-inactive'}">${code.active ? 'Active' : 'Inactive'}</span>
+              ${!code.active && code.deactivated_at ? `<div style="font-size:11px;color:var(--muted);margin-top:4px;">${daysUntilAutoDelete(code.deactivated_at)}</div>` : ''}
+            </td>
             <td>
               ${code.active ? `
                 <button class="btn btn-danger" onclick="deactivateCode('${code.id}')">Deactivate</button>
               ` : `
                 <button class="btn btn-success" onclick="activateCode('${code.id}')">Activate</button>
+                <button class="btn btn-danger" onclick="deleteInviteCode('${code.id}', '${code.code}')">🗑 Delete</button>
               `}
             </td>
           </tr>
@@ -756,6 +760,35 @@
       container.innerHTML = html;
     }
     
+    function daysUntilAutoDelete(deactivatedAt) {
+      const daysInactive = Math.floor((Date.now() - new Date(deactivatedAt).getTime()) / (1000 * 60 * 60 * 24));
+      const daysLeft = Math.max(0, 30 - daysInactive);
+      return daysLeft === 0 ? 'auto-deletes soon' : `auto-deletes in ${daysLeft}d`;
+    }
+
+    async function deleteInviteCode(codeId, codeText) {
+      if (!confirm(`Permanently delete invite code "${codeText}"? This can't be undone.`)) return;
+
+      // Guard: only ever deletes if the code is still inactive, even if the
+      // button was clicked from a stale view of the table.
+      const { error, count } = await _supabase
+        .from('invite_codes')
+        .delete({ count: 'exact' })
+        .eq('id', codeId)
+        .eq('active', false);
+
+      if (error) {
+        alert('Failed to delete invite code: ' + error.message);
+        return;
+      }
+
+      if (!count) {
+        alert('This code is active — deactivate it first, then delete it.');
+      }
+
+      loadInviteCodes();
+    }
+
     async function deactivateCode(codeId) {
       if (!confirm('Deactivate this invite code? Users won\'t be able to use it anymore.')) return;
       
