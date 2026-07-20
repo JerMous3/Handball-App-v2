@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handball-Tracker | Keep the whole match, not just the score</title>
+<meta name="description" content="Handball-Tracker records every shot, save, card and suspension as it happens, then turns your season into statistics you can use. Built for the coach on the sideline.">
+
+<meta property="og:title" content="Handball-Tracker">
+<meta property="og:description" content="Keep the whole match, not just the score. Live match tracking, live broadcast, and season statistics for handball coaches and clubs.">
+<meta property="og:type" content="website">
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' fill='none' stroke='%23e8ff00' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='14' cy='18' r='7.5'/%3E%3Cpath d='M14 18V10.5M14 18l-6.5 3.75M14 18l6.5 3.75'/%3E%3Cpath d='M5.5 27A12.5 12.5 0 0 1 25.8 12.9'/%3E%3Cpath d='M20.4 11.4l5.6 1.4-1.5 5.5'/%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav" id="nav">
+  <div class="shell nav-inner">
+    <a class="brand" href="index.html">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="14" cy="18" r="7.5"/>
+        <path d="M14 18V10.5M14 18l-6.5 3.75M14 18l6.5 3.75"/>
+        <path d="M5.5 27A12.5 12.5 0 0 1 25.8 12.9"/>
+        <path d="M20.4 11.4l5.6 1.4-1.5 5.5"/>
+      </svg>
+      <span class="brand-word">Handball-Tracker</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#tracking">Tracking</a></li>
+      <li><a href="#live">Live</a></li>
+      <li><a href="#stats">Statistics</a></li>
+      <li><a href="pricing.html">Plans</a></li>
+    </ul>
+    <a class="btn btn-primary" href="../index.html">Start free trial</a>
+  </div>
+</header>
+
+<main id="main">
+<div class="shell rail-grid">
+
+  <!-- ------------------------------------------------------ rail -->
+  <nav class="rail" aria-label="Page sections">
+    <ul class="rail-list" id="rail">
+      <li class="rail-item" data-for="throwoff">00:00</li>
+      <li class="rail-item" data-for="problem">04:15</li>
+      <li class="rail-item" data-for="tracking">12:30</li>
+      <li class="rail-item" data-for="squad">23:40</li>
+      <li class="rail-item" data-for="demo">HT</li>
+      <li class="rail-item" data-for="live">38:00</li>
+      <li class="rail-item" data-for="stats">51:20</li>
+      <li class="rail-item" data-for="fulltime">FT</li>
+    </ul>
+  </nav>
+
+  <div>
+
+    <!-- ---------------------------------------------------- hero -->
+    <section class="hero" id="throwoff">
+      <span class="stamp">00:00 &middot; THROW-OFF</span>
+      <div class="hero-grid">
+        <div>
+          <h1 class="display d-hero" data-reveal>Keep the whole match. Not just the score.</h1>
+          <p class="lede reveal-d1" data-reveal>
+            Handball-Tracker records every shot, save, card and two-minute suspension as it
+            happens, then adds your season up on its own. Built for the coach on the sideline
+            with one hand free.
+          </p>
+          <div class="hero-cta reveal-d2" data-reveal>
+            <a class="btn btn-primary btn-lg" href="../index.html">Start free trial</a>
+            <a class="btn btn-ghost btn-lg" href="#demo">Watch the demo</a>
+          </div>
+          <p class="hero-note reveal-d2" data-reveal>
+            Runs in the browser on any phone, tablet or laptop. Nothing to install.
+          </p>
+        </div>
+
+        <!-- live board: the product demonstrating itself -->
+        <div class="board reveal-d3" data-reveal aria-hidden="true">
+          <div class="board-top">
+            <div>
+              <div class="board-half" id="boardHalf">1ST HALF</div>
+              <div class="board-clock tnum" id="boardClock">00:00</div>
+            </div>
+            <div class="board-score">
+              <div class="t">HV HELIOS &middot; HC TORNADO</div>
+              <div class="n tnum"><span id="scoreHome">0</span> &ndash; <span id="scoreAway">0</span></div>
+            </div>
+          </div>
+          <ul class="board-log" id="boardLog"></ul>
+          <div class="board-foot">
+            <span class="pulse"></span>
+            <span id="boardFoot">Recording</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------- problem -->
+    <section class="sec sec-tight" id="problem">
+      <span class="stamp">04:15</span>
+      <div class="sec-head">
+        <h2 class="display d-1" data-reveal>The sheet never survives the car park</h2>
+      </div>
+      <p class="reveal-d1" data-reveal>
+        You wrote it down. Goals on the back of the team list, cards in the margin, saves
+        somewhere near the bottom. By Tuesday the paper is in a kit bag and the numbers are a
+        guess. Next season a new coach arrives and the record starts at zero again.
+      </p>
+      <p class="reveal-d1" data-reveal style="margin-top:18px">
+        Handball-Tracker keeps it. One tap per event during the match, and the season is already
+        counted before you reach the car.
+      </p>
+    </section>
+
+    <!-- ------------------------------------------------ tracking -->
+    <section class="sec" id="tracking">
+      <span class="stamp">12:30</span>
+      <div class="feat">
+        <div class="feat-copy">
+          <h3 class="display d-2" data-reveal>One tap per event</h3>
+          <p class="reveal-d1" data-reveal>
+            Every player carries their own row. Goal, shot, assist, yellow, two minutes, red.
+            The clock runs, the event log fills, and the numbers on the left update while you
+            are still watching the next attack.
+          </p>
+          <ul class="list reveal-d2" data-reveal>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Goalkeepers get save and stop tracking with their own save rate</li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Shot placement by goal zone, so you can see where they beat you</li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Two-minute suspensions count themselves down</li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Undo on every action, because the hall is loud and thumbs are wide</li>
+          </ul>
+        </div>
+        <div class="shot bleed-r reveal-d2" data-reveal>
+          <img src="img/3-goals.png" width="1280" height="720" loading="lazy" decoding="async"
+               alt="Match screen mid-game: a running clock, a 5 to 0 score, one row per player with goal, shot, assist and card buttons, and a minute-stamped event log down the right side.">
+        </div>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------- squad -->
+    <section class="sec" id="squad">
+      <span class="stamp">23:40</span>
+      <div class="feat feat-flip">
+        <div class="feat-copy">
+          <h3 class="display d-2" data-reveal>Your squad is already loaded</h3>
+          <p class="reveal-d1" data-reveal>
+            Set the roster once. Numbers, positions, goalkeepers, bench. Save it and it comes
+            back for the next fixture, so the ten minutes before throw-off stay yours.
+          </p>
+          <ul class="list reveal-d2" data-reveal>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Saved rosters for every team you coach</li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Paste a squad list in and it imports</li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Substitutions tracked between court and bench</li>
+          </ul>
+        </div>
+        <div class="shot reveal-d2" data-reveal>
+          <img src="img/2-roster.png" width="1280" height="720" loading="lazy" decoding="async"
+               alt="Roster setup screen listing players with shirt numbers and positions, goalkeepers grouped separately from field players.">
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------- demo -->
+    <section class="sec" id="demo">
+      <span class="stamp">HT &middot; HALFTIME</span>
+      <div class="sec-head">
+        <h2 class="display d-1" data-reveal>See it run</h2>
+        <p class="reveal-d1" data-reveal>
+          Two minutes, no narration. Sign in, build the roster, track a few goals, go live, save
+          the match, read the season.
+        </p>
+      </div>
+      <div class="video-wrap reveal-d2" data-reveal>
+        <video controls preload="none" poster="img/3-goals.png"
+               aria-label="Silent walkthrough of Handball-Tracker, from sign in to season statistics">
+          <source src="img/demo.webm" type="video/webm">
+          Your browser cannot play this video. The walkthrough covers sign in, roster setup,
+          live goal tracking, broadcasting, saving a match and reading season statistics.
+        </video>
+      </div>
+    </section>
+
+    <!-- ---------------------------------------------------- live -->
+    <section class="sec" id="live">
+      <span class="stamp">38:00</span>
+      <div class="feat">
+        <div class="feat-copy">
+          <h3 class="display d-2" data-reveal>For everyone who could not get there</h3>
+          <p class="reveal-d1" data-reveal>
+            Put the match on a link. Parents at work, players who are injured, the away
+            supporters who did not travel: they open one page and watch the score and the event
+            log update as you tap. No account, no app, no login wall.
+          </p>
+          <ul class="list reveal-d2" data-reveal>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Share one link, watched on any number of screens</li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Score, clock and events follow the match live</li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Stop broadcasting whenever you want</li>
+          </ul>
+        </div>
+        <div class="shot bleed-r reveal-d2" data-reveal>
+          <img src="img/4b-livepage.png" width="1280" height="720" loading="lazy" decoding="async"
+               alt="Public live page showing the current score and a running list of match events, viewed by a follower with no account.">
+        </div>
+      </div>
+    </section>
+
+    <!-- --------------------------------------------------- stats -->
+    <section class="sec" id="stats">
+      <span class="stamp">51:20</span>
+      <div class="feat feat-flip">
+        <div class="feat-copy">
+          <h3 class="display d-2" data-reveal>The season adds itself up</h3>
+          <p class="reveal-d1" data-reveal>
+            Every saved match rolls into the season. Top scorers, save percentages, cards, shot
+            efficiency. When someone asks who is actually converting, the answer is a page, not
+            an argument.
+          </p>
+          <ul class="list reveal-d2" data-reveal>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Separate seasons, so last year stays last year</li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Full match history, every event kept</li>
+            <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 10.5l4 4 8-9"/></svg>Export to Excel when the club wants its own copy</li>
+          </ul>
+        </div>
+        <div class="shot reveal-d2" data-reveal>
+          <img src="img/6-stats.png" width="1280" height="720" loading="lazy" decoding="async"
+               alt="Season statistics page with a top scorers table, goalkeeper stop percentage and a most cards panel.">
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------ fulltime -->
+    <section class="sec" id="fulltime">
+      <span class="stamp">FT &middot; FULL TIME</span>
+
+      <div class="closing">
+        <h2 class="display d-1" data-reveal>Track your next match</h2>
+        <p class="lede reveal-d1" data-reveal style="margin-top:20px">
+          Start on the trial, bring one team, see whether it survives a real Saturday. If it
+          does, the rest of the club can follow.
+        </p>
+        <div class="hero-cta reveal-d2" data-reveal>
+          <a class="btn btn-primary btn-lg" href="../index.html">Start free trial</a>
+          <a class="btn btn-ghost btn-lg" href="pricing.html">See what is included</a>
+        </div>
+      </div>
+
+      <h2 class="display d-2" data-reveal style="margin-top:96px;margin-bottom:28px">Questions</h2>
+      <div class="faq">
+        <details class="faq-item">
+          <summary class="faq-q">
+            Do I need an invite code?
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12"/></svg>
+          </summary>
+          <div class="faq-a">
+            <p>Yes. Accounts are created with an invite code while the product is in early
+            access. If your club already uses it, ask whoever set it up. If not, request a
+            personal code from the sign-in screen and you will have one back shortly.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-q">
+            What do I run it on during a match?
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12"/></svg>
+          </summary>
+          <div class="faq-a">
+            <p>A browser. Phone, tablet or laptop, whatever you already carry. A tablet gives
+            you the biggest buttons, which matters more than you would think at 3 to 3 with
+            four minutes left. There is nothing to install and no app store.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-q">
+            Can more than one person track the same match?
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12"/></svg>
+          </summary>
+          <div class="faq-a">
+            <p>Your matches sync across your own devices, so you can start on a phone and
+            finish on a tablet. Followers watching the live link see the match update but
+            cannot change anything.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-q">
+            Who owns the data?
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12"/></svg>
+          </summary>
+          <div class="faq-a">
+            <p>You do. Every match and season can be exported to Excel at any time, so the
+            club keeps its own copy of its own history regardless of what happens to any
+            subscription.</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary class="faq-q">
+            Is it only for handball?
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12"/></svg>
+          </summary>
+          <div class="faq-a">
+            <p>Only handball. Two-minute suspensions, seven metre throws, goalkeeper stop
+            percentage and attack counts are built into the way it works, not bolted onto a
+            generic sports tracker.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+  </div>
+</div>
+</main>
+
+<footer class="footer">
+  <div class="shell footer-inner">
+    <a class="brand" href="index.html">
+      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="14" cy="18" r="7.5"/>
+        <path d="M14 18V10.5M14 18l-6.5 3.75M14 18l6.5 3.75"/>
+        <path d="M5.5 27A12.5 12.5 0 0 1 25.8 12.9"/>
+        <path d="M20.4 11.4l5.6 1.4-1.5 5.5"/>
+      </svg>
+      <span class="brand-word">Handball-Tracker</span>
+    </a>
+    <ul class="footer-links">
+      <li><a href="pricing.html">Plans</a></li>
+      <li><a href="../index.html">Sign in</a></li>
+      <li><a href="mailto:jeremybekkers@icloud.com">Contact</a></li>
+    </ul>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+</body>
+</html>
