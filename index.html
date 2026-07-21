@@ -3356,12 +3356,9 @@ window.restoreMatchState = function(data, rosterData = null) {
 
     window.currentRoster = rosterData;
 
-    // Restore match state - set both local and window variables
-    window.matchSeconds = data.timer_seconds || 0;
-    window.timerRunning = data.is_timer_running || false;
-    window.timerPausedAt = data.timer_seconds || 0;
-    window.timerStartTime = null;
-    window.currentHalf = data.current_half || 1;
+    // Restore the timer as a smooth, real-time clock (continues from where the
+    // other device left off, including any switch-over gap if it was running).
+    window.applyRemoteTimer(data);
 
     if (window.stats) {
       window.stats.goals = data.score_home || 0;
@@ -3652,6 +3649,41 @@ function startTimerInterval() {
 // Expose to window for cross-device sync
 window.startTimerInterval = startTimerInterval;
 window.updateTimerDisplay = updateTimerDisplay;
+
+// Apply timer state received from another device (cloud sync). Reconstructs a
+// smooth, real-time clock: when the remote timer is running, anchor to the remote
+// save time (last_updated) so elapsed keeps counting locally. This lets device B
+// take over a dead device A and continue in real time — including the seconds that
+// pass while switching devices — ticking every second instead of in 5s jumps.
+function applyRemoteTimer(data) {
+  const running = !!data.is_timer_running;
+  window.currentHalf = data.current_half || 1;
+  window.timerRunning = running;
+
+  if (running) {
+    window.timerPausedAt = data.timer_seconds || 0;
+    const anchor = data.last_updated ? Date.parse(data.last_updated) : Date.now();
+    window.timerStartTime = isNaN(anchor) ? Date.now() : anchor;
+    startTimerInterval();
+  } else {
+    window.timerPausedAt = data.timer_seconds || 0;
+    window.matchSeconds = data.timer_seconds || 0;
+    window.timerStartTime = null;
+    if (window.timerInterval) {
+      clearInterval(window.timerInterval);
+      window.timerInterval = null;
+    }
+  }
+
+  updateTimerDisplay();
+
+  const btn = document.getElementById('startStopBtn');
+  if (btn) {
+    btn.textContent = running ? '⏸ Pause' : '▶ Start';
+    btn.classList.toggle('active', running);
+  }
+}
+window.applyRemoteTimer = applyRemoteTimer;
 
 function toggleTimer() {
   window.timerRunning = !window.timerRunning;

@@ -35,7 +35,12 @@ async function saveMatchToCloud() {
       coach_user_id: window.currentUser.id,
       team_name: document.getElementById('homeTeamName')?.textContent || '',
       opponent: document.getElementById('awayTeamName')?.textContent || '',
-      timer_seconds: window.matchSeconds || 0,
+      // Compute elapsed fresh so it stays consistent with last_updated even if the
+      // 1s display interval was throttled (e.g. backgrounded tab). This is the anchor
+      // another device uses to reconstruct a real-time clock, so keep it accurate.
+      timer_seconds: (window.timerRunning && window.timerStartTime)
+        ? (window.timerPausedAt || 0) + Math.floor((Date.now() - window.timerStartTime) / 1000)
+        : (window.matchSeconds || 0),
       is_timer_running: window.timerRunning || false,
       current_half: window.currentHalf || 'first',
       score_home: window.stats?.goals || 0,
@@ -259,19 +264,24 @@ function startRealtimeSync() {
         window.stats.goalsAgainst = payload.new.score_away;
       }
       
-      // Update timer
-      window.matchSeconds = payload.new.timer_seconds;
-      window.timerRunning = payload.new.is_timer_running;
-      window.timerPausedAt = payload.new.timer_seconds; // Important for when timer starts
-      window.timerStartTime = null; // Reset start time
-      window.currentHalf = payload.new.current_half;
-      
-      // Update UI
+      // Update scoreboard UI
       if (typeof window.updateScoreboard === 'function') {
         window.updateScoreboard();
       }
-      if (typeof window.updateTimerDisplay === 'function') {
-        window.updateTimerDisplay();
+
+      // Update the timer as a smooth, real-time clock. applyRemoteTimer anchors to the
+      // remote save time so it keeps ticking locally between the 5s pushes — and keeps
+      // running on its own if the other device dies (this device takes over).
+      if (typeof window.applyRemoteTimer === 'function') {
+        window.applyRemoteTimer(payload.new);
+      } else {
+        // Fallback (older index.html without applyRemoteTimer): coarse 5s update
+        window.matchSeconds = payload.new.timer_seconds;
+        window.timerRunning = payload.new.is_timer_running;
+        window.timerPausedAt = payload.new.timer_seconds;
+        window.timerStartTime = null;
+        window.currentHalf = payload.new.current_half;
+        if (typeof window.updateTimerDisplay === 'function') window.updateTimerDisplay();
       }
       
       console.log('✅ UI updated from other device');
