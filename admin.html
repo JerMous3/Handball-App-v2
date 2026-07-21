@@ -323,7 +323,11 @@
     const SUPABASE_URL = 'https://qgqryeanopdxrwrfczcx.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_I67bdwmAkdodIk5bAQf1Zw_86KroW5R';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    
+
+    // Only this account may use the admin panel. This is enforced for real by
+    // the RLS policies in Supabase; the checks below are just the matching UX.
+    const ADMIN_EMAIL = 'jeremybekkers@icloud.com';
+
     let currentUser = null;
     
     // Check authentication on page load
@@ -331,49 +335,15 @@
       const { data: { session } } = await _supabase.auth.getSession();
       
       if (!session) {
-        // Not logged in - show message and redirect
-        document.body.innerHTML = `
-          <div style="
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: var(--bg);
-            color: var(--text);
-            text-align: center;
-            padding: 20px;
-          ">
-            <div style="max-width: 500px;">
-              <h1 style="font-size: 48px; margin-bottom: 16px;">🔐</h1>
-              <h2 style="margin-bottom: 8px;">Admin Access Required</h2>
-              <p style="color: var(--muted); margin-bottom: 24px;">
-                You need to be signed in to access the admin panel.
-              </p>
-              <p style="color: var(--muted); margin-bottom: 24px;">
-                Please sign in to the main app first, then return here.
-              </p>
-              <a href="index.html" style="
-                display: inline-block;
-                background: var(--accent);
-                color: white;
-                padding: 12px 24px;
-                border-radius: 6px;
-                text-decoration: none;
-                font-weight: 600;
-              ">Go to Main App</a>
-              <p style="color: var(--muted); margin-top: 16px; font-size: 13px;">
-                After signing in, open this admin page again.
-              </p>
-            </div>
-          </div>
-        `;
+        // Not logged in - show an inline sign-in form.
+        renderAdminLogin();
         return false;
       }
       
       currentUser = session.user;
       
-      // Check if user is admin (jeremybekkers@icloud.com)
-      if (currentUser.email !== 'jeremybekkers@icloud.com') {
+      // Check if user is admin (ADMIN_EMAIL)
+      if (currentUser.email !== ADMIN_EMAIL) {
         document.body.innerHTML = `
           <div style="
             display: flex;
@@ -426,11 +396,78 @@
       return true;
     }
     
+    function renderAdminLogin() {
+      document.body.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);color:var(--text);padding:20px;">
+          <form id="adminLoginForm" style="max-width:360px;width:100%;background:var(--surface);padding:32px;border-radius:12px;box-sizing:border-box;">
+            <h1 style="font-size:44px;text-align:center;margin:0 0 8px;">🔐</h1>
+            <h2 style="text-align:center;margin:0 0 4px;">Admin Sign In</h2>
+            <p style="color:var(--muted);text-align:center;margin:0 0 24px;font-size:14px;">Handball Tracker admin panel</p>
+            <div id="adminLoginError" style="display:none;background:#7F1D1D;color:#FCA5A5;padding:10px 12px;border-radius:6px;font-size:13px;margin-bottom:16px;"></div>
+            <div style="margin-bottom:16px;">
+              <label for="adminEmail" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;">Email</label>
+              <input type="email" id="adminEmail" autocomplete="username" style="width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;box-sizing:border-box;">
+            </div>
+            <div style="margin-bottom:20px;">
+              <label for="adminPassword" style="display:block;margin-bottom:6px;font-weight:600;font-size:14px;">Password</label>
+              <input type="password" id="adminPassword" autocomplete="current-password" style="width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;box-sizing:border-box;">
+            </div>
+            <button type="submit" id="adminLoginBtn" style="width:100%;background:var(--accent);color:white;padding:12px;border:none;border-radius:6px;font-weight:600;font-size:15px;cursor:pointer;">Sign In</button>
+          </form>
+        </div>
+      `;
+      document.getElementById('adminLoginForm').addEventListener('submit', adminSignIn);
+      document.getElementById('adminEmail').focus();
+    }
+
+    function showAdminLoginError(msg) {
+      const el = document.getElementById('adminLoginError');
+      if (!el) return;
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    async function adminSignIn(e) {
+      e.preventDefault();
+      const email = document.getElementById('adminEmail').value.trim();
+      const password = document.getElementById('adminPassword').value;
+      const btn = document.getElementById('adminLoginBtn');
+
+      if (!email || !password) {
+        showAdminLoginError('Please enter your email and password.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Signing in…';
+
+      const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        showAdminLoginError(error.message || 'Sign in failed.');
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+        return;
+      }
+
+      // Enforce admin-only access before revealing the panel. Non-admins are
+      // signed straight back out. (RLS also blocks them at the data layer.)
+      if (data.user.email !== ADMIN_EMAIL) {
+        await _supabase.auth.signOut();
+        showAdminLoginError('This account is not authorized for the admin panel.');
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+        return;
+      }
+
+      window.location.reload();
+    }
+
     async function signOut() {
       await _supabase.auth.signOut();
       window.location.reload();
     }
-    
+
     window.signOut = signOut;
     
     // Load all data on page load
