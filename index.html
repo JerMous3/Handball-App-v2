@@ -3650,6 +3650,18 @@ function startTimerInterval() {
 window.startTimerInterval = startTimerInterval;
 window.updateTimerDisplay = updateTimerDisplay;
 
+// Parse a timestamp to epoch ms, treating values WITHOUT an explicit timezone as
+// UTC. last_updated is saved as UTC via toISOString() ("…Z"), but Supabase returns
+// it from a `timestamp` column without the "Z"; Date.parse() would then read it as
+// LOCAL time, offsetting the anchor by the browser's UTC offset (e.g. +2h in CEST →
+// the timer jumps ahead by exactly that offset on takeover).
+function parseTimestampMs(s) {
+  if (!s) return NaN;
+  s = String(s).trim();
+  const hasTz = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s);
+  return Date.parse(hasTz ? s : s.replace(' ', 'T') + 'Z');
+}
+
 // Apply timer state received from another device (cloud sync). Reconstructs a
 // smooth, real-time clock: when the remote timer is running, anchor to the remote
 // save time (last_updated) so elapsed keeps counting locally. This lets device B
@@ -3662,7 +3674,7 @@ function applyRemoteTimer(data) {
 
   if (running) {
     window.timerPausedAt = data.timer_seconds || 0;
-    const anchor = data.last_updated ? Date.parse(data.last_updated) : Date.now();
+    const anchor = data.last_updated ? parseTimestampMs(data.last_updated) : Date.now();
     window.timerStartTime = isNaN(anchor) ? Date.now() : anchor;
     startTimerInterval();
   } else {
