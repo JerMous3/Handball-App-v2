@@ -313,7 +313,6 @@
 let liveMatches = [];
 let subscription = null;
 
-// Load live matches
 async function loadLiveMatches() {
   try {
     const { data, error } = await _supabase
@@ -334,7 +333,6 @@ async function loadLiveMatches() {
   }
 }
 
-// Subscribe to real-time updates
 function subscribeToMatches() {
   subscription = _supabase
     .channel('live-matches-channel')
@@ -354,7 +352,6 @@ function subscribeToMatches() {
     .subscribe();
 }
 
-// Handle real-time updates
 function handleMatchUpdate(payload) {
   const { eventType, new: newRecord, old: oldRecord } = payload;
 
@@ -373,7 +370,6 @@ function handleMatchUpdate(payload) {
   updateLiveCount();
 }
 
-// Render matches to DOM
 function renderMatches() {
   const container = document.getElementById('matchesContainer');
 
@@ -428,7 +424,6 @@ function renderMatches() {
   container.innerHTML = `<div class="matches-grid">${matchesHTML}</div>`;
 }
 
-// Update live count
 function updateLiveCount() {
   const count = liveMatches.length;
   document.getElementById('liveCount').textContent = `${count} Live Now`;
@@ -437,7 +432,6 @@ function updateLiveCount() {
   `;
 }
 
-// Navigate to watch page
 function watchMatch(matchId) {
   window.location.href = `watch.html?match=${matchId}`;
 }
