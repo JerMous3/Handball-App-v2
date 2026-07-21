@@ -3006,14 +3006,6 @@ async function saveMatchToSupabase(matchData) {
   }
 }
 
-function setCloudStatus(state, msg) {
-  const el = document.getElementById('cloudStatus');
-  if (el && el.textContent !== undefined) {
-    el.textContent = msg;
-    el.className = 'cloud-status' + (state ? ' ' + state : '');
-  }
-}
-
 // CLOUD MATCH HISTORY
 async function loadCloudHistory() {
   if (!currentUser) return loadHistory(); // fall back to localStorage
@@ -3608,47 +3600,6 @@ window.timerInterval = timerInterval;
 window.timerStartTime = timerStartTime;
 window.timerPausedAt = timerPausedAt;
 
-// Load timer state from localStorage on init
-function loadTimerState() {
-  try {
-    const saved = localStorage.getItem('handballtrack_timer');
-    if (saved) {
-      const state = JSON.parse(saved);
-      window.timerRunning = state.running || false;
-      window.timerStartTime = state.startTime || null;
-      window.timerPausedAt = state.pausedAt || 0;
-      window.currentHalf = state.half || 1;
-      
-      // If timer was running, calculate elapsed time
-      if (window.timerRunning && window.timerStartTime) {
-        const now = Date.now();
-        const elapsed = Math.floor((now - window.timerStartTime) / 1000);
-        window.matchSeconds = window.timerPausedAt + elapsed;
-      } else {
-        window.matchSeconds = window.timerPausedAt;
-      }
-      
-      updateTimerDisplay();
-      
-      // Update timer label to show current half
-      const timerLabel = document.getElementById('timerLabel');
-      if (timerLabel) {
-        timerLabel.textContent = window.currentHalf === 1 ? '1st Half' : '2nd Half';
-      }
-      
-      // Restart interval if it was running
-      if (timerRunning) {
-        const btn = document.getElementById('startStopBtn');
-        btn.textContent = '⏸ Pause';
-        btn.classList.add('active');
-        startTimerInterval();
-      }
-    }
-  } catch(e) {
-    console.error('Error loading timer state:', e);
-  }
-}
-
 // Save timer state to localStorage
 function saveTimerState() {
   try {
@@ -3662,13 +3613,6 @@ function saveTimerState() {
   } catch(e) {
     console.error('Error saving timer state:', e);
   }
-}
-
-// Clear timer state from localStorage
-function clearTimerState() {
-  try {
-    localStorage.removeItem('handballtrack_timer');
-  } catch(e) {}
 }
 
 function pad(n) { return String(n).padStart(2,'0'); }
