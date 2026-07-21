@@ -643,7 +643,6 @@
           }
         });
 
-        // Iterate through each player in this match
         Object.entries(matchPlayerStats).forEach(([playerId, stats]) => {
           const playerName = playerNames[playerId] || `Player ${playerId}`;
 
@@ -976,7 +975,6 @@
       console.log('✅ Season statistics exported to Excel');
     }
     
-    // Load data on page load
     loadData();
   </script>
 </body>

@@ -2518,7 +2518,6 @@ async function handleAuth() {
     // Increment invite code usage and track user
     if (data.user) {
       try {
-        // Call function to increment usage
         await _supabase.rpc('increment_invite_usage', { invite_code_text: inviteCode });
         
         // Track which invite code this user used
@@ -2569,7 +2568,6 @@ function showPersonalAccessForm() {
 function closePersonalAccessForm() {
   const modal = document.getElementById('personalAccessModal');
   modal.style.display = 'none';
-  // Clear form
   document.getElementById('accessRequestName').value = '';
   document.getElementById('accessRequestEmail').value = '';
   document.getElementById('accessRequestPhone').value = '';
@@ -2609,7 +2607,6 @@ async function submitAccessRequest() {
     
     if (error) throw error;
     
-    // Success!
     closePersonalAccessForm();
     showAuthSuccess('✓ Request submitted! We\'ll send you an access code within 24 hours.');
     
@@ -3341,7 +3338,6 @@ window.restoreMatchState = function(data, rosterData = null) {
   if (rosterData) {
     // Full restore with roster - actually launch the match
 
-    // Set team names
     window.teamName = data.team_name || 'Team';
     window.opponent = data.opponent || 'Opponent';
 
@@ -3457,12 +3453,10 @@ window.restoreMatchState = function(data, rosterData = null) {
       window.updateScoreboard();
     }
 
-    // Call renderPlayers to show the player list
     if (typeof window.renderPlayers === 'function') {
       window.renderPlayers();
     }
 
-    // Call renderEventLog to show the events
     if (typeof window.renderEventLog === 'function') {
       window.renderEventLog();
     }
@@ -4040,7 +4034,6 @@ window.deleteEvent = function deleteEvent(idx) {
     return;
   }
   
-  // Get player ID from row
   const playerId = playerRow.dataset.playerId;
   
   // Reverse the stats based on event type
