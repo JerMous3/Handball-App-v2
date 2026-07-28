@@ -90,7 +90,7 @@ set search_path = ''
 as $$
 declare
   v_api_key     text;
-  v_from        text := 'Handball-Tracker <notifications@handball-tracker.com>';
+  v_from        text := 'Handball-Tracker <info@handball-tracker.com>';
   v_to          text := 'info@handball-tracker.com';
   -- The invite code auto-emailed to every new subscriber so they can create an
   -- account without waiting for manual approval. To hand out a different code
