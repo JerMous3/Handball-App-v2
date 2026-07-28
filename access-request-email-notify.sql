@@ -79,7 +79,7 @@ as $$
 declare
   v_api_key text;
   v_from    text := 'Handball Tracker <notifications@handball-tracker.com>';
-  v_to      text := 'jeremybekkers@icloud.com';
+  v_to      text := 'info@handball-tracker.com';
   v_subject text;
   v_html    text;
 begin
