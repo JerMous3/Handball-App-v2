@@ -8,13 +8,25 @@
 -- only INSERTs a row into `public.access_requests` with status 'pending'.
 -- Nothing tells anyone a request arrived, so the only way to notice a new
 -- subscriber was to open admin.html and check the list by hand. This adds an
--- AFTER INSERT trigger that sends the admin an email through Resend, so a new
--- request lands in the inbox instead of waiting to be discovered.
+-- AFTER INSERT trigger that, through Resend, sends TWO emails on each request:
 --
--- The email is fire-and-forget (pg_net queues it and returns immediately) and
--- every failure path is swallowed with a warning: a notification problem must
--- never roll back the subscriber's request. Losing the request would be worse
--- than losing the email.
+--   1. To the admin (info@handball-tracker.com) — so a new subscriber lands in
+--      the inbox instead of waiting to be discovered. The request row is still
+--      recorded, so the admin panel remains the full list of who signed up.
+--   2. To the subscriber — an automatic welcome with the current invite code
+--      (v_invite_code, set in the trigger function below) and step-by-step
+--      sign-up instructions. This replaces manually emailing each person the
+--      code. To change which code goes out, edit v_invite_code and re-run.
+--
+-- Both emails are fire-and-forget (pg_net queues them and returns immediately)
+-- and every failure path is swallowed with a warning: a notification problem
+-- must never roll back the subscriber's request. Losing the request would be
+-- worse than losing the email.
+--
+-- NOTE: the invite code is sent to everyone who submits the form, so keep an
+-- eye on its usage cap in the admin panel — once a shared code hits its
+-- max_uses, sign-up will start failing for new people until you raise the
+-- limit or swap in a fresh code here.
 --
 -- ONE-TIME SETUP (do this before running the rest of the file)
 -- ----------------------------------------------------------------------------
@@ -77,11 +89,18 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_api_key text;
-  v_from    text := 'Handball Tracker <notifications@handball-tracker.com>';
-  v_to      text := 'info@handball-tracker.com';
-  v_subject text;
-  v_html    text;
+  v_api_key     text;
+  v_from        text := 'Handball Tracker <notifications@handball-tracker.com>';
+  v_to          text := 'info@handball-tracker.com';
+  -- The invite code auto-emailed to every new subscriber so they can create an
+  -- account without waiting for manual approval. To hand out a different code
+  -- later, change this one line and re-run this file. It must match an active
+  -- row in public.invite_codes (and stay in UPPERCASE — the signup form
+  -- upper-cases whatever the user types before checking it).
+  v_invite_code text := 'TEST-GROEP-2026';
+  v_subject     text;
+  v_html        text;
+  v_name        text;
 begin
   -- No key configured yet? Warn and leave the INSERT untouched.
   select decrypted_secret
@@ -129,6 +148,46 @@ begin
                  'html',     v_html
                )
   );
+
+  -- ---- 2) welcome email to the subscriber, with their invite code ----------
+  -- Only if we actually have an address to send to. This is what used to be a
+  -- manual "here's the code" email; it now goes out automatically on submit.
+  if new.email is not null and btrim(new.email) <> '' then
+    v_name := public.access_request_html_escape(coalesce(nullif(btrim(new.name), ''), 'there'));
+
+    v_html :=
+        '<h2>Welcome to Handball Tracker</h2>'
+      || '<p>Hi ' || v_name || ',</p>'
+      || '<p>Thanks for requesting access. Here is your invite code to create '
+      || 'your account:</p>'
+      || '<p style="font-size:22px;font-weight:bold;letter-spacing:2px;'
+      || 'font-family:monospace">' || public.access_request_html_escape(v_invite_code) || '</p>'
+      || '<p>To get started:</p>'
+      || '<ol>'
+      || '<li>Go to <a href="https://app.handball-tracker.com/">app.handball-tracker.com</a></li>'
+      || '<li>Click <strong>Create Account</strong></li>'
+      || '<li>Enter your email and choose a password</li>'
+      || '<li>Enter the invite code above, then click <strong>Create Account</strong></li>'
+      || '</ol>'
+      || '<p>See you on the court!</p>'
+      || '<hr><p style="color:#888;font-size:13px">Questions? Just reply to this '
+      || 'email and it will reach us at info@handball-tracker.com.</p>';
+
+    perform net.http_post(
+      url     := 'https://api.resend.com/emails',
+      headers := jsonb_build_object(
+                   'Authorization', 'Bearer ' || v_api_key,
+                   'Content-Type',  'application/json'
+                 ),
+      body    := jsonb_build_object(
+                   'from',     v_from,
+                   'to',       jsonb_build_array(new.email),
+                   'reply_to', v_to,       -- replies reach the support inbox
+                   'subject',  'Your Handball Tracker access code',
+                   'html',     v_html
+                 )
+    );
+  end if;
 
   return new;
 exception
