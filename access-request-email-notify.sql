@@ -90,7 +90,7 @@ set search_path = ''
 as $$
 declare
   v_api_key     text;
-  v_from        text := 'Handball Tracker <notifications@handball-tracker.com>';
+  v_from        text := 'Handball-Tracker <notifications@handball-tracker.com>';
   v_to          text := 'info@handball-tracker.com';
   -- The invite code auto-emailed to every new subscriber so they can create an
   -- account without waiting for manual approval. To hand out a different code
@@ -120,7 +120,7 @@ begin
                || public.access_request_html_escape(coalesce(new.name, 'Unknown'));
 
   v_html :=
-      '<h2>New Handball Tracker access request</h2>'
+      '<h2>New Handball-Tracker access request</h2>'
     || '<p><strong>Name:</strong> '  || public.access_request_html_escape(coalesce(new.name, '-'))  || '</p>'
     || '<p><strong>Email:</strong> ' || public.access_request_html_escape(coalesce(new.email, '-')) || '</p>'
     || '<p><strong>Phone:</strong> ' || public.access_request_html_escape(coalesce(new.phone, '-')) || '</p>'
@@ -167,13 +167,13 @@ begin
       ||       'border-radius:14px;overflow:hidden">'
       ||       '<div style="text-align:center;padding:28px 24px 4px">'
       ||         '<img src="https://app.handball-tracker.com/Logo.png" '
-      ||           'alt="Handball Tracker" width="72" '
+      ||           'alt="Handball-Tracker" width="72" '
       ||           'style="width:72px;height:auto;display:inline-block"></div>'
       ||       '<div style="height:4px;background:#e8ff00;margin:14px 24px 0;'
       ||         'border-radius:2px"></div>'
       ||       '<div style="padding:24px">'
       ||         '<h1 style="margin:0 0 6px;font-size:22px;color:#1a1e28">'
-      ||           'Welcome to Handball Tracker</h1>'
+      ||           'Welcome to Handball-Tracker</h1>'
       ||         '<p style="margin:0 0 18px;font-size:15px;line-height:1.5;'
       ||           'color:#3a414d">Hi ' || v_name || ', thanks for requesting '
       ||           'access. Here is your invite code to create your account:</p>'
@@ -211,7 +211,7 @@ begin
       ||           'info@handball-tracker.com.</p></div>'
       ||     '</div>'
       ||     '<p style="text-align:center;font-size:11px;color:#8a93a0;'
-      ||       'margin:14px 0 0">Handball Tracker &middot; See you on the court</p>'
+      ||       'margin:14px 0 0">Handball-Tracker &middot; See you on the court</p>'
       ||   '</div>'
       || '</div>';
 
@@ -225,7 +225,7 @@ begin
                    'from',     v_from,
                    'to',       jsonb_build_array(new.email),
                    'reply_to', v_to,       -- replies reach the support inbox
-                   'subject',  'Your Handball Tracker access code',
+                   'subject',  'Your Handball-Tracker access code',
                    'html',     v_html
                  )
     );
