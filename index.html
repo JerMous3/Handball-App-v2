@@ -2719,27 +2719,24 @@ document.addEventListener('keydown', function(e) {
 
 async function onSignedIn(user, { isExplicitLogin = false } = {}) {
   // TRIAL LOGIN LIMIT CHECK
-  // Runs on every entry point (explicit sign-in, signup, session restore) so a
-  // capped account can't dodge the gate by just keeping the tab open. Only an
-  // explicit sign-in (password submit) burns down the counter.
-  const { data: profile } = await _supabase
-    .from('profiles')
-    .select('login_count, login_limit, is_paid')
-    .eq('id', user.id)
-    .single();
-
-  if (profile) {
-    const hasLimit = profile.login_limit !== null && profile.login_limit !== undefined;
-    const capped = !profile.is_paid && hasLimit && profile.login_count >= profile.login_limit;
-
-    if (capped) {
+  // Enforced server-side by the register_login() RPC (trial-login-limit-
+  // enforcement.sql): it reads the account's trial status and burns down the
+  // counter on an explicit sign-in, all with elevated rights. This has to be
+  // server-side — RLS on profiles blocks the browser from writing login_limit
+  // or login_count, which is why the counter never moved before. Runs on every
+  // entry point (explicit sign-in, signup, session restore) so a capped account
+  // can't dodge the gate by just keeping the tab open; only an explicit sign-in
+  // burns down a login. Fails open: if the check errors we let the user in
+  // rather than lock everyone out on a bad deploy.
+  try {
+    const { data: trialStatus, error: trialError } =
+      await _supabase.rpc('register_login', { p_is_explicit: isExplicitLogin });
+    if (!trialError && trialStatus === 'capped') {
       showTrialEndedScreen();
       return;
     }
-
-    if (isExplicitLogin && !profile.is_paid && hasLimit) {
-      await _supabase.from('profiles').update({ login_count: profile.login_count + 1 }).eq('id', user.id);
-    }
+  } catch (err) {
+    console.error('Trial login check failed (allowing sign-in):', err);
   }
 
   currentUser = user;
