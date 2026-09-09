@@ -54,11 +54,13 @@ async function saveMatchToCloud() {
       player_stats: window.playerStats ? JSON.stringify({
         ...window.playerStats,
         _matchStats: {
-          saves:      window.stats?.saves      || 0,
-          attacks:    window.stats?.attacks    || 0,
-          zones:      window.stats?.zones      || [0,0,0,0,0,0],
-          zonesSaves: window.stats?.zonesSaves || [0,0,0,0,0,0],
-          zonesGoals: window.stats?.zonesGoals || [0,0,0,0,0,0],
+          saves:           window.stats?.saves           || 0,
+          attacks:         window.stats?.attacks         || 0,
+          zones:           window.stats?.zones           || [0,0,0,0,0,0],
+          zonesSaves:      window.stats?.zonesSaves      || [0,0,0,0,0,0],
+          zonesGoals:      window.stats?.zonesGoals      || [0,0,0,0,0,0],
+          penaltiesScored: window.stats?.penaltiesScored || 0,
+          penaltiesSaved:  window.stats?.penaltiesSaved  || 0,
         }
       }) : null
     };
