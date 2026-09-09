@@ -4039,8 +4039,8 @@ function renderEventLog() {
   el.innerHTML = html || '<div style="font-size:12px;color:var(--muted);text-align:center;padding:10px">No events yet</div>';
 }
 
-function addEvent(type, player, extra) {
-  const ev = { type, name: player.name, time: getCurrentTime(), extra, playerId: player.id };
+function addEvent(type, player, extra, meta) {
+  const ev = { type, name: player.name, time: getCurrentTime(), extra, playerId: player.id, ...(meta || {}) };
   
   // Prevent duplicates - check if same event already exists in last 3 events
   const isDuplicate = eventLog.slice(0, 3).some(e => 
@@ -4080,6 +4080,7 @@ window.deleteEvent = function deleteEvent(idx) {
     case 'goal':
       if (playerId && playerStats[playerId]) {
         playerStats[playerId].goals = Math.max(0, playerStats[playerId].goals - 1);
+        playerStats[playerId].shots = Math.max(0, playerStats[playerId].shots - 1);
       }
       stats.goals = Math.max(0, stats.goals - 1);
       stats.shots = Math.max(0, stats.shots - 1);
@@ -4095,15 +4096,25 @@ window.deleteEvent = function deleteEvent(idx) {
       }
       stats.shots = Math.max(0, stats.shots - 1);
       break;
-    case 'gk_save':
+    case 'save':
       if (playerId && playerStats[playerId]) {
         playerStats[playerId].saves = Math.max(0, playerStats[playerId].saves - 1);
       }
       stats.saves = Math.max(0, stats.saves - 1);
-      stats.goalsAgainst = Math.max(0, stats.goalsAgainst - 1);
+      if (event.zoneIdx != null) {
+        stats.zones[event.zoneIdx] = Math.max(0, stats.zones[event.zoneIdx] - 1);
+        stats.zonesSaves[event.zoneIdx] = Math.max(0, stats.zonesSaves[event.zoneIdx] - 1);
+      }
+      if (event.penalty) stats.penaltiesSaved = Math.max(0, stats.penaltiesSaved - 1);
       break;
-    case 'gk_goal':
+    case 'goal_against':
       stats.goalsAgainst = Math.max(0, stats.goalsAgainst - 1);
+      stats.attacks = Math.max(0, stats.attacks - 1);
+      if (event.zoneIdx != null) {
+        stats.zones[event.zoneIdx] = Math.max(0, stats.zones[event.zoneIdx] - 1);
+        stats.zonesGoals[event.zoneIdx] = Math.max(0, stats.zonesGoals[event.zoneIdx] - 1);
+      }
+      if (event.penalty) stats.penaltiesScored = Math.max(0, stats.penaltiesScored - 1);
       break;
     case 'yellow':
       if (playerId && playerStats[playerId]) {
@@ -4150,7 +4161,9 @@ window.deleteEvent = function deleteEvent(idx) {
   renderPlayers();
   updateScoreboard();
   updateStats();
-  
+  const attackCounterEl = document.getElementById('attackCounter');
+  if (attackCounterEl) attackCounterEl.textContent = stats.attacks;
+
   // LIVE BROADCASTING - Sync score after delete
   if (typeof updateLiveScore === 'function' && isLiveBroadcasting) {
     updateLiveScore();
@@ -4356,7 +4369,7 @@ function confirmShot() {
       stats.zones[zoneIdx]++;
       stats.zonesSaves[zoneIdx]++;
     }
-    addEvent('save', gkPlayer, detail);
+    addEvent('save', gkPlayer, detail, { zoneIdx, penalty: isPenalty });
     pushUndo(() => {
       stats.saves--;
       playerStats[gkPlayer.id].saves--;
@@ -4375,7 +4388,7 @@ function confirmShot() {
       stats.zones[zoneIdx]++;
       stats.zonesGoals[zoneIdx]++;
     }
-    addEvent('goal_against', gkPlayer, detail);
+    addEvent('goal_against', gkPlayer, detail, { zoneIdx, penalty: isPenalty });
     pushUndo(() => {
       stats.goalsAgainst--;
       stats.attacks = Math.max(0, stats.attacks - 1); // Decrement attacks on undo
