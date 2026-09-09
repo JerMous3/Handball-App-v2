@@ -3259,6 +3259,10 @@ function launchMatch() {
   document.getElementById('setupScreen').classList.add('hidden');
   document.getElementById('appTopbar').style.display = '';
   document.getElementById('appMain').style.display = '';
+
+  // Fresh match: nothing to save yet
+  window.matchDirty = false;
+  if (window.updateSaveReminder) window.updateSaveReminder();
 }
 
 // Pre-populate setup screen with default roster
@@ -3510,6 +3514,10 @@ window.restoreMatchState = function(data, rosterData = null) {
     if (typeof startAutoSave === 'function') {
       startAutoSave();
     }
+
+    // A restored match has real data that isn't in history yet
+    window.matchDirty = true;
+    if (window.updateSaveReminder) window.updateSaveReminder();
 
   } else {
     // Partial restore - just pre-fill setup screen
@@ -3779,6 +3787,21 @@ function toggleTimer() {
 }
 
 async function resetTimer() {
+  // If this match has unsaved data, make the risk explicit and offer to
+  // save first before wiping everything (reset deletes the cloud copy too).
+  if (window.hasUnsavedMatch && window.hasUnsavedMatch()) {
+    const saveFirst = confirm(
+      '⚠️ This match has NOT been saved yet.\n\n' +
+      'Resetting will permanently delete its score, player stats and event log — ' +
+      'there is no way to get them back.\n\n' +
+      'Click OK to Save it first, or Cancel to continue resetting.'
+    );
+    if (saveFirst) {
+      if (typeof saveMatch === 'function') saveMatch();
+      return; // Let them finish saving, then reset again if they still want to
+    }
+  }
+
   // Confirmation dialog to prevent accidental resets
   const confirmed = confirm(
     '⚠️ Reset entire match?\n\n' +
@@ -3791,7 +3814,7 @@ async function resetTimer() {
     '• Active suspensions\n\n' +
     'This cannot be undone!'
   );
-  
+
   if (!confirmed) return;
   
   // Reset timer
@@ -3866,6 +3889,10 @@ async function resetTimer() {
   if (typeof clearMatchFromCloud === 'function') {
     await clearMatchFromCloud();
   }
+
+  // Nothing left to save after a full reset
+  window.matchDirty = false;
+  if (window.updateSaveReminder) window.updateSaveReminder();
 }
 
 function switchHalf() {
@@ -3901,6 +3928,7 @@ function addEventNoPlayer(type, label) {
   const ev = { type, name: label, time: getCurrentTime(), extra: '' };
   eventLog.unshift(ev);
   renderEventLog();
+  if (window.markMatchDirty) window.markMatchDirty();
 }
 
 function getCurrentTime() {
@@ -4052,8 +4080,9 @@ function addEvent(type, player, extra, meta) {
   if (!isDuplicate) {
     eventLog.unshift(ev);
   }
-  
+
   renderEventLog();
+  if (window.markMatchDirty) window.markMatchDirty();
 }
 
 window.deleteEvent = function deleteEvent(idx) {
@@ -4168,6 +4197,8 @@ window.deleteEvent = function deleteEvent(idx) {
   if (typeof updateLiveScore === 'function' && isLiveBroadcasting) {
     updateLiveScore();
   }
+
+  if (window.markMatchDirty) window.markMatchDirty();
 }
 
 // PLAYER ACTIONS
@@ -4664,6 +4695,10 @@ async function confirmSaveMatch() {
   saveMatchToHistory(matchData);
   await saveMatchToSupabase(matchData);
 
+  // This match is now safely in history - clear the "unsaved" state
+  window.matchDirty = false;
+  if (window.updateSaveReminder) window.updateSaveReminder();
+
   // Visual confirmation on all Save buttons
   const exportButtons = document.querySelectorAll('.export');
   exportButtons.forEach(btn => {
@@ -4676,6 +4711,63 @@ async function confirmSaveMatch() {
     }, 2000);
   });
 }
+
+// ============================================================
+// UNSAVED-MATCH SAFEGUARDS
+// A live match exists only in memory + the single-row cloud
+// autosave until you hit Save. These guards make it hard to lose
+// one by closing the tab, resetting, or starting a new match.
+// ============================================================
+
+// True once the current match has tracked data not yet written to
+// history. Set on any change, cleared on Save / new match / reset.
+window.matchDirty = false;
+
+window.markMatchDirty = function() {
+  window.matchDirty = true;
+  if (window.updateSaveReminder) window.updateSaveReminder();
+};
+
+// Is there a match in progress with real data that hasn't been saved?
+window.hasUnsavedMatch = function() {
+  const hasData =
+       (window.eventLog && window.eventLog.length > 0)
+    || (window.stats && (((window.stats.goals || 0) > 0) || ((window.stats.goalsAgainst || 0) > 0)))
+    || ((window.matchSeconds || 0) > 0);
+  return hasData && window.matchDirty === true;
+};
+
+// Passive "don't forget to Save" cue: highlight every Save button
+// while there is unsaved match data.
+window.updateSaveReminder = function() {
+  const dirty = window.hasUnsavedMatch();
+  document.querySelectorAll('.export').forEach(btn => {
+    btn.classList.toggle('needs-save', dirty);
+  });
+};
+
+// Inject the highlight style once.
+(function injectSaveReminderStyle() {
+  const s = document.createElement('style');
+  s.textContent = `
+    .export.needs-save {
+      box-shadow: 0 0 0 2px rgba(245,166,35,.85);
+      animation: hbSavePulse 1.8s ease-in-out infinite;
+    }
+    @keyframes hbSavePulse {
+      0%,100% { box-shadow: 0 0 0 2px rgba(245,166,35,.85); }
+      50%     { box-shadow: 0 0 0 5px rgba(245,166,35,.20); }
+    }`;
+  document.head.appendChild(s);
+})();
+
+// Warn before closing / reloading the tab with an unsaved match.
+window.addEventListener('beforeunload', function(e) {
+  if (window.hasUnsavedMatch()) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
 
 // EXPORT TO EXCEL
 function exportToExcel() {

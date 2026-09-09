@@ -141,9 +141,32 @@ async function loadMatchFromCloud() {
       `Score: ${data.score_home}-${data.score_away}\n\n` +
       `Click OK to continue, or Cancel to start a new match.`
     );
-    
+
     if (!doContinue) {
-      // User wants to start fresh
+      // Starting fresh means discarding this in-progress match for good -
+      // it was never saved to history. Confirm before deleting it so a
+      // single mis-click can't wipe an unsaved match.
+      const discard = confirm(
+        `⚠️ Discard this unsaved match?\n\n` +
+        `${matchDesc}\n` +
+        `Time: ${timeDesc}\n` +
+        `Score: ${data.score_home}-${data.score_away}\n\n` +
+        `It was never saved to your history, so this CANNOT be undone.\n\n` +
+        `Click Cancel to go back and continue it instead (then you can Save it).`
+      );
+      if (!discard) {
+        // They changed their mind - restore and keep the match so they can Save it.
+        if (data.roster_data && window.restoreMatchState) {
+          try {
+            window.restoreMatchState(data, JSON.parse(data.roster_data));
+            return true;
+          } catch (err) {
+            console.error('Failed to parse roster data on keep:', err);
+          }
+        }
+        return false;
+      }
+      // User explicitly chose to discard
       await clearMatchFromCloud();
       return false;
     }
