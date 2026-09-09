@@ -1311,6 +1311,34 @@
   }
   .shooter-input:focus { border-color: var(--red); }
   .shooter-hint { font-size: 11px; color: var(--muted); }
+  .penalty-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .penalty-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .penalty-check input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--red);
+    cursor: pointer;
+    margin: 0;
+  }
+  .penalty-hint { font-size: 11px; color: var(--muted); }
   /* AUTH SCREEN */
   .auth-screen {
     position: fixed;
@@ -2014,6 +2042,10 @@
       <div class="stat-label">2-Min Suspensions</div>
       <div class="stat-value" id="suspCount">0</div>
     </div>
+    <div class="stat-card">
+      <div class="stat-label">Penalties (7m)</div>
+      <div class="stat-value" id="penaltyScoredCount">0<span id="penaltySavedCount">0 saved</span></div>
+    </div>
 
     <div class="sidebar-title" style="margin-top:4px">GK Shot Zones</div>
     <div class="heatmap-grid" id="heatmapGrid">
@@ -2242,6 +2274,14 @@
       <span class="shooter-label">👕 Opponent shooter #</span>
       <input class="shooter-input" id="shooterNumber" type="number" min="1" max="99" placeholder="—" />
       <span class="shooter-hint">Jersey number (optional)</span>
+    </div>
+
+    <div class="penalty-row">
+      <label class="penalty-check">
+        <input type="checkbox" id="penaltyCheck" />
+        <span>🎯 Penalty (7m)</span>
+      </label>
+      <span class="penalty-hint">Logs as “Penalty scored / saved”</span>
     </div>
 
     <div class="modal-btns">
@@ -3428,6 +3468,8 @@ window.restoreMatchState = function(data, rosterData = null) {
           window.stats.zones      = embeddedMatchStats.zones      || [0,0,0,0,0,0];
           window.stats.zonesSaves = embeddedMatchStats.zonesSaves || [0,0,0,0,0,0];
           window.stats.zonesGoals = embeddedMatchStats.zonesGoals || [0,0,0,0,0,0];
+          window.stats.penaltiesScored = embeddedMatchStats.penaltiesScored || 0;
+          window.stats.penaltiesSaved  = embeddedMatchStats.penaltiesSaved  || 0;
         }
       } catch (err) {
         console.error('   Failed to parse player stats:', err);
@@ -3493,6 +3535,8 @@ const stats = {
   zonesSaves: [0,0,0,0,0,0], // Saves per zone
   zonesGoals: [0,0,0,0,0,0], // Goals conceded per zone
   attacks: 0, // New: track number of attacks
+  penaltiesScored: 0, // 7m penalties the opponent scored against us
+  penaltiesSaved: 0,  // 7m penalties our GK saved
 };
 
 const playerStats = {};
@@ -3783,7 +3827,9 @@ async function resetTimer() {
   stats.zonesSaves = [0, 0, 0, 0, 0, 0];
   stats.zonesGoals = [0, 0, 0, 0, 0, 0];
   stats.attacks = 0;
-  
+  stats.penaltiesScored = 0;
+  stats.penaltiesSaved = 0;
+
   // Reset player stats
   Object.keys(playerStats).forEach(playerId => {
     playerStats[playerId] = {
@@ -3930,6 +3976,8 @@ function updateStats() {
   document.getElementById('shotsOnGoal').textContent = stats.shots;
   document.getElementById('yellowCount').textContent = stats.yellows;
   document.getElementById('suspCount').textContent = stats.suspensions;
+  document.getElementById('penaltyScoredCount').innerHTML =
+    `${stats.penaltiesScored}<span id="penaltySavedCount">${stats.penaltiesSaved} saved</span>`;
   
   // Update shot zone heatmap with color coding
   const maxZone = Math.max(...stats.zones, 1);
@@ -4255,6 +4303,7 @@ function openGkModal(player) {
   window.currentShotType = 'save';
   document.getElementById('gkModalName').textContent = player.name;
   document.getElementById('shooterNumber').value = '';
+  document.getElementById('penaltyCheck').checked = false;
   setShotType('save');
   document.querySelectorAll('.goal-cell').forEach(c => c.classList.remove('selected'));
   document.getElementById('modalOverlay').classList.add('open');
@@ -4292,14 +4341,20 @@ function confirmShot() {
   const zoneNames = ['Top Left','Top Center','Top Right','Bot Left','Bot Center','Bot Right'];
   const zoneName = selectedZone !== null ? zoneNames[selectedZone] : 'Unknown zone';
   const shooterNum = document.getElementById('shooterNumber').value.trim();
-  const detail = shooterNum ? `${zoneName} · Shooter: #${shooterNum}` : zoneName;
   const zoneIdx = selectedZone;
   const gkPlayer = currentGkPlayer;
   const shotType = currentShotType;
+  const isPenalty = document.getElementById('penaltyCheck').checked;
+
+  // Build the event detail line, prepending the penalty tag when checked
+  const penaltyLabel = isPenalty ? (shotType === 'save' ? 'Penalty saved' : 'Penalty scored') : '';
+  let detail = shooterNum ? `${zoneName} · Shooter: #${shooterNum}` : zoneName;
+  if (penaltyLabel) detail = `${penaltyLabel} · ${detail}`;
 
   if (shotType === 'save') {
     stats.saves++;
     playerStats[gkPlayer.id].saves++;
+    if (isPenalty) stats.penaltiesSaved++;
     if (zoneIdx !== null) {
       stats.zones[zoneIdx]++;
       stats.zonesSaves[zoneIdx]++;
@@ -4308,6 +4363,7 @@ function confirmShot() {
     pushUndo(() => {
       stats.saves--;
       playerStats[gkPlayer.id].saves--;
+      if (isPenalty) stats.penaltiesSaved = Math.max(0, stats.penaltiesSaved - 1);
       if (zoneIdx !== null) {
         stats.zones[zoneIdx]--;
         stats.zonesSaves[zoneIdx]--;
@@ -4317,6 +4373,7 @@ function confirmShot() {
   } else {
     stats.goalsAgainst++;
     stats.attacks++; // Auto-increment attacks when opponent scores
+    if (isPenalty) stats.penaltiesScored++;
     if (zoneIdx !== null) {
       stats.zones[zoneIdx]++;
       stats.zonesGoals[zoneIdx]++;
@@ -4325,6 +4382,7 @@ function confirmShot() {
     pushUndo(() => {
       stats.goalsAgainst--;
       stats.attacks = Math.max(0, stats.attacks - 1); // Decrement attacks on undo
+      if (isPenalty) stats.penaltiesScored = Math.max(0, stats.penaltiesScored - 1);
       if (zoneIdx !== null) {
         stats.zones[zoneIdx]--;
         stats.zonesGoals[zoneIdx]--;
@@ -4543,6 +4601,8 @@ function buildMatchData() {
     yellows: stats.yellows,
     suspensions: stats.suspensions,
     attacks: stats.attacks,
+    penaltiesScored: stats.penaltiesScored,
+    penaltiesSaved: stats.penaltiesSaved,
     eventLog: window.eventLog ? window.eventLog.slice(0, 100) : [],
     playerStats: window.playerStats || {},
   };
