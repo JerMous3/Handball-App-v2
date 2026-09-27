@@ -504,7 +504,6 @@
 
   .btn-goal { background: var(--accent); color: #000; }
   .btn-shot { background: #1e2d1f; color: var(--green); border: 1px solid var(--green); }
-  .btn-assist { background: #1a2535; color: var(--accent2); border: 1px solid var(--accent2); }
   .btn-yellow { background: #2a2210; color: var(--yellow); border: 1px solid var(--yellow); }
   .btn-suspend { background: #2a1c0a; color: #ff9800; border: 1px solid #ff9800; }
   .btn-red { background: #2a0e0e; color: var(--red); border: 1px solid var(--red); }
@@ -4348,7 +4347,6 @@ function buildPlayerRow(player, zone) {
     btnsHtml = `
       <button class="action-btn btn-goal"    onclick="recordGoalById(${player.id})">⚽ Goal</button>
       <button class="action-btn btn-shot"    onclick="recordShotById(${player.id})">🎯 Shot</button>
-      <button class="action-btn btn-assist"  onclick="recordAssistById(${player.id})">🤝 Assist</button>
       <button class="action-btn btn-yellow"  onclick="recordYellowById(${player.id})">🟡 Yellow</button>
       <button class="action-btn btn-suspend" onclick="recordSuspensionById(${player.id})">⏱ 2-Min</button>
       <button class="action-btn btn-red"     onclick="recordRedById(${player.id})">🟥 Red</button>
