@@ -504,7 +504,6 @@
 
   .btn-goal { background: var(--accent); color: #000; }
   .btn-shot { background: #1e2d1f; color: var(--green); border: 1px solid var(--green); }
-  .btn-assist { background: #1a2535; color: var(--accent2); border: 1px solid var(--accent2); }
   .btn-yellow { background: #2a2210; color: var(--yellow); border: 1px solid var(--yellow); }
   .btn-suspend { background: #2a1c0a; color: #ff9800; border: 1px solid #ff9800; }
   .btn-red { background: #2a0e0e; color: var(--red); border: 1px solid var(--red); }
@@ -523,7 +522,6 @@
 
   /* SHARED MODAL OVERLAY BASE */
   .modal-overlay,
-  .history-modal-overlay,
   .import-modal-overlay {
     position: fixed;
     inset: 0;
@@ -538,7 +536,6 @@
   }
 
   .modal-overlay.open,
-  .history-modal-overlay.open,
   .import-modal-overlay.open {
     opacity: 1;
     pointer-events: auto;
@@ -718,77 +715,6 @@
   .btn-sm.undo { border-color: var(--accent2); color: var(--accent2); }
   .btn-sm.undo:hover { background: var(--accent2); color: #000; }
   .btn-sm.undo:disabled { opacity: 0.3; cursor: not-allowed; border-color: var(--border); color: var(--muted); }
-  .btn-sm.history { border-color: var(--muted); color: var(--muted); }
-  .btn-sm.history:hover { border-color: var(--text); color: var(--text); }
-
-  /* History modal */
-  .history-modal-overlay {
-    z-index: var(--z-history);
-  }
-  .history-modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px;
-    width: 580px;
-    max-width: 96vw;
-    max-height: 85vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 0 60px rgba(0,0,0,0.6);
-  }
-  .history-list {
-    overflow-y: auto;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 14px;
-  }
-  .history-list::-webkit-scrollbar { width: 3px; }
-  .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-  .history-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 14px;
-    cursor: pointer;
-    transition: border-color 0.15s;
-  }
-  .history-card:hover { border-color: var(--accent); }
-  .history-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 6px;
-  }
-  .history-card-title {
-    font-family: 'Bebas Neue', cursive;
-    font-size: 16px;
-    letter-spacing: 2px;
-    color: var(--text);
-  }
-  .history-card-date { font-size: 11px; color: var(--muted); }
-  .history-card-score {
-    font-family: 'Bebas Neue', cursive;
-    font-size: 28px;
-    color: var(--accent);
-    line-height: 1;
-    margin-bottom: 4px;
-  }
-  .history-card-stats { font-size: 11px; color: var(--muted); }
-  .history-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 32px; }
-  .history-card-del {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    color: var(--muted);
-    padding: 3px 8px;
-    font-size: 11px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .history-card-del:hover { border-color: var(--red); color: var(--red); }
 
   /* DRAG AND DROP */
   .player-row[draggable="true"] { cursor: grab; }
@@ -912,10 +838,8 @@
     .btn-sm { padding: 5px 9px; font-size: 11px; }
     
     /* Hide buttons on mobile - accessible via More tab */
-    .btn-sm.history,
     .btn-sm.export,
     .btn-sm.signout,
-    .topbar-right a[href="watch.html"],
     .topbar-right a[href="stats.html"],
     #undoBtn,
     #themeToggleBtn,
@@ -1069,15 +993,6 @@
     /* Import modal */
     .import-modal { border-radius: 16px 16px 0 0; }
 
-    /* History modal */
-    .history-modal {
-      width: 100%;
-      max-width: 100%;
-      border-radius: 16px 16px 0 0;
-      max-height: 90dvh;
-    }
-    .history-modal-overlay { align-items: flex-end; }
-
     /* Show mobile-actions-bar on mobile */
     .mobile-actions-bar {
       display: flex;
@@ -1090,7 +1005,6 @@
       padding: 10px;
       font-size: 12px;
     }
-    .mobile-actions-bar .btn-sm.history { display: flex !important; justify-content: center; }
     .mobile-actions-bar .btn-sm.export  { display: flex !important; justify-content: center; }
 
     /* Show tab bar on mobile */
@@ -1492,6 +1406,11 @@
     appearance: none; cursor: pointer;
   }
   .season-picker-select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .season-picker-excel {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--text); margin: -6px 0 18px; cursor: pointer;
+  }
+  .season-picker-excel input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
   .season-picker-btns { display: flex; gap: 10px; }
   .season-picker-btns .modal-btn { flex: 1; }
 
@@ -1938,10 +1857,9 @@
 </div>
 
 <div class="topbar" id="appTopbar" style="display:none">
-  <!-- Left Section: Logo + Reset -->
+  <!-- Left Section: Logo -->
   <div class="topbar-left">
     <div class="topbar-brand">⬡</div>
-    <button class="btn-sm danger" onclick="resetTimer()">🔄 Reset Match</button>
   </div>
   
   <!-- Center Section: Timer, Score, Half Badge -->
@@ -1970,11 +1888,8 @@
     <button class="btn-sm" id="startStopBtn" onclick="toggleTimer()">▶ Start</button>
     <button class="btn-sm" onclick="switchHalf()">½ Half</button>
     <button class="btn-sm undo" id="undoBtn" onclick="undoLastAction()" disabled>↩ Undo</button>
-    <a href="watch.html" target="_blank" class="btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">📺 Live</a>
     <a href="stats.html" target="_blank" class="btn-sm" style="text-decoration: none; display: inline-flex; align-items: center;">📊 Stats</a>
-    <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
     <button class="btn-sm export" onclick="saveMatch()" title="Save match to history">💾 Save</button>
-    <button class="btn-sm" onclick="exportToExcel()" title="Download Excel file">⬇ Excel</button>
     <button class="btn-sm" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle light/dark mode">☀️</button>
     <button class="btn-sm signout" onclick="signOut()">Sign Out</button>
   </div>
@@ -1988,21 +1903,13 @@
     <select class="season-picker-select" id="seasonPickerSelect">
       <option value="">Current Season</option>
     </select>
+    <label class="season-picker-excel">
+      <input type="checkbox" id="seasonPickerExcel">
+      ⬇ Download Excel
+    </label>
     <div class="season-picker-btns">
       <button class="modal-btn cancel" onclick="closeSeasonPicker()">Cancel</button>
       <button class="modal-btn confirm" onclick="confirmSaveMatch()">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- HISTORY MODAL -->
-<div class="history-modal-overlay" id="historyModalOverlay">
-  <div class="history-modal" role="dialog" aria-modal="true" aria-labelledby="historyModalTitle">
-    <div class="modal-title" id="historyModalTitle">Match History</div>
-    <div class="modal-sub" id="historyModalSub">Saved to your account — up to 20 matches.</div>
-    <div class="history-list" id="historyList"></div>
-    <div class="modal-btns" style="margin-top:14px">
-      <button class="modal-btn cancel" onclick="closeHistoryModal()">Close</button>
     </div>
   </div>
 </div>
@@ -2089,7 +1996,6 @@
         </div>
       </div>
       
-      <button class="btn-sm history" onclick="openHistoryModal()">📋 History</button>
       <button class="btn-sm export" onclick="saveMatch()" title="Save match to history">💾 Save</button>
       <button class="btn-sm signout" onclick="signOut()" style="display:none" id="mobileSignout">Sign Out</button>
     </div>
@@ -2160,20 +2066,16 @@
   <div class="more-section">
     <div class="more-section-title">Match Actions</div>
     <div class="more-button-group">
-      <button class="more-button danger" onclick="resetTimer()">
-        🔄 Reset Match
-      </button>
-      
       <button class="more-button" id="mobileUndoBtn" onclick="undoLastAction()" disabled>
         ↩ Undo Last Action
-      </button>
-      
-      <button class="more-button" onclick="switchHalf()">
-        ½ Switch Half
       </button>
 
       <button class="more-button live" id="mobileLiveBtn" onclick="typeof startLiveMatch === 'function' ? startLiveMatch() : alert('Live broadcasting not available')">
         🔴 Go Live
+      </button>
+
+      <button class="more-button" onclick="switchHalf()">
+        ½ Switch Half
       </button>
     </div>
   </div>
@@ -2182,23 +2084,12 @@
   <div class="more-section">
     <div class="more-section-title">Other Actions</div>
     <div class="more-button-group">
-      <a href="watch.html" target="_blank" class="more-button" style="text-decoration: none;">
-        📺 Live Matches
-      </a>
-      
       <a href="stats.html" target="_blank" class="more-button" style="text-decoration: none;">
         📊 Season Stats
       </a>
-      
-      <button class="more-button" onclick="openHistoryModal()">
-        📋 Match History
-      </button>
-      
+
       <button class="more-button" onclick="saveMatch()">
         💾 Save Match
-      </button>
-      <button class="more-button" onclick="exportToExcel()">
-        ⬇ Export Excel
       </button>
       
       <button class="more-button" onclick="toggleTheme()">
@@ -3046,37 +2937,6 @@ async function saveMatchToSupabase(matchData) {
   }
 }
 
-// CLOUD MATCH HISTORY
-async function loadCloudHistory() {
-  if (!currentUser) return loadHistory(); // fall back to localStorage
-  const { data, error } = await _supabase
-    .from('matches')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .order('played_at', { ascending: false })
-    .limit(20);
-  if (error || !data) return loadHistory();
-  return data.map(m => ({
-    id: m.id,
-    date: new Date(m.played_at).toLocaleDateString('en-GB'),
-    teamName: m.team_name,
-    opponent: m.opponent,
-    goalsFor: m.goals_for,
-    goalsAgainst: m.goals_against,
-    shots: m.shots,
-    shotPct: m.shot_pct,
-    saves: m.saves,
-    savePct: m.save_pct,
-    yellows: m.yellows,
-  }));
-}
-
-async function deleteCloudEntry(id) {
-  if (!currentUser) { deleteHistoryEntry(id); return; }
-  await _supabase.from('matches').delete().eq('id', id).eq('user_id', currentUser.id);
-  renderHistoryList();
-}
-
 // SESSION RESTORE + EMAIL CONFIRMATION HANDLER
 // Supabase puts tokens in the URL hash after email confirmation.
 // We detect and exchange them here before checking for a session.
@@ -3583,9 +3443,6 @@ window.confirmShot = confirmShot;
 window.closeModal = closeModal;
 window.undoLastAction = undoLastAction;
 window.pushUndo = pushUndo;
-window.openHistoryModal = openHistoryModal;
-window.closeHistoryModal = closeHistoryModal;
-window.deleteHistoryEntry = deleteHistoryEntry;
 
 // Expose direct record functions for live-broadcast wrapping
 window.recordGoal = recordGoal;
@@ -4485,7 +4342,6 @@ function buildPlayerRow(player, zone) {
     btnsHtml = `
       <button class="action-btn btn-goal"    onclick="recordGoalById(${player.id})">⚽ Goal</button>
       <button class="action-btn btn-shot"    onclick="recordShotById(${player.id})">🎯 Shot</button>
-      <button class="action-btn btn-assist"  onclick="recordAssistById(${player.id})">🤝 Assist</button>
       <button class="action-btn btn-yellow"  onclick="recordYellowById(${player.id})">🟡 Yellow</button>
       <button class="action-btn btn-suspend" onclick="recordSuspensionById(${player.id})">⏱ 2-Min</button>
       <button class="action-btn btn-red"     onclick="recordRedById(${player.id})">🟥 Red</button>
@@ -4689,7 +4545,10 @@ function closeSeasonPicker() {
 
 async function confirmSaveMatch() {
   const season = document.getElementById('seasonPickerSelect').value || null;
+  const wantsExcel = document.getElementById('seasonPickerExcel').checked;
   closeSeasonPicker();
+
+  if (wantsExcel) exportToExcel();
 
   const matchData = { ...buildMatchData(), season };
   saveMatchToHistory(matchData);
@@ -4864,7 +4723,6 @@ window.saveRosterToCloud = saveRosterToCloud;
 window.loadSelectedRoster = loadSelectedRoster;
 window.deleteSelectedRoster = deleteSelectedRoster;
 window.switchAuthTab = switchAuthTab;
-window.deleteCloudEntry = deleteCloudEntry;
 
 } // end initMatch
 
@@ -4892,55 +4750,6 @@ function saveMatchToHistory(matchData) {
   }
 }
 
-function openHistoryModal() {
-  renderHistoryList();
-  document.getElementById('historyModalOverlay').classList.add('open');
-  trapFocus(document.querySelector('#historyModalOverlay .history-modal'));
-}
-
-function closeHistoryModal() {
-  document.getElementById('historyModalOverlay').classList.remove('open');
-  releaseFocus();
-}
-
-function deleteHistoryEntry(id) {
-  const entries = loadHistory().filter(e => e.id !== id);
-  saveHistory(entries);
-  renderHistoryList();
-}
-
-async function renderHistoryList() {
-  const el = document.getElementById('historyList');
-  el.innerHTML = '<div class="history-empty" style="color:var(--muted)">Loading...</div>';
-  const entries = await loadCloudHistory();
-  if (!entries.length) {
-    el.innerHTML = '<div class="history-empty">No matches saved yet.<br>Use ⬇ Export to save a match to history.</div>';
-    return;
-  }
-  el.innerHTML = entries.map(e => `
-    <div class="history-card">
-      <div class="history-card-header">
-        <div class="history-card-title">${e.teamName || 'Home'} vs ${e.opponent || 'Away'}</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="history-card-date">${e.date}</div>
-          <button class="history-card-del" onclick="deleteCloudEntry('${e.id}')">✕</button>
-        </div>
-      </div>
-      <div class="history-card-score">${e.goalsFor} – ${e.goalsAgainst}</div>
-      <div class="history-card-stats">
-        🎯 ${e.shots} shots &nbsp;·&nbsp;
-        📊 ${e.shotPct}% efficiency &nbsp;·&nbsp;
-        🧤 ${e.saves} saves &nbsp;·&nbsp;
-        ${e.savePct}% save rate &nbsp;·&nbsp;
-        🟡 ${e.yellows} yellow cards
-      </div>
-    </div>
-  `).join('');
-}
-
-document.getElementById('historyModalOverlay').addEventListener('click', function(e) {
-  if (e.target === this) closeHistoryModal();
-});
 </script>
 
 <!-- Live Broadcasting Module -->
