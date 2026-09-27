@@ -169,7 +169,7 @@
     
     .table-header {
       display: grid;
-      grid-template-columns: 120px 2fr 80px 2fr 100px;
+      grid-template-columns: 120px 2fr 80px 2fr 100px 40px;
       gap: 16px;
       padding: 16px 20px;
       background: var(--surface2);
@@ -183,7 +183,8 @@
     
     .table-row {
       display: grid;
-      grid-template-columns: 120px 2fr 80px 2fr 100px;
+      grid-template-columns: 120px 2fr 80px 2fr 100px 40px;
+      align-items: center;
       gap: 16px;
       padding: 16px 20px;
       border-bottom: 1px solid var(--border);
@@ -289,6 +290,94 @@
     }
     .btn-new-season:hover { background: var(--accent); color: #000; }
 
+    .btn-delete-match {
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 16px;
+      width: 36px;
+      height: 32px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-delete-match:hover {
+      color: var(--red);
+      border-color: var(--red);
+      background: rgba(255, 59, 59, 0.1);
+    }
+    .btn-delete-match:disabled { opacity: 0.4; cursor: wait; }
+
+    .btn-topbar {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-topbar:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+
+    .import-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .import-overlay.open { display: flex; }
+    .import-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      width: 100%;
+      max-width: 440px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+    .import-modal h3 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 28px;
+      letter-spacing: 1px;
+      color: var(--accent);
+      margin: 0 0 4px 0;
+    }
+    .import-sub { color: var(--muted); font-size: 13px; margin: 0 0 16px 0; word-break: break-all; }
+    .import-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+    .import-field label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+    .import-field input, .import-field select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+      padding: 8px 12px;
+      font-family: inherit;
+    }
+    .import-preview {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .import-score { font-family: 'Bebas Neue', cursive; font-size: 24px; color: var(--accent); letter-spacing: 1px; }
+    .import-preview ul { margin: 8px 0 0 0; padding-left: 18px; color: var(--muted); }
+    .import-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
     .season-badge {
       display: inline-block;
       background: var(--surface2);
@@ -330,6 +419,13 @@
 
       .table-row {
         padding: 16px;
+        position: relative;
+      }
+
+      .table-row .btn-delete-match {
+        position: absolute;
+        top: 12px;
+        right: 12px;
       }
 
       .page-title {
@@ -346,22 +442,12 @@
         <option value="">Current Season</option>
       </select>
       <button class="btn-new-season" onclick="startNewSeason()">+ New Season</button>
-      <button onclick="exportToExcel()" style="
-        background: transparent;
-        color: var(--text);
-        border: 1px solid var(--border);
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 14px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        transition: all 0.2s;
-        white-space: nowrap;
-      " onmouseover="this.style.background='var(--accent)'; this.style.color='#000'; this.style.borderColor='var(--accent)'"
-         onmouseout="this.style.background='transparent'; this.style.color='var(--text)'; this.style.borderColor='var(--border)'">
+      <button class="btn-topbar" onclick="document.getElementById('importFile').click()" title="Import a match Excel file exported from the tracker">
+        <span>📥</span>
+        <span>Import</span>
+      </button>
+      <input type="file" id="importFile" accept=".xlsx,.xls" style="display: none;" onchange="onImportFile(event)">
+      <button class="btn-topbar" onclick="exportToExcel()">
         <span>💾</span>
         <span>Export</span>
       </button>
@@ -419,9 +505,39 @@
         <div>Score</div>
         <div>Away Team</div>
         <div>Result</div>
+        <div></div>
       </div>
       <div id="matchHistory">
         <div style="text-align: center; padding: 40px; color: var(--muted);">Loading match history...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import match popup -->
+  <div class="import-overlay" id="importOverlay" onclick="if (event.target === this) closeImport()">
+    <div class="import-modal" role="dialog" aria-labelledby="importTitle">
+      <h3 id="importTitle">Import Match</h3>
+      <p class="import-sub" id="importFileName"></p>
+      <div class="import-preview" id="importPreview"></div>
+      <div class="import-field">
+        <label for="importTeam">Team</label>
+        <input type="text" id="importTeam" placeholder="Home">
+      </div>
+      <div class="import-field">
+        <label for="importOpponent">Opponent</label>
+        <input type="text" id="importOpponent" placeholder="Away">
+      </div>
+      <div class="import-field">
+        <label for="importDate">Date</label>
+        <input type="date" id="importDate">
+      </div>
+      <div class="import-field">
+        <label for="importSeason">Add to season</label>
+        <select id="importSeason"></select>
+      </div>
+      <div class="import-actions">
+        <button class="btn-topbar" onclick="closeImport()">Cancel</button>
+        <button class="btn-new-season" id="importConfirmBtn" onclick="confirmImport()">Import</button>
       </div>
     </div>
   </div>
@@ -644,7 +760,7 @@
         });
 
         Object.entries(matchPlayerStats).forEach(([playerId, stats]) => {
-          const playerName = playerNames[playerId] || `Player ${playerId}`;
+          const playerName = playerNames[playerId] || stats.name || `Player ${playerId}`;
 
           if (!playerStats[playerName]) {
             playerStats[playerName] = {
@@ -788,11 +904,221 @@
                 ${result === 'win' ? 'Won' : result === 'loss' ? 'Lost' : 'Draw'}
               </span>
             </div>
+            <div>
+              <button class="btn-delete-match" onclick="deleteMatch('${match.id}', this)" title="Delete this match and all its stats" aria-label="Delete match">🗑</button>
+            </div>
           </div>
         `;
       }).join('');
     }
     
+    async function deleteMatch(matchId, btn) {
+      const match = allMatches.find(m => String(m.id) === String(matchId));
+      if (!match) return;
+      const date = formatDate(new Date(match.played_at || match.created_at));
+      const label = `${match.team_name || 'Home'} ${match.goals_for || 0} - ${match.goals_against || 0} ${match.opponent || 'Away'}`;
+      if (!confirm(`Delete this match?\n\n${label}\n${date}\n\nAll goals, saves, cards and other stats from this match will be removed from the season. This can't be undone.`)) return;
+
+      btn.disabled = true;
+      const { data, error } = await _supabase
+        .from('matches')
+        .delete()
+        .eq('id', match.id)
+        .eq('user_id', currentSession.user.id)
+        .select('id');
+
+      // Row-level security deletes 0 rows without an error when there's no delete policy.
+      if (error || !data || data.length === 0) {
+        btn.disabled = false;
+        alert('Could not delete the match: ' + (error ? error.message : 'the database did not allow it (no delete permission on the matches table).'));
+        return;
+      }
+
+      allMatches = allMatches.filter(m => m !== match);
+      renderMatchHistory();
+      calculateStats();
+    }
+
+    // ── Import a match from the tracker's Excel export ──
+    // The tracker's Save popup can export a match as an .xlsx with
+    // "Match Summary", "Player Stats" and "Event Log" sheets. Importing
+    // rebuilds a matches row from it, so a teammate's stats can be added
+    // to your season.
+    let pendingImport = null;
+
+    function onImportFile(event) {
+      const file = event.target.files[0];
+      event.target.value = ''; // allow picking the same file again
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+          pendingImport = parseMatchWorkbook(wb);
+          openImport(file.name);
+        } catch (err) {
+          console.error('Import failed:', err);
+          alert('Could not read this file: ' + err.message);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function parseMatchWorkbook(wb) {
+      const sheetRows = name => {
+        const ws = wb.Sheets[name];
+        return ws ? XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) : null;
+      };
+      const num = v => parseInt(v, 10) || 0;
+
+      const summary = sheetRows('Match Summary');
+      const players = sheetRows('Player Stats');
+      if (!summary || !players) {
+        throw new Error('this is not a match file exported from the Handball Tracker (expected "Match Summary" and "Player Stats" sheets).');
+      }
+
+      // Summary sheet is label / value pairs
+      const values = {};
+      summary.forEach(row => {
+        if (typeof row[0] === 'string' && row[0]) values[row[0].trim()] = row[1];
+      });
+
+      // Player Stats: # | Name | Position | Zone | Goals | Shots | Shot % | Assists | Saves | Yellow Cards | 2-Min Suspensions | Red Card
+      const playerStats = {};
+      const idByName = {};
+      players.slice(1).forEach((row, i) => {
+        const name = String(row[1] || '').trim();
+        if (!name) return;
+        const id = 'imp' + (i + 1);
+        idByName[name] = id;
+        playerStats[id] = {
+          name,
+          goals: num(row[4]),
+          shots: num(row[5]),
+          assists: num(row[7]),
+          saves: num(row[8]),
+          yellows: num(row[9]),
+          suspensions: num(row[10]),
+          redCard: String(row[11]).trim().toLowerCase() === 'yes',
+        };
+      });
+      if (Object.keys(playerStats).length === 0) throw new Error('no players found in the file.');
+
+      // Event Log: Time | Player | Event | Detail, oldest first (the app stores newest first).
+      // Goals against per keeper are counted from these events, so keep them.
+      const eventLog = (sheetRows('Event Log') || []).slice(1)
+        .filter(row => row[2])
+        .map(row => {
+          const name = String(row[1] || '').trim();
+          const ev = { time: String(row[0] || ''), name, type: String(row[2]).trim().replace(/ /g, '_') };
+          if (idByName[name]) ev.playerId = idByName[name];
+          if (row[3]) ev.extra = String(row[3]);
+          return ev;
+        })
+        .reverse();
+
+      const goalsFor = num(values['Goals Scored']);
+      const goalsAgainst = num(values['Goals Conceded']);
+      const shots = num(values['Total Shots']);
+      const saves = num(values['GK Saves']);
+
+      // Date is written as dd/mm/yyyy
+      let date = '';
+      const m = String(values['Date'] || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (m) date = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+
+      return {
+        date,
+        goals_for: goalsFor,
+        goals_against: goalsAgainst,
+        shots,
+        shot_pct: shots > 0 ? Math.round(goalsFor / shots * 100) : 0,
+        saves,
+        save_pct: (saves + goalsAgainst) > 0 ? Math.round(saves / (saves + goalsAgainst) * 100) : 0,
+        yellows: num(values['Yellow Cards']),
+        suspensions: num(values['2-Min Suspensions']),
+        attacks: num(values['Total Attacks']),
+        player_stats: playerStats,
+        event_log: eventLog,
+      };
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function openImport(fileName) {
+      const imp = pendingImport;
+      const standouts = Object.values(imp.player_stats)
+        .filter(p => p.goals > 0 || p.saves > 0)
+        .sort((a, b) => b.goals - a.goals || b.saves - a.saves);
+      const plural = (n, word) => `${n} ${word}${n !== 1 ? 's' : ''}`;
+
+      document.getElementById('importFileName').textContent = fileName;
+      document.getElementById('importPreview').innerHTML = `
+        <div class="import-score">${imp.goals_for} - ${imp.goals_against}</div>
+        <div>${plural(Object.keys(imp.player_stats).length, 'player')} · ${plural(imp.shots, 'shot')} · ${plural(imp.saves, 'save')}</div>
+        ${standouts.length ? `<ul>${standouts.slice(0, 6).map(p =>
+          `<li>${escapeHtml(p.name)}${p.goals ? ` — ${plural(p.goals, 'goal')}` : ''}${p.saves ? ` — ${plural(p.saves, 'save')}` : ''}</li>`
+        ).join('')}${standouts.length > 6 ? `<li>+${standouts.length - 6} more</li>` : ''}</ul>` : ''}
+      `;
+      document.getElementById('importTeam').value = '';
+      document.getElementById('importOpponent').value = '';
+      document.getElementById('importDate').value = imp.date || new Date().toISOString().slice(0, 10);
+
+      // Same season list as the topbar, defaulting to the season being viewed
+      const importSeason = document.getElementById('importSeason');
+      importSeason.innerHTML = document.getElementById('seasonSelect').innerHTML;
+      importSeason.value = selectedSeason || '';
+
+      document.getElementById('importConfirmBtn').disabled = false;
+      document.getElementById('importOverlay').classList.add('open');
+      document.getElementById('importTeam').focus();
+    }
+
+    function closeImport() {
+      document.getElementById('importOverlay').classList.remove('open');
+      pendingImport = null;
+    }
+
+    async function confirmImport() {
+      if (!pendingImport) return;
+      const btn = document.getElementById('importConfirmBtn');
+      const { date, ...fields } = pendingImport;
+      const season = document.getElementById('importSeason').value || null;
+      const dateVal = document.getElementById('importDate').value;
+
+      const payload = {
+        ...fields,
+        user_id: currentSession.user.id,
+        team_name: document.getElementById('importTeam').value.trim() || 'Home',
+        opponent: document.getElementById('importOpponent').value.trim() || 'Away',
+        season,
+      };
+      if (dateVal) payload.played_at = new Date(dateVal + 'T12:00:00').toISOString();
+
+      btn.disabled = true;
+      const { error } = await _supabase.from('matches').insert(payload);
+      if (error) {
+        btn.disabled = false;
+        alert('Import failed: ' + error.message);
+        return;
+      }
+      closeImport();
+
+      // Switch to the season the match went into
+      if (season !== selectedSeason) {
+        selectedSeason = season;
+        try { localStorage.setItem(LAST_SEASON_KEY, season || ''); } catch (_) {}
+        document.getElementById('seasonSelect').value = season || '';
+        document.getElementById('seasonBadge').textContent = season || 'Current Season';
+      }
+      await loadMatchHistory();
+      calculateStats();
+      alert(`Match imported into ${season ? `"${season}"` : 'the current season'}.`);
+    }
+
     function formatDate(date) {
       const options = { 
         year: 'numeric', 
@@ -830,8 +1156,8 @@
         });
         
         Object.entries(matchPlayerStats).forEach(([playerId, stats]) => {
-          const playerName = playerNames[playerId] || `Player ${playerId}`;
-          
+          const playerName = playerNames[playerId] || stats.name || `Player ${playerId}`;
+
           if (!playerStats[playerName]) {
             playerStats[playerName] = {
               name: playerName,
