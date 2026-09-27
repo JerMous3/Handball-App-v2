@@ -1857,10 +1857,9 @@
 </div>
 
 <div class="topbar" id="appTopbar" style="display:none">
-  <!-- Left Section: Logo + Reset -->
+  <!-- Left Section: Logo -->
   <div class="topbar-left">
     <div class="topbar-brand">⬡</div>
-    <button class="btn-sm danger" onclick="resetTimer()">🔄 Reset Match</button>
   </div>
   
   <!-- Center Section: Timer, Score, Half Badge -->
@@ -1906,7 +1905,7 @@
     </select>
     <label class="season-picker-excel">
       <input type="checkbox" id="seasonPickerExcel">
-      ⬇ Also download Excel file
+      ⬇ Download Excel
     </label>
     <div class="season-picker-btns">
       <button class="modal-btn cancel" onclick="closeSeasonPicker()">Cancel</button>
@@ -2067,10 +2066,6 @@
   <div class="more-section">
     <div class="more-section-title">Match Actions</div>
     <div class="more-button-group">
-      <button class="more-button danger" onclick="resetTimer()">
-        🔄 Reset Match
-      </button>
-      
       <button class="more-button" id="mobileUndoBtn" onclick="undoLastAction()" disabled>
         ↩ Undo Last Action
       </button>
