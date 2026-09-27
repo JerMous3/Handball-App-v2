@@ -766,10 +766,10 @@ function addLiveBroadcastButton() {
   btn.textContent = '🔴 Go Live';
   btn.onclick = startLiveMatch;
 
-  // Insert before export button
-  const exportBtn = topbarControls.querySelector('.export');
-  if (exportBtn) {
-    topbarControls.insertBefore(btn, exportBtn);
+  // Insert right after the Undo button
+  const undoBtn = topbarControls.querySelector('#undoBtn');
+  if (undoBtn) {
+    undoBtn.after(btn);
   } else {
     topbarControls.appendChild(btn);
   }
