@@ -6,10 +6,14 @@
 <title>Handball-Tracker</title>
 
 <!-- Eruda mobile console for debugging -->
-<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 <script>
-  // Only enable Eruda when ?debug=1 is in URL
+  // Only download Eruda when ?debug=1 is in URL (written synchronously so it still captures startup logs)
   if (window.location.search.includes('debug=1')) {
+    document.write('<script src="https://cdn.jsdelivr.net/npm/eruda@3.4.3"><\/script>');
+  }
+</script>
+<script>
+  if (window.eruda) {
     eruda.init();
     console.log('📱 Eruda mobile console enabled');
   }
@@ -19,8 +23,8 @@
 <link rel="preload" href="fonts/bebas-neue-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="polish-theme.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
 <script>
   const SUPABASE_URL = 'https://qgqryeanopdxrwrfczcx.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_I67bdwmAkdodIk5bAQf1Zw_86KroW5R';
