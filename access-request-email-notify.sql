@@ -23,6 +23,19 @@
 -- must never roll back the subscriber's request. Losing the request would be
 -- worse than losing the email.
 --
+-- ABUSE LIMITS
+-- ----------------------------------------------------------------------------
+-- The form and the anon key are public, so a script can insert requests as
+-- fast as it likes, and each one would make Resend email an address the script
+-- chooses. Two limits keep that in check without changing the form:
+--   * Emails are skipped (the request is still stored) when the same address
+--     already submitted in the last 24 hours, or when more than 10 requests
+--     arrived in the last hour.
+--   * New requests are refused once 50 arrived in the last hour. Pending
+--     requests are never auto-deleted, so a flood would otherwise sit in the
+--     admin panel for good. The form then shows its usual "please try again".
+-- Real sign-ups come nowhere near either number. Change them below if needed.
+--
 -- NOTE: the invite code is sent to everyone who submits the form, so keep an
 -- eye on its usage cap in the admin panel — once a shared code hits its
 -- max_uses, sign-up will start failing for new people until you raise the
@@ -101,7 +114,36 @@ declare
   v_subject     text;
   v_html        text;
   v_name        text;
+  v_recent      integer;
 begin
+  -- Throttle (see ABUSE LIMITS at the top). This is an AFTER INSERT trigger,
+  -- so the new row is already in the table: exclude it from the address check
+  -- and count it in the hourly total.
+  if new.email is not null and exists (
+    select 1
+      from public.access_requests r
+     where lower(btrim(r.email)) = lower(btrim(new.email))
+       and r.id <> new.id
+       and r.created_at > now() - interval '24 hours'
+  ) then
+    raise warning
+      'notify_admin_of_access_request: address already requested in the last 24h; skipping email for request %',
+      new.id;
+    return new;
+  end if;
+
+  select count(*)
+    into v_recent
+    from public.access_requests r
+   where r.created_at > now() - interval '1 hour';
+
+  if v_recent > 10 then
+    raise warning
+      'notify_admin_of_access_request: % requests in the last hour; skipping email for request %',
+      v_recent, new.id;
+    return new;
+  end if;
+
   -- No key configured yet? Warn and leave the INSERT untouched.
   select decrypted_secret
     into v_api_key
@@ -251,9 +293,36 @@ create trigger trg_notify_admin_of_access_request
   for each row
   execute function public.notify_admin_of_access_request();
 
+-- ---------------------------------------------------------------- flood guard
+
+-- Refuses new requests once 50 arrived in the last hour (see ABUSE LIMITS at the
+-- top). SECURITY DEFINER because the anonymous role that inserts cannot read
+-- the table.
+create or replace function public.limit_access_request_rate()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if (select count(*)
+        from public.access_requests r
+       where r.created_at > now() - interval '1 hour') >= 50 then
+    raise exception 'Too many access requests right now. Please try again later.';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_limit_access_request_rate on public.access_requests;
+create trigger trg_limit_access_request_rate
+  before insert on public.access_requests
+  for each row
+  execute function public.limit_access_request_rate();
+
 -- ---------------------------------------------------------------- verification
 --
--- Is the trigger registered?
+-- Are both triggers registered (notify + rate limit)?
 --   select tgname, tgenabled from pg_trigger
 --    where tgrelid = 'public.access_requests'::regclass
 --      and not tgisinternal;
