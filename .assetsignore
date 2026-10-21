@@ -1,0 +1,13 @@
+# Files in this folder that are not part of the website. Cloudflare publishes
+# everything else in the folder, so keep these out of the deploy.
+.git
+.github
+.claude
+.wrangler
+node_modules
+.gitignore
+.dev.vars*
+.env*
+wrangler.jsonc
+*.sql
+*.md
