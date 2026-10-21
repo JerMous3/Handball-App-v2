@@ -328,6 +328,17 @@
     // the RLS policies in Supabase; the checks below are just the matching UX.
     const ADMIN_EMAIL = 'jeremybekkers@icloud.com';
 
+    // Database values (access requests come from a public form) must be
+    // escaped before they go into innerHTML.
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // A string argument for an inline onclick="fn(...)" handler
+    function jsArg(value) {
+      return escapeHtml(JSON.stringify(String(value ?? '')));
+    }
+
     let currentUser = null;
     
     // Check authentication on page load
@@ -359,7 +370,7 @@
               <h1 style="font-size: 48px; margin-bottom: 16px;">⛔</h1>
               <h2 style="margin-bottom: 8px;">Access Denied</h2>
               <p style="color: var(--muted); margin-bottom: 24px;">
-                You are signed in as: <strong>${currentUser.email}</strong>
+                You are signed in as: <strong>${escapeHtml(currentUser.email)}</strong>
               </p>
               <p style="color: var(--muted); margin-bottom: 24px;">
                 This admin panel is restricted to authorized administrators only.
@@ -391,7 +402,7 @@
       }
       
       // Show user info
-      document.querySelector('h1').innerHTML = `🔐 Handball Tracker Admin <small style="font-size:14px;color:var(--muted);font-weight:400;">(${currentUser.email}) <a href="#" onclick="signOut()" style="color:var(--red);text-decoration:none;margin-left:12px;">Sign Out</a></small>`;
+      document.querySelector('h1').innerHTML = `🔐 Handball Tracker Admin <small style="font-size:14px;color:var(--muted);font-weight:400;">(${escapeHtml(currentUser.email)}) <a href="#" onclick="signOut()" style="color:var(--red);text-decoration:none;margin-left:12px;">Sign Out</a></small>`;
       
       return true;
     }
@@ -534,17 +545,17 @@
       const maxUses = document.getElementById('maxUses').value;
       const loginLimit = document.getElementById('loginLimit').value;
 
-      let html = '<div class="code-display">' + (code || 'CODE-PREVIEW') + '</div>';
+      let html = '<div class="code-display">' + escapeHtml(code || 'CODE-PREVIEW') + '</div>';
       html += '<p><strong>Type:</strong> ' + (type === 'club' ? '🏢 Club' : '👤 Personal') + '</p>';
-      html += '<p><strong>Max Uses:</strong> ' + maxUses + '</p>';
-      html += '<p><strong>Login Limit:</strong> ' + (loginLimit || 'Unlimited') + '</p>';
+      html += '<p><strong>Max Uses:</strong> ' + escapeHtml(maxUses) + '</p>';
+      html += '<p><strong>Login Limit:</strong> ' + escapeHtml(loginLimit || 'Unlimited') + '</p>';
       
       if (type === 'club') {
         const clubName = document.getElementById('clubName').value || 'Club Name';
         const plan = document.getElementById('planName').value || 'Small';
         const maxUsers = document.getElementById('maxUsers').value || '10';
-        html += '<p><strong>Club:</strong> ' + clubName + '</p>';
-        html += '<p><strong>Plan:</strong> ' + plan + ' (' + maxUsers + ' users)</p>';
+        html += '<p><strong>Club:</strong> ' + escapeHtml(clubName) + '</p>';
+        html += '<p><strong>Plan:</strong> ' + escapeHtml(plan) + ' (' + escapeHtml(maxUsers) + ' users)</p>';
       }
       
       document.getElementById('codePreview').innerHTML = html;
@@ -577,18 +588,18 @@
         
         html += `
           <tr>
-            <td><strong>${req.name}</strong></td>
-            <td>${req.email}</td>
-            <td>${req.phone || '-'}</td>
-            <td>${req.message || '-'}</td>
-            <td><span class="badge ${statusClass}">${req.status}</span></td>
+            <td><strong>${escapeHtml(req.name)}</strong></td>
+            <td>${escapeHtml(req.email)}</td>
+            <td>${escapeHtml(req.phone || '-')}</td>
+            <td>${escapeHtml(req.message || '-')}</td>
+            <td><span class="badge ${statusClass}">${escapeHtml(req.status)}</span></td>
             <td>${date}</td>
             <td>
               ${req.status === 'pending' ? `
-                <button class="btn btn-success" onclick="approveRequest('${req.id}', '${req.email}')">✓ Approve</button>
-                <button class="btn btn-danger" onclick="rejectRequest('${req.id}')">✗ Reject</button>
+                <button class="btn btn-success" onclick="approveRequest(${jsArg(req.id)}, ${jsArg(req.email)})">✓ Approve</button>
+                <button class="btn btn-danger" onclick="rejectRequest(${jsArg(req.id)})">✗ Reject</button>
               ` : req.invite_code_generated ? `
-                <div class="code-display" style="margin: 0; padding: 6px; font-size: 12px;">${req.invite_code_generated}</div>
+                <div class="code-display" style="margin: 0; padding: 6px; font-size: 12px;">${escapeHtml(req.invite_code_generated)}</div>
               ` : '-'}
             </td>
           </tr>
@@ -766,9 +777,9 @@
         
         html += `
           <tr>
-            <td><strong style="font-family: monospace;">${code.code}</strong></td>
-            <td>${code.club_name}</td>
-            <td><span class="badge ${code.plan_type === 'club' ? 'badge-approved' : 'badge-pending'}">${code.plan_type}</span></td>
+            <td><strong style="font-family: monospace;">${escapeHtml(code.code)}</strong></td>
+            <td>${escapeHtml(code.club_name)}</td>
+            <td><span class="badge ${code.plan_type === 'club' ? 'badge-approved' : 'badge-pending'}">${escapeHtml(code.plan_type)}</span></td>
             <td>
               <span class="${usageClass}">${code.uses_count} / ${code.max_uses} (${usagePercent}%)</span>
               <div class="progress-bar">
@@ -783,10 +794,10 @@
             </td>
             <td>
               ${code.active ? `
-                <button class="btn btn-danger" onclick="deactivateCode('${code.id}')">Deactivate</button>
+                <button class="btn btn-danger" onclick="deactivateCode(${jsArg(code.id)})">Deactivate</button>
               ` : `
-                <button class="btn btn-success" onclick="activateCode('${code.id}')">Activate</button>
-                <button class="btn btn-danger" onclick="deleteInviteCode('${code.id}', '${code.code}')">🗑 Delete</button>
+                <button class="btn btn-success" onclick="activateCode(${jsArg(code.id)})">Activate</button>
+                <button class="btn btn-danger" onclick="deleteInviteCode(${jsArg(code.id)}, ${jsArg(code.code)})">🗑 Delete</button>
               `}
             </td>
           </tr>
@@ -885,8 +896,8 @@
         
         html += `
           <tr>
-            <td><strong>${sub.club_name}</strong></td>
-            <td>${sub.plan_name}</td>
+            <td><strong>${escapeHtml(sub.club_name)}</strong></td>
+            <td>${escapeHtml(sub.plan_name)}</td>
             <td>
               <span class="${usageClass}">${sub.current_users} / ${sub.max_users} (${usagePercent}%)</span>
               <div class="progress-bar">
@@ -894,11 +905,11 @@
               </div>
             </td>
             <td>
-              ${sub.contact_name || '-'}<br>
-              <small style="color: var(--muted);">${sub.contact_email}</small>
+              ${escapeHtml(sub.contact_name || '-')}<br>
+              <small style="color: var(--muted);">${escapeHtml(sub.contact_email)}</small>
             </td>
-            <td>€${sub.price_per_month}/mo</td>
-            <td><span class="badge ${sub.status === 'active' ? 'badge-active' : 'badge-inactive'}">${sub.status}</span></td>
+            <td>€${escapeHtml(sub.price_per_month)}/mo</td>
+            <td><span class="badge ${sub.status === 'active' ? 'badge-active' : 'badge-inactive'}">${escapeHtml(sub.status)}</span></td>
           </tr>
         `;
       });
@@ -934,15 +945,15 @@
 
         html += `
           <tr>
-            <td>${profile.email || '-'}</td>
-            <td>${profile.team_name || '-'}</td>
+            <td>${escapeHtml(profile.email || '-')}</td>
+            <td>${escapeHtml(profile.team_name || '-')}</td>
             <td><span class="${capped ? 'danger' : ''}">${loginsText}</span></td>
             <td><span class="badge ${profile.is_paid ? 'badge-active' : (capped ? 'badge-rejected' : 'badge-pending')}">${profile.is_paid ? 'Paid' : (capped ? 'Trial ended' : 'Trial')}</span></td>
             <td>
               ${profile.is_paid ? `
-                <button class="btn btn-secondary" onclick="togglePaid('${profile.id}', false)">Revert to Trial</button>
+                <button class="btn btn-secondary" onclick="togglePaid(${jsArg(profile.id)}, false)">Revert to Trial</button>
               ` : `
-                <button class="btn btn-success" onclick="togglePaid('${profile.id}', true)">✓ Upgrade to Paid</button>
+                <button class="btn btn-success" onclick="togglePaid(${jsArg(profile.id)}, true)">✓ Upgrade to Paid</button>
               `}
             </td>
           </tr>
