@@ -1,6 +1,10 @@
 -- Makes the trial login-limit actually work.
 -- Run once in the Supabase SQL editor (as the `postgres` role).
 --
+-- NOTE: security-hardening.sql redefines set_profile_login_limit() and
+-- register_login() (accounts created without a valid invite code start
+-- locked). If you re-run this file, re-run that one afterwards.
+--
 -- THE PROBLEM
 -- ----------------------------------------------------------------------------
 -- The trial cap is written and enforced entirely from the browser:
