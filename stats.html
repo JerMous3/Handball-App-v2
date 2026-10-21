@@ -669,7 +669,7 @@
         console.error('Error loading match history:', error);
         document.getElementById('matchHistory').innerHTML = `
           <div style="text-align: center; padding: 40px; color: var(--red);">
-            Failed to load match history: ${error.message}
+            Failed to load match history: ${escapeHtml(error.message)}
           </div>
         `;
       }
@@ -881,10 +881,10 @@
         <div class="leaderboard-item">
           <div class="leaderboard-rank ${rankClass}">${rank}</div>
           <div class="leaderboard-player">
-            <div class="player-name">${name}</div>
-            <div class="player-stats">${subtitle}</div>
+            <div class="player-name">${escapeHtml(name)}</div>
+            <div class="player-stats">${escapeHtml(subtitle)}</div>
           </div>
-          <div class="leaderboard-value">${value}</div>
+          <div class="leaderboard-value">${escapeHtml(value)}</div>
         </div>
       `;
     }
@@ -917,17 +917,17 @@
         return `
           <div class="table-row">
             <div class="match-date">${formatDate(date)}</div>
-            <div class="match-team">${teamName}</div>
-            <div class="match-score">${scoreHome} - ${scoreAway}</div>
-            <div class="match-team">${opponent}</div>
+            <div class="match-team">${escapeHtml(teamName)}</div>
+            <div class="match-score">${escapeHtml(scoreHome)} - ${escapeHtml(scoreAway)}</div>
+            <div class="match-team">${escapeHtml(opponent)}</div>
             <div>
               <span class="match-result ${result}">
                 ${result === 'win' ? 'Won' : result === 'loss' ? 'Lost' : 'Draw'}
               </span>
             </div>
             <div class="match-actions">
-              <button class="btn-export-match" onclick="exportMatch('${match.id}')" title="Export this match to Excel" aria-label="Export match">⬇</button>
-              <button class="btn-delete-match" onclick="deleteMatch('${match.id}', this)" title="Delete this match and all its stats" aria-label="Delete match">🗑</button>
+              <button class="btn-export-match" onclick="exportMatch(${jsArg(match.id)})" title="Export this match to Excel" aria-label="Export match">⬇</button>
+              <button class="btn-delete-match" onclick="deleteMatch(${jsArg(match.id)}, this)" title="Delete this match and all its stats" aria-label="Delete match">🗑</button>
             </div>
           </div>
         `;
@@ -1151,6 +1151,11 @@
 
     function escapeHtml(str) {
       return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // A string argument for an inline onclick="fn(...)" handler
+    function jsArg(value) {
+      return escapeHtml(JSON.stringify(String(value)));
     }
 
     function openImport(fileName) {

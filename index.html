@@ -3009,6 +3009,11 @@ let setupIdCounter = 100;
 
 const defaultRoster = { gk: [], players: [], subs: [] };
 
+// Player names and other typed text must be escaped before they go into innerHTML
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function makeSetupRow(section, num='', name='', pos='') {
   const id = ++setupIdCounter;
   const isGk = section === 'gk';
@@ -3016,9 +3021,9 @@ function makeSetupRow(section, num='', name='', pos='') {
   div.className = 'setup-row';
   div.dataset.rowId = id;
   div.innerHTML = `
-    <input class="setup-input${isGk?' gk-input':''}" placeholder="#" value="${num}" data-field="num" style="text-align:center" aria-label="Jersey number" />
-    <input class="setup-input${isGk?' gk-input':''}" placeholder="Full name" value="${name}" data-field="name" aria-label="Player name" />
-    <input class="setup-input${isGk?' gk-input':''}" placeholder="Position" value="${pos}" data-field="pos" aria-label="Position" />
+    <input class="setup-input${isGk?' gk-input':''}" placeholder="#" value="${escapeHtml(num)}" data-field="num" style="text-align:center" aria-label="Jersey number" />
+    <input class="setup-input${isGk?' gk-input':''}" placeholder="Full name" value="${escapeHtml(name)}" data-field="name" aria-label="Player name" />
+    <input class="setup-input${isGk?' gk-input':''}" placeholder="Position" value="${escapeHtml(pos)}" data-field="pos" aria-label="Position" />
     <button class="setup-remove-btn" onclick="removeSetupRow('${section}',${id})" aria-label="Remove player">×</button>
   `;
   return div;
@@ -3840,7 +3845,7 @@ function renderSuspensions() {
     const urgent = s.remaining <= 30;
     return `<div class="suspension-item">
       <div>
-        <div class="suspension-name">🟡 ${s.name}</div>
+        <div class="suspension-name">🟡 ${escapeHtml(s.name)}</div>
         <div style="font-size:10px;color:var(--muted)">2-min suspension</div>
       </div>
       <div class="suspension-timer${urgent?' urgent':''}">${pad(m)}:${pad(sec)}</div>
@@ -3917,11 +3922,11 @@ function renderEventLog() {
   const el = document.getElementById('eventLog');
   const html = eventLog.slice(0,40).map((e, idx) => `
     <div class="event-item" style="border-left-color:${eventColors[e.type]||'var(--border)'}; position: relative;">
-      <div class="event-time">${e.time}</div>
+      <div class="event-time">${escapeHtml(e.time)}</div>
       <div class="event-icon">${eventIcons[e.type]||'•'}</div>
       <div style="flex:1;min-width:0">
-        <div class="event-name">${e.name}</div>
-        <div class="event-type">${e.type.replace('_',' ')}${e.extra?' · '+e.extra:''}</div>
+        <div class="event-name">${escapeHtml(e.name)}</div>
+        <div class="event-type">${escapeHtml(e.type.replace('_',' '))}${e.extra?' · '+escapeHtml(e.extra):''}</div>
       </div>
       <button onclick="deleteEvent(${idx})" style="background:var(--red);color:white;border:none;padding:4px 8px;border-radius:4px;font-size:11px;cursor:pointer;margin-left:8px;" title="Delete event">×</button>
     </div>`).join('');
@@ -4358,10 +4363,10 @@ function buildPlayerRow(player, zone) {
     <div class="${classes}" data-player-id="${player.id}" data-zone="${zone}"
          draggable="true">
       <span class="drag-handle">⠿</span>
-      <div class="player-num">${player.num}</div>
+      <div class="player-num">${escapeHtml(player.num)}</div>
       <div class="player-info">
-        <div class="player-name">${player.name}</div>
-        <div class="player-meta">${player.pos}</div>
+        <div class="player-name">${escapeHtml(player.name)}</div>
+        <div class="player-meta">${escapeHtml(player.pos)}</div>
         <div class="player-stats" style="margin-top:4px;flex-wrap:wrap;gap:4px">${statsHtml}</div>
       </div>
       <div class="action-btns">${btnsHtml}</div>

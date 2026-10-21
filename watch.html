@@ -272,6 +272,17 @@ let matchSubscription = null;
 let eventsSubscription = null;
 let isReplayMode = false;
 
+// Match and player names are typed by whoever broadcasts the match, so escape
+// them before they go into innerHTML.
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// A string argument for an inline onclick="fn(...)" handler
+function jsArg(value) {
+  return escapeHtml(JSON.stringify(String(value ?? '')));
+}
+
 // Initialize
 initApp();
 
@@ -406,17 +417,17 @@ function renderMatches() {
     let badgeText = isLive ? '🔴 Live Now' : isRecent ? '🔥 Recent' : '📼 Replay';
     
     return `
-      <div class="match-card" onclick="watchMatch('${match.id}', ${!isLive})">
+      <div class="match-card" onclick="watchMatch(${jsArg(match.id)}, ${!isLive})">
         <div class="card-badge ${badgeClass}">${badgeText}</div>
         
         <div class="card-matchup">
-          ${match.team_name || 'Home'}
+          ${escapeHtml(match.team_name || 'Home')}
           <span class="vs">vs</span>
-          ${match.opponent || 'Away'}
+          ${escapeHtml(match.opponent || 'Away')}
         </div>
         
         <div class="card-score">
-          ${match.score_home} - ${match.score_away}
+          ${escapeHtml(match.score_home)} - ${escapeHtml(match.score_away)}
         </div>
         
         <div class="card-meta">
@@ -538,8 +549,8 @@ function renderEvents() {
       <div class="event-item">
         <div class="event-icon">${icon}</div>
         <div class="event-content">
-          <div class="event-player">${event.player_name || 'Team'}</div>
-          <div class="event-desc">${formatEventType(event.event_type)}</div>
+          <div class="event-player">${escapeHtml(event.player_name || 'Team')}</div>
+          <div class="event-desc">${escapeHtml(formatEventType(event.event_type))}</div>
         </div>
         <div class="event-time">${time}</div>
       </div>
@@ -698,7 +709,7 @@ function showMatchEnded() {
         Final Score
       </div>
       <div style="font-family: 'Bebas Neue', cursive; font-size: 56px; color: var(--accent); margin-bottom: 40px; letter-spacing: 3px;">
-        ${matchData.score_home} - ${matchData.score_away}
+        ${escapeHtml(matchData.score_home)} - ${escapeHtml(matchData.score_away)}
       </div>
       <button onclick="window.location.href='watch.html'" style="
         background: var(--accent);
