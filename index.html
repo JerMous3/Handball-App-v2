@@ -2404,15 +2404,11 @@ async function handleAuth() {
       return;
     }
     
-    // Check if invite code is valid
+    // Check if invite code is valid (server-side, so the list of codes stays private)
     const { data: codeData, error: codeError } = await _supabase
-      .from('invite_codes')
-      .select('*')
-      .eq('code', inviteCode)
-      .eq('active', true)
-      .single();
+      .rpc('check_invite_code', { p_code: inviteCode });
     
-    if (codeError || !codeData) {
+    if (codeError || !codeData || codeData.status === 'invalid') {
       showAuthError('Invalid invite code. Please check and try again.');
       btn.disabled = false;
       btn.textContent = 'Create Account';
@@ -2420,7 +2416,7 @@ async function handleAuth() {
     }
     
     // Check if code has expired
-    if (codeData.expires_at && new Date(codeData.expires_at) < new Date()) {
+    if (codeData.status === 'expired') {
       showAuthError('This invite code has expired. Please contact support.');
       btn.disabled = false;
       btn.textContent = 'Create Account';
@@ -2428,7 +2424,7 @@ async function handleAuth() {
     }
     
     // Check if code has reached max uses
-    if (codeData.uses_count >= codeData.max_uses) {
+    if (codeData.status === 'full') {
       showAuthError('This invite code has reached its maximum uses. Please contact your club administrator.');
       btn.disabled = false;
       btn.textContent = 'Create Account';
@@ -2456,11 +2452,9 @@ async function handleAuth() {
       return; 
     }
     
-    // Increment invite code usage and track user
+    // Track the user (the database counts the invite code use itself when the account is created)
     if (data.user) {
       try {
-        await _supabase.rpc('increment_invite_usage', { invite_code_text: inviteCode });
-        
         // Track which invite code this user used
         await _supabase.from('user_invites').insert({
           user_id: data.user.id,
