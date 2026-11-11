@@ -4503,7 +4503,8 @@ function buildMatchData() {
     attacks: stats.attacks,
     penaltiesScored: stats.penaltiesScored,
     penaltiesSaved: stats.penaltiesSaved,
-    eventLog: window.eventLog ? window.eventLog.slice(0, 100) : [],
+    // Keep the full log: the stats page builds the season shot map from it
+    eventLog: window.eventLog ? window.eventLog.slice() : [],
     playerStats: window.playerStats || {},
   };
 }

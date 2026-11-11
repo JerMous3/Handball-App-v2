@@ -169,7 +169,7 @@
     
     .table-header {
       display: grid;
-      grid-template-columns: 120px 2fr 80px 2fr 100px 80px;
+      grid-template-columns: 120px 2fr 80px 2fr 60px 100px 80px;
       gap: 16px;
       padding: 16px 20px;
       background: var(--surface2);
@@ -183,7 +183,7 @@
     
     .table-row {
       display: grid;
-      grid-template-columns: 120px 2fr 80px 2fr 100px 80px;
+      grid-template-columns: 120px 2fr 80px 2fr 60px 100px 80px;
       align-items: center;
       gap: 16px;
       padding: 16px 20px;
@@ -412,7 +412,163 @@
       vertical-align: middle;
     }
 
+    /* ── Season overview tiles ── */
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+    .overview-tile {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+    .overview-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .overview-value {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 40px;
+      line-height: 1;
+      letter-spacing: 1px;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .overview-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .pos { color: var(--green); }
+    .neg { color: var(--red); }
+
+    .match-diff {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 20px;
+      letter-spacing: 1px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .match-diff.pos { color: var(--green); }
+    .match-diff.neg { color: var(--red); }
+
+    /* ── Goalkeeping: shot map + penalties ── */
+    .gk-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+    .stat-header .gk-filter { margin-left: auto; font-size: 13px; padding: 6px 10px; }
+    .shotmap {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 4px;
+      aspect-ratio: 3 / 1.5;
+      padding: 6px;
+      background: var(--surface2);
+      border: 3px solid var(--text);
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+    }
+    .shotmap-cell {
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      background: var(--surface);
+      color: var(--text);
+      text-align: center;
+      padding: 4px;
+      min-width: 0;
+    }
+    .shotmap-cell.filled { color: #fff; }
+    .shotmap-zone {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.75;
+    }
+    .shotmap-count {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 30px;
+      line-height: 1;
+      letter-spacing: 1px;
+      font-variant-numeric: tabular-nums;
+    }
+    .shotmap-pct { font-size: 12px; font-weight: 600; opacity: 0.85; }
+    .shotmap-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+    .shotmap-legend i {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      margin-right: 6px;
+      vertical-align: -1px;
+    }
+    .shotmap-totals {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 20px;
+      font-size: 14px;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+    .shotmap-totals b { color: var(--text); font-variant-numeric: tabular-nums; }
+    .shotmap-note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+    .penalty-big {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 56px;
+      line-height: 1;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+    .penalty-big-label { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+    .penalty-bar {
+      display: flex;
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
+      background: var(--surface2);
+      margin-bottom: 16px;
+    }
+    .penalty-bar span { display: block; height: 100%; }
+    .penalty-rows { display: flex; flex-direction: column; gap: 8px; }
+    .penalty-rows div {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    .penalty-rows b { font-variant-numeric: tabular-nums; }
+
+    @media (max-width: 1000px) {
+      .overview-grid { grid-template-columns: repeat(3, 1fr); }
+      .gk-grid { grid-template-columns: 1fr; }
+    }
+
     @media (max-width: 768px) {
+      .overview-grid { grid-template-columns: repeat(2, 1fr); }
+      .overview-value { font-size: 32px; }
+      .shotmap { aspect-ratio: 3 / 2; }
+      .shotmap-count { font-size: 24px; }
+      .shotmap-zone { font-size: 10px; }
+
       .topbar-content {
         flex-wrap: wrap;
         gap: 8px;
@@ -442,6 +598,8 @@
         padding: 16px;
         position: relative;
       }
+
+      .table-row .match-diff { text-align: left; }
 
       .table-row .match-actions {
         position: absolute;
@@ -481,6 +639,9 @@
       <p class="page-subtitle">Aggregated player and team performance from match history</p>
     </div>
     
+    <!-- Season overview: results and goal difference -->
+    <div class="overview-grid" id="seasonOverview" style="margin-bottom: 32px;"></div>
+
     <!-- Leaderboards Grid -->
     <div class="stats-grid" id="leaderboards">
       <!-- Top Scorers -->
@@ -516,7 +677,38 @@
         </div>
       </div>
     </div>
-    
+
+    <!-- Goalkeeping: season shot map + penalties -->
+    <h2 class="section-title">Goalkeeping</h2>
+    <div class="gk-grid">
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon">🥅</div>
+          <div class="stat-title">Season Shot Map</div>
+          <select class="season-select gk-filter" id="gkFilter" onchange="renderGoalkeeping()" aria-label="Filter by goalkeeper">
+            <option value="">All goalkeepers</option>
+          </select>
+        </div>
+        <div class="shotmap" id="shotMap" role="img" aria-label="Shots faced per goal zone"></div>
+        <div class="shotmap-totals" id="shotMapTotals"></div>
+        <div class="shotmap-legend">
+          <span>Numbers: <b style="color: var(--text);">saved / conceded</b></span>
+          <span><i style="background: rgba(34,197,94,0.8)"></i>Mostly saved (70%+)</span>
+          <span><i style="background: rgba(123,92,250,0.8)"></i>Mixed</span>
+          <span><i style="background: rgba(239,68,68,0.8)"></i>Mostly conceded (70%+)</span>
+        </div>
+        <div class="shotmap-note" id="shotMapNote"></div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-title">Penalties (7m)</div>
+        </div>
+        <div id="penaltyStats"></div>
+      </div>
+    </div>
+
     <!-- Match History -->
     <h2 class="section-title">Match History</h2>
     <div class="matches-table">
@@ -525,6 +717,7 @@
         <div>Home Team</div>
         <div>Score</div>
         <div>Away Team</div>
+        <div style="text-align: center;">+/-</div>
         <div>Result</div>
         <div></div>
       </div>
@@ -812,6 +1005,140 @@
       });
       
       renderLeaderboards(playerStats);
+      renderOverview();
+      renderGoalkeeping(true);
+    }
+
+    function formatDiff(n) { return n > 0 ? `+${n}` : String(n); }
+    function diffClass(n) { return n > 0 ? 'pos' : n < 0 ? 'neg' : ''; }
+
+    // ── Season overview: played, record, goals for/against, difference ──
+    function renderOverview() {
+      const played = allMatches.length;
+      const goalsFor = allMatches.reduce((s, m) => s + (m.goals_for || 0), 0);
+      const goalsAgainst = allMatches.reduce((s, m) => s + (m.goals_against || 0), 0);
+      const wins = allMatches.filter(m => (m.goals_for || 0) > (m.goals_against || 0)).length;
+      const losses = allMatches.filter(m => (m.goals_for || 0) < (m.goals_against || 0)).length;
+      const draws = played - wins - losses;
+      const diff = goalsFor - goalsAgainst;
+      const avg = n => played ? (n / played).toFixed(1) : '0.0';
+
+      const tile = (label, value, sub, cls = '') => `
+        <div class="overview-tile">
+          <div class="overview-label">${label}</div>
+          <div class="overview-value ${cls}">${value}</div>
+          <div class="overview-sub">${sub}</div>
+        </div>`;
+
+      document.getElementById('seasonOverview').innerHTML =
+        tile('Played', played, played === 1 ? 'match' : 'matches') +
+        tile('Record', `${wins}-${draws}-${losses}`, 'won · drawn · lost') +
+        tile('Goals scored', goalsFor, `${avg(goalsFor)} per match`) +
+        tile('Goals conceded', goalsAgainst, `${avg(goalsAgainst)} per match`) +
+        tile('Goal difference', formatDiff(diff), `${played ? formatDiff(+(diff / played).toFixed(1)) : '0'} per match`, diffClass(diff));
+    }
+
+    // ── Goalkeeping: shots faced per goal zone, and penalties ──
+    // Every keeper save / goal conceded is an event in the match's event log.
+    // Matches saved by the tracker store the zone index and a penalty flag on
+    // the event; imported (Excel) matches only have the detail text, e.g.
+    // "Penalty saved · Top Left · Shooter: #7", so fall back to reading that.
+    const ZONE_NAMES = ['Top Left', 'Top Center', 'Top Right', 'Bot Left', 'Bot Center', 'Bot Right'];
+
+    function keeperShots(match) {
+      return (match.event_log || [])
+        .filter(e => e.type === 'save' || e.type === 'goal_against')
+        .map(e => {
+          const extra = String(e.extra || '');
+          let zone = Number.isInteger(e.zoneIdx) ? e.zoneIdx : ZONE_NAMES.findIndex(z => extra.includes(z));
+          if (zone < 0 || zone > 5) zone = null;
+          return {
+            keeper: e.name || 'Unknown',
+            saved: e.type === 'save',
+            zone,
+            penalty: e.penalty === true || /penalty (saved|scored)/i.test(extra),
+          };
+        });
+    }
+
+    function renderGoalkeeping(rebuildFilter) {
+      const allShots = allMatches.flatMap(keeperShots);
+
+      // Keeper filter: rebuilt when the season's data changes, keeping the choice if possible
+      const filterEl = document.getElementById('gkFilter');
+      if (rebuildFilter) {
+        const prev = filterEl.value;
+        const keepers = [...new Set(allShots.map(s => s.keeper))].sort((a, b) => a.localeCompare(b));
+        filterEl.innerHTML = '<option value="">All goalkeepers</option>' +
+          keepers.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
+        filterEl.value = keepers.includes(prev) ? prev : '';
+        filterEl.style.display = keepers.length > 1 ? '' : 'none';
+      }
+      const keeper = filterEl.value;
+      const shots = keeper ? allShots.filter(s => s.keeper === keeper) : allShots;
+
+      // Shot map
+      const zones = ZONE_NAMES.map(() => ({ saves: 0, goals: 0 }));
+      shots.forEach(s => { if (s.zone !== null) zones[s.zone][s.saved ? 'saves' : 'goals']++; });
+      const maxZone = Math.max(1, ...zones.map(z => z.saves + z.goals));
+
+      document.getElementById('shotMap').innerHTML = zones.map((z, i) => {
+        const total = z.saves + z.goals;
+        let bg = '';
+        if (total > 0) {
+          const ratio = z.saves / total;
+          const alpha = (total / maxZone) * 0.7 + 0.25;
+          const rgb = ratio >= 0.7 ? '34,197,94' : ratio <= 0.3 ? '239,68,68' : '123,92,250';
+          bg = `background: rgba(${rgb},${alpha.toFixed(2)});`;
+        }
+        return `
+          <div class="shotmap-cell${total ? ' filled' : ''}" style="${bg}" title="${ZONE_NAMES[i]}: ${z.saves} saved, ${z.goals} conceded">
+            <span class="shotmap-zone">${ZONE_NAMES[i]}</span>
+            <span class="shotmap-count">${z.saves}/${z.goals}</span>
+            <span class="shotmap-pct">${total ? `${Math.round(z.saves / total * 100)}% saved` : 'no shots'}</span>
+          </div>`;
+      }).join('');
+
+      const saves = shots.filter(s => s.saved).length;
+      const conceded = shots.length - saves;
+      const noZone = shots.filter(s => s.zone === null).length;
+      document.getElementById('shotMapTotals').innerHTML = `
+        <span>Shots faced <b>${shots.length}</b></span>
+        <span>Saved <b>${saves}</b></span>
+        <span>Conceded <b>${conceded}</b></span>
+        <span>Save % <b>${shots.length ? Math.round(saves / shots.length * 100) : 0}%</b></span>`;
+
+      // Notes: shots without a zone, and matches whose log doesn't cover every goal conceded
+      const notes = [];
+      if (noZone) notes.push(`${noZone} shot${noZone !== 1 ? 's' : ''} logged without a zone ${noZone !== 1 ? 'are' : 'is'} counted in the totals but not on the map.`);
+      if (!keeper) {
+        const loggedAgainst = allShots.filter(s => !s.saved).length;
+        const totalAgainst = allMatches.reduce((s, m) => s + (m.goals_against || 0), 0);
+        if (loggedAgainst < totalAgainst) {
+          notes.push(`${totalAgainst - loggedAgainst} of ${totalAgainst} goals conceded have no keeper event (older matches only kept the last 100 events, or the goal wasn't logged through the goalkeeper).`);
+        }
+      }
+      document.getElementById('shotMapNote').textContent = notes.join(' ');
+
+      // Penalties
+      const pens = shots.filter(s => s.penalty);
+      const penSaved = pens.filter(s => s.saved).length;
+      const penConceded = pens.length - penSaved;
+      const penPct = pens.length ? Math.round(penSaved / pens.length * 100) : 0;
+      document.getElementById('penaltyStats').innerHTML = pens.length === 0
+        ? '<div style="text-align: center; padding: 20px; color: var(--muted);">No penalties faced yet</div>'
+        : `
+          <div class="penalty-big">${penPct}%</div>
+          <div class="penalty-big-label">of penalties saved</div>
+          <div class="penalty-bar" aria-hidden="true">
+            <span style="width: ${penPct}%; background: var(--green);"></span>
+            <span style="width: ${100 - penPct}%; background: var(--red);"></span>
+          </div>
+          <div class="penalty-rows">
+            <div><span>Faced</span><b>${pens.length}</b></div>
+            <div><span>Stopped</span><b class="pos">${penSaved}</b></div>
+            <div><span>Conceded</span><b class="neg">${penConceded}</b></div>
+          </div>`;
     }
     
     function renderLeaderboards(playerStats) {
@@ -920,6 +1247,7 @@
             <div class="match-team">${escapeHtml(teamName)}</div>
             <div class="match-score">${escapeHtml(scoreHome)} - ${escapeHtml(scoreAway)}</div>
             <div class="match-team">${escapeHtml(opponent)}</div>
+            <div class="match-diff ${diffClass(scoreHome - scoreAway)}" title="Goal difference">${formatDiff(scoreHome - scoreAway)}</div>
             <div>
               <span class="match-result ${result}">
                 ${result === 'win' ? 'Won' : result === 'loss' ? 'Lost' : 'Draw'}
