@@ -187,6 +187,37 @@
     
     .warning { color: #F59E0B; }
     .danger { color: #EF4444; }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .archive-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 0 0 auto;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .archive-toggle input {
+      width: auto;
+      margin: 0;
+    }
+
+    tr.row-archived td {
+      opacity: 0.6;
+    }
+
+    tr.row-archived td:last-child {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
@@ -197,8 +228,12 @@
     <!-- Pending Access Requests -->
     <div class="section">
       <div class="section-title">
-        🎟️ Pending Access Requests
-        <button class="btn btn-secondary" onclick="loadAccessRequests()" style="margin-left: auto;">↻ Refresh</button>
+        🎟️ Access Requests
+        <label class="archive-toggle">
+          <input type="checkbox" id="showArchivedRequests" onchange="loadAccessRequests()">
+          Show archived <span id="archivedRequestsCount"></span>
+        </label>
+        <button class="btn btn-secondary" onclick="loadAccessRequests()">↻ Refresh</button>
       </div>
       <div id="accessRequestsTable"></div>
     </div>
@@ -313,7 +348,11 @@
     <div class="section">
       <div class="section-title">
         👤 Trial Users
-        <button class="btn btn-secondary" onclick="loadUsers()" style="margin-left: auto;">↻ Refresh</button>
+        <label class="archive-toggle">
+          <input type="checkbox" id="showArchivedUsers" onchange="loadUsers()">
+          Show archived <span id="archivedUsersCount"></span>
+        </label>
+        <button class="btn btn-secondary" onclick="loadUsers()">↻ Refresh</button>
       </div>
       <div id="usersTable"></div>
     </div>
@@ -573,34 +612,51 @@
       }
       
       const container = document.getElementById('accessRequestsTable');
-      
-      if (!data || data.length === 0) {
-        container.innerHTML = '<div class="empty-state">No pending access requests</div>';
+      const showArchived = document.getElementById('showArchivedRequests').checked;
+      const all = data || [];
+      const archivedCount = all.filter(r => r.archived_at).length;
+      const rows = showArchived ? all : all.filter(r => !r.archived_at);
+      document.getElementById('archivedRequestsCount').textContent = `(${archivedCount})`;
+
+      if (rows.length === 0) {
+        container.innerHTML = `<div class="empty-state">No access requests${archivedCount && !showArchived ? ` (${archivedCount} archived)` : ''}</div>`;
         return;
       }
-      
+
       let html = '<table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Message</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>';
-      
-      data.forEach(req => {
+
+      rows.forEach(req => {
         const date = new Date(req.created_at).toLocaleDateString();
-        const statusClass = req.status === 'pending' ? 'badge-pending' : 
+        const statusClass = req.status === 'pending' ? 'badge-pending' :
                            req.status === 'approved' ? 'badge-approved' : 'badge-rejected';
-        
+        const label = `${req.name || ''} <${req.email || ''}>`;
+
         html += `
-          <tr>
+          <tr class="${req.archived_at ? 'row-archived' : ''}">
             <td><strong>${escapeHtml(req.name)}</strong></td>
             <td>${escapeHtml(req.email)}</td>
             <td>${escapeHtml(req.phone || '-')}</td>
             <td>${escapeHtml(req.message || '-')}</td>
-            <td><span class="badge ${statusClass}">${escapeHtml(req.status)}</span></td>
+            <td>
+              <span class="badge ${statusClass}">${escapeHtml(req.status)}</span>
+              ${req.archived_at ? '<span class="badge badge-inactive">Archived</span>' : ''}
+            </td>
             <td>${date}</td>
             <td>
-              ${req.status === 'pending' ? `
-                <button class="btn btn-success" onclick="approveRequest(${jsArg(req.id)}, ${jsArg(req.email)})">✓ Approve</button>
-                <button class="btn btn-danger" onclick="rejectRequest(${jsArg(req.id)})">✗ Reject</button>
-              ` : req.invite_code_generated ? `
-                <div class="code-display" style="margin: 0; padding: 6px; font-size: 12px;">${escapeHtml(req.invite_code_generated)}</div>
-              ` : '-'}
+              <div class="actions">
+                ${req.status === 'pending' && !req.archived_at ? `
+                  <button class="btn btn-success" onclick="approveRequest(${jsArg(req.id)}, ${jsArg(req.email)})">✓ Approve</button>
+                  <button class="btn btn-danger" onclick="rejectRequest(${jsArg(req.id)})">✗ Reject</button>
+                ` : req.invite_code_generated ? `
+                  <div class="code-display" style="margin: 0; padding: 6px; font-size: 12px;">${escapeHtml(req.invite_code_generated)}</div>
+                ` : ''}
+                ${req.archived_at ? `
+                  <button class="btn btn-secondary" onclick="setRequestArchived(${jsArg(req.id)}, false)">↩ Unarchive</button>
+                ` : `
+                  <button class="btn btn-secondary" onclick="setRequestArchived(${jsArg(req.id)}, true)">🗄 Archive</button>
+                `}
+                <button class="btn btn-danger" onclick="deleteRequest(${jsArg(req.id)}, ${jsArg(label)})">🗑 Delete</button>
+              </div>
             </td>
           </tr>
         `;
@@ -668,6 +724,49 @@
       }
       
       alert('Request rejected');
+      loadAccessRequests();
+    }
+
+    // Shown when archived_at is missing because admin-archive-delete.sql
+    // hasn't been run in Supabase yet.
+    function archiveErrorMessage(error) {
+      const msg = error && error.message ? error.message : String(error);
+      return /archived_at/.test(msg)
+        ? msg + '\n\nRun admin-archive-delete.sql in the Supabase SQL editor first.'
+        : msg;
+    }
+
+    async function setRequestArchived(requestId, archived) {
+      const { error, count } = await _supabase
+        .from('access_requests')
+        .update({ archived_at: archived ? new Date().toISOString() : null }, { count: 'exact' })
+        .eq('id', requestId);
+
+      if (error) {
+        alert('Failed to update request: ' + archiveErrorMessage(error));
+        return;
+      }
+      if (!count) {
+        alert('Nothing was changed. Check that admin-archive-delete.sql has been run in Supabase.');
+      }
+      loadAccessRequests();
+    }
+
+    async function deleteRequest(requestId, label) {
+      if (!confirm(`Permanently delete the access request from ${label}?\n\nThis cannot be undone. Use Archive instead if you only want to hide it.`)) return;
+
+      const { error, count } = await _supabase
+        .from('access_requests')
+        .delete({ count: 'exact' })
+        .eq('id', requestId);
+
+      if (error) {
+        alert('Failed to delete request: ' + error.message);
+        return;
+      }
+      if (!count) {
+        alert('Nothing was deleted. Check that admin-archive-delete.sql has been run in Supabase.');
+      }
       loadAccessRequests();
     }
     
@@ -930,31 +1029,51 @@
       }
 
       const container = document.getElementById('usersTable');
+      const showArchived = document.getElementById('showArchivedUsers').checked;
+      const all = data || [];
+      const archivedCount = all.filter(p => p.archived_at).length;
+      const rows = showArchived ? all : all.filter(p => !p.archived_at);
+      document.getElementById('archivedUsersCount').textContent = `(${archivedCount})`;
 
-      if (!data || data.length === 0) {
-        container.innerHTML = '<div class="empty-state">No users yet</div>';
+      if (rows.length === 0) {
+        container.innerHTML = `<div class="empty-state">No users${archivedCount && !showArchived ? ` (${archivedCount} archived)` : ' yet'}</div>`;
         return;
       }
 
       let html = '<table><thead><tr><th>Email</th><th>Team</th><th>Logins</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
 
-      data.forEach(profile => {
+      rows.forEach(profile => {
         const hasLimit = profile.login_limit !== null && profile.login_limit !== undefined;
         const capped = !profile.is_paid && hasLimit && profile.login_count >= profile.login_limit;
         const loginsText = hasLimit ? `${profile.login_count} / ${profile.login_limit}` : `${profile.login_count} (unlimited)`;
+        const isAdmin = profile.id === currentUser.id || profile.email === ADMIN_EMAIL;
+        const label = profile.email || profile.team_name || profile.id;
 
         html += `
-          <tr>
+          <tr class="${profile.archived_at ? 'row-archived' : ''}">
             <td>${escapeHtml(profile.email || '-')}</td>
             <td>${escapeHtml(profile.team_name || '-')}</td>
             <td><span class="${capped ? 'danger' : ''}">${loginsText}</span></td>
-            <td><span class="badge ${profile.is_paid ? 'badge-active' : (capped ? 'badge-rejected' : 'badge-pending')}">${profile.is_paid ? 'Paid' : (capped ? 'Trial ended' : 'Trial')}</span></td>
             <td>
-              ${profile.is_paid ? `
-                <button class="btn btn-secondary" onclick="togglePaid(${jsArg(profile.id)}, false)">Revert to Trial</button>
-              ` : `
-                <button class="btn btn-success" onclick="togglePaid(${jsArg(profile.id)}, true)">✓ Upgrade to Paid</button>
-              `}
+              <span class="badge ${profile.is_paid ? 'badge-active' : (capped ? 'badge-rejected' : 'badge-pending')}">${profile.is_paid ? 'Paid' : (capped ? 'Trial ended' : 'Trial')}</span>
+              ${profile.archived_at ? '<span class="badge badge-inactive">Archived</span>' : ''}
+            </td>
+            <td>
+              <div class="actions">
+                ${profile.is_paid ? `
+                  <button class="btn btn-secondary" onclick="togglePaid(${jsArg(profile.id)}, false)">Revert to Trial</button>
+                ` : `
+                  <button class="btn btn-success" onclick="togglePaid(${jsArg(profile.id)}, true)">✓ Upgrade to Paid</button>
+                `}
+                ${isAdmin ? '' : profile.archived_at ? `
+                  <button class="btn btn-secondary" onclick="setUserArchived(${jsArg(profile.id)}, false)">↩ Unarchive</button>
+                ` : `
+                  <button class="btn btn-secondary" onclick="setUserArchived(${jsArg(profile.id)}, true)">🗄 Archive</button>
+                `}
+                ${isAdmin ? '' : `
+                  <button class="btn btn-danger" onclick="deleteUser(${jsArg(profile.id)}, ${jsArg(label)})">🗑 Delete</button>
+                `}
+              </div>
             </td>
           </tr>
         `;
@@ -975,6 +1094,37 @@
         return;
       }
 
+      loadUsers();
+    }
+
+    async function setUserArchived(userId, archived) {
+      const { error, count } = await _supabase
+        .from('profiles')
+        .update({ archived_at: archived ? new Date().toISOString() : null }, { count: 'exact' })
+        .eq('id', userId);
+
+      if (error) {
+        alert('Failed to update user: ' + archiveErrorMessage(error));
+        return;
+      }
+      if (!count) {
+        alert('Nothing was changed. Check that admin-archive-delete.sql has been run in Supabase.');
+      }
+      loadUsers();
+    }
+
+    async function deleteUser(userId, label) {
+      if (!confirm(`Permanently delete the account ${label}?\n\nThis deletes their login and all their data (matches, rosters, seasons, live matches). It cannot be undone.\n\nUse Archive instead if you only want to hide them.`)) return;
+
+      const { error } = await _supabase.rpc('admin_delete_user', { p_user_id: userId });
+
+      if (error) {
+        const hint = /admin_delete_user/.test(error.message || '')
+          ? '\n\nRun admin-archive-delete.sql in the Supabase SQL editor first.'
+          : '';
+        alert('Failed to delete user: ' + error.message + hint);
+        return;
+      }
       loadUsers();
     }
   </script>
